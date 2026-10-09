@@ -8,16 +8,21 @@ export function validateRepository(
   target: PuzzleTarget,
 ): ValidationResult {
   const unmet: string[] = [];
+  const targetHead = repository.branches[target.branch];
 
-  if (target.snapshot) {
-    const actual = getSnapshot(repository);
+  if (!targetHead) {
+    unmet.push(`The required branch '${target.branch}' does not exist.`);
+  } else {
+    const actual = getSnapshot(repository, targetHead);
     if (!semanticEqual(actual, target.snapshot)) {
-      unmet.push("The illustrated repository state does not match the target.");
+      unmet.push(
+        `Branch '${target.branch}' does not contain the target repository state.`,
+      );
     }
   }
 
-  if (target.currentBranch && repository.currentBranch !== target.currentBranch) {
-    unmet.push(`HEAD must finish on branch '${target.currentBranch}'.`);
+  if (repository.currentBranch !== target.branch) {
+    unmet.push(`HEAD must finish on branch '${target.branch}'.`);
   }
 
   for (const [branch, expectedHead] of Object.entries(target.branchHeads ?? {})) {

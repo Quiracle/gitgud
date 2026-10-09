@@ -89,6 +89,26 @@ describe("executeCommand", () => {
     expect(repository.commits.g2.provenance?.type).toBe("merge");
   });
 
+  it("requires the target state to be on the target branch", () => {
+    let repository = puzzleRepository();
+    repository = run(repository, "git revert b22");
+    repository = run(repository, "git cherry-pick s14");
+
+    repository.branches.style = repository.head;
+    repository.branches.main = "b22";
+    repository.currentBranch = "style";
+
+    const validation = validateRepository(
+      repository,
+      chickenCoronationPuzzle.target,
+    );
+    expect(validation.solved).toBe(false);
+    expect(validation.unmet).toContain(
+      "Branch 'main' does not contain the target repository state.",
+    );
+    expect(validation.unmet).toContain("HEAD must finish on branch 'main'.");
+  });
+
   it("creates deterministic generated IDs within a fresh run", () => {
     const first = run(puzzleRepository(), "git revert b22");
     const restarted = run(puzzleRepository(), "git revert b22");

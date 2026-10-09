@@ -79,8 +79,8 @@ export interface RequiredProvenance {
 }
 
 export interface PuzzleTarget {
-  snapshot?: SemanticState;
-  currentBranch?: string;
+  branch: string;
+  snapshot: SemanticState;
   branchHeads?: Record<string, string>;
   requiredProvenance?: RequiredProvenance[];
 }

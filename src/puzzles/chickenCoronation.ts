@@ -65,11 +65,11 @@ export const chickenCoronationPuzzle: PuzzleDefinition = {
     scarf: "turquoise",
   },
   target: {
+    branch: "main",
     snapshot: {
       ...initialState,
       scarf: "turquoise",
     },
-    currentBranch: "main",
     requiredProvenance: [
       { type: "revert", sourceCommit: "b22" },
     ],
