@@ -1,5 +1,14 @@
 import type { ParseResult } from "./types";
 
+/** Action names the currently shipped simulator can execute. */
+export const SUPPORTED_ACTION_TYPES = [
+  "switch",
+  "log",
+  "merge",
+  "cherry-pick",
+  "revert",
+] as const;
+
 const usage = {
   switch: "Usage: git switch <branch>",
   merge: "Usage: git merge [--ff-only] <branch>",

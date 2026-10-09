@@ -1,4 +1,5 @@
-import type { PuzzleDefinition, Repository } from "../engine";
+import type { Repository } from "../engine";
+import { PUZZLE_SCHEMA_VERSION, type PublicPuzzleDefinition } from "./types";
 
 const initialState = {
   sunglasses: false,
@@ -7,8 +8,13 @@ const initialState = {
   crest: "red",
 };
 
-export const chickenCoronationPuzzle: PuzzleDefinition = {
+export const chickenCoronationPuzzle: PublicPuzzleDefinition = {
+  schemaVersion: PUZZLE_SCHEMA_VERSION,
   id: "chicken-coronation",
+  version: 1,
+  kind: "lesson",
+  slug: "chicken-coronation",
+  difficulty: "easy",
   title: "The chicken's missing scarf",
   description:
     "The main branch contains unwanted sunglasses, while the style branch contains the turquoise scarf we need.",
@@ -60,10 +66,6 @@ export const chickenCoronationPuzzle: PuzzleDefinition = {
       },
     },
   } satisfies Repository,
-  targetState: {
-    ...initialState,
-    scarf: "turquoise",
-  },
   target: {
     branch: "main",
     snapshot: {
@@ -74,4 +76,8 @@ export const chickenCoronationPuzzle: PuzzleDefinition = {
       { type: "revert", sourceCommit: "b22" },
     ],
   },
+  allowedCommands: ["switch", "log", "merge", "cherry-pick", "revert"],
+  hints: [
+    "One existing commit changes the scarf, and another can be safely undone.",
+  ],
 };

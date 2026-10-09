@@ -89,13 +89,3 @@ export interface ValidationResult {
   solved: boolean;
   unmet: string[];
 }
-
-export interface PuzzleDefinition {
-  id: string;
-  title: string;
-  description: string;
-  objectives: string[];
-  initialRepository: Repository;
-  target: PuzzleTarget;
-  targetState: SemanticState;
-}

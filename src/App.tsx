@@ -142,7 +142,7 @@ export default function App() {
         <div className="grid gap-6 xl:grid-cols-[1.05fr_1.4fr_0.9fr]">
           <div className="order-2 space-y-6 xl:order-1">
             <GoalPanel
-              objectives={chickenCoronationPuzzle.objectives}
+              objectives={chickenCoronationPuzzle.objectives ?? []}
               validation={validation}
             />
             <GitGraph repository={repository} />
@@ -153,7 +153,7 @@ export default function App() {
               <ChickenIllustration label="Current" state={currentState} />
               <ChickenIllustration
                 label="Target"
-                state={chickenCoronationPuzzle.targetState}
+                state={chickenCoronationPuzzle.target.snapshot}
               />
             </div>
             <Terminal
