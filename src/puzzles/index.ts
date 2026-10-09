@@ -1,0 +1,1 @@
+export { chickenCoronationPuzzle } from "./chickenCoronation";
