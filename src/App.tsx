@@ -96,9 +96,9 @@ export default function App() {
   const seconds = (elapsedSeconds % 60).toString().padStart(2, "0");
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
+    <div className="min-h-dvh bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-950/90">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 px-4 py-4 sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:gap-4 sm:px-6 sm:py-4">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-400">
               GitGud engine preview
@@ -122,7 +122,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+      <main className="mx-auto max-w-7xl px-4 py-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-6">
         <div
           className={`mb-6 rounded-xl border p-4 ${
             validation.solved
@@ -140,7 +140,7 @@ export default function App() {
         </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.05fr_1.4fr_0.9fr]">
-          <div className="space-y-6">
+          <div className="order-2 space-y-6 xl:order-1">
             <GoalPanel
               objectives={chickenCoronationPuzzle.objectives}
               validation={validation}
@@ -148,8 +148,8 @@ export default function App() {
             <GitGraph repository={repository} />
           </div>
 
-          <div className="space-y-6">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <div className="order-1 space-y-4 sm:space-y-6 xl:order-2">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <ChickenIllustration label="Current" state={currentState} />
               <ChickenIllustration
                 label="Target"
@@ -163,7 +163,9 @@ export default function App() {
             />
           </div>
 
-          <GitLog repository={repository} />
+          <div className="order-3">
+            <GitLog repository={repository} />
+          </div>
         </div>
       </main>
     </div>

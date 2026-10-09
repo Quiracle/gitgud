@@ -77,6 +77,18 @@ describe("executeCommand", () => {
     expect(getSnapshot(first)).toEqual(getSnapshot(second));
   });
 
+  it("accepts merging the style branch as an alternative to cherry-pick", () => {
+    let repository = puzzleRepository();
+    repository = run(repository, "git revert b22");
+    repository = run(repository, "git merge style");
+
+    expect(validateRepository(repository, chickenCoronationPuzzle.target)).toEqual({
+      solved: true,
+      unmet: [],
+    });
+    expect(repository.commits.g2.provenance?.type).toBe("merge");
+  });
+
   it("creates deterministic generated IDs within a fresh run", () => {
     const first = run(puzzleRepository(), "git revert b22");
     const restarted = run(puzzleRepository(), "git revert b22");

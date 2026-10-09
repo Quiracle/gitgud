@@ -72,7 +72,6 @@ export const chickenCoronationPuzzle: PuzzleDefinition = {
     currentBranch: "main",
     requiredProvenance: [
       { type: "revert", sourceCommit: "b22" },
-      { type: "cherry-pick", sourceCommit: "s14" },
     ],
   },
 };

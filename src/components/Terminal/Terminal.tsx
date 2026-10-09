@@ -35,7 +35,7 @@ export function Terminal({ entries, disabled, onCommand }: TerminalProps) {
         <span className="ml-2 text-xs text-slate-500">gitgud terminal — simulated</span>
       </div>
 
-      <div className="h-64 overflow-y-auto p-4 font-mono text-sm" aria-live="polite">
+      <div className="terminal-output overflow-y-auto p-4 font-mono text-sm" aria-live="polite">
         {entries.map((entry) => (
           <div key={entry.id} className="mb-3 last:mb-0">
             {entry.command && (
@@ -62,7 +62,10 @@ export function Terminal({ entries, disabled, onCommand }: TerminalProps) {
         ))}
       </div>
 
-      <form onSubmit={submit} className="border-t border-slate-800 p-3">
+      <form
+        onSubmit={submit}
+        className="sticky bottom-0 z-20 border-t border-slate-800 bg-slate-950/95 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur"
+      >
         <label htmlFor="git-command" className="sr-only">
           Git command
         </label>
@@ -75,8 +78,16 @@ export function Terminal({ entries, disabled, onCommand }: TerminalProps) {
             disabled={disabled}
             autoComplete="off"
             spellCheck={false}
+            onFocus={(event) => {
+              if (window.matchMedia("(max-width: 640px)").matches) {
+                window.setTimeout(
+                  () => event.currentTarget.scrollIntoView({ block: "center" }),
+                  150,
+                );
+              }
+            }}
             placeholder={disabled ? "Puzzle solved" : "Type a Git command…"}
-            className="min-w-0 flex-1 bg-transparent py-3 font-mono text-sm text-slate-100 outline-none placeholder:text-slate-600 disabled:cursor-not-allowed"
+            className="min-w-0 flex-1 bg-transparent py-3 font-mono text-base text-slate-100 outline-none placeholder:text-slate-600 disabled:cursor-not-allowed sm:text-sm"
           />
           <button
             type="submit"

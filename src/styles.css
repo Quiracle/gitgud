@@ -12,6 +12,11 @@
   text-rendering: optimizeLegibility;
 }
 
+html {
+  min-height: 100%;
+  scroll-padding-bottom: 45dvh;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -20,9 +25,23 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
+  min-height: 100dvh;
+  overscroll-behavior-y: contain;
+}
+
+#root {
+  min-height: 100dvh;
+}
+
+.terminal-output {
+  height: clamp(8rem, 28dvh, 16rem);
 }
 
 button,
 input {
   font: inherit;
+}
+
+button {
+  touch-action: manipulation;
 }
