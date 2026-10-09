@@ -1,4 +1,15 @@
 export { chickenCoronationPuzzle } from "./chickenCoronation";
+export {
+  CHICKEN_SEMANTIC_POLICY,
+  LEARN_BASICS_LESSON_IDS,
+  getLearnBasicsLesson,
+  isAvailableLesson,
+  learnBasicsCatalog,
+  type AvailableLesson,
+  type ComingSoonLesson,
+  type LearnBasicsLesson,
+  type LearnBasicsLessonId,
+} from "./learnBasics";
 export { validatePuzzleCandidate } from "./validateCandidate";
 export { parsePuzzleCandidate } from "./schema";
 export { validatePuzzleCompletion, matchesActionRequirement, type ExecutedAction } from "./completion";
