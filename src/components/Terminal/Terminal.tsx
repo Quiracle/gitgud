@@ -10,12 +10,18 @@ export interface TerminalEntry {
 interface TerminalProps {
   entries: TerminalEntry[];
   disabled?: boolean;
+  examples?: string[];
   onCommand: (command: string) => void;
 }
 
-const examples = ["git log --all", "git revert b22", "git cherry-pick s14"];
+const defaultExamples = ["git log --all", "git revert b22", "git cherry-pick s14"];
 
-export function Terminal({ entries, disabled, onCommand }: TerminalProps) {
+export function Terminal({
+  entries,
+  disabled,
+  examples = defaultExamples,
+  onCommand,
+}: TerminalProps) {
   const [command, setCommand] = useState("");
 
   function submit(event: FormEvent) {
