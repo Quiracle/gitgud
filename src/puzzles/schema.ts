@@ -1,5 +1,6 @@
 import { SUPPORTED_ACTION_TYPES, type Commit, type CommitProvenance, type PuzzleTarget, type Repository } from "../engine";
 import type {
+  ActionRequirement,
   JsonValue,
   PuzzleCandidate,
   PuzzleDifficulty,
@@ -38,7 +39,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
     [
       "schemaVersion", "id", "version", "kind", "slug", "title", "description",
       "difficulty", "objectives", "initialRepository", "target", "allowedCommands",
-      "hints", "solutionCommands",
+      "hints", "actionRequirements", "solutionCommands",
     ],
     "$",
     issues,
@@ -57,6 +58,9 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
   const target = parseTarget(root.target, "$.target", issues);
   const allowedCommands = enumArray(root.allowedCommands, commands, "$.allowedCommands", issues);
   const hints = stringArray(root.hints, "$.hints", issues, false);
+  const actionRequirements = root.actionRequirements === undefined
+    ? undefined
+    : parseActionRequirements(root.actionRequirements, "$.actionRequirements", issues);
   const solutionCommands = stringArray(root.solutionCommands, "$.solutionCommands", issues, false);
 
   if (schemaVersion !== undefined && schemaVersion !== 1) {
@@ -66,7 +70,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
   if (
     issues.length > 0 || schemaVersion !== 1 || id === undefined || version === undefined || kind === undefined || slug === undefined ||
     title === undefined || description === undefined || difficulty === undefined || repository === undefined || target === undefined || allowedCommands === undefined || hints === undefined ||
-    solutionCommands === undefined
+    solutionCommands === undefined || (root.actionRequirements !== undefined && actionRequirements === undefined)
   ) {
     return { issues };
   }
@@ -87,6 +91,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
       target,
       allowedCommands,
       hints,
+      ...(actionRequirements ? { actionRequirements } : {}),
       solutionCommands,
     },
   };
@@ -109,7 +114,7 @@ function parseRepository(value: unknown, path: string, issues: ValidationIssue[]
 function parseCommits(value: unknown, path: string, issues: ValidationIssue[]): Record<string, Commit> | undefined {
   const source = record(value, path, issues);
   if (!source) return undefined;
-  const commits: Record<string, Commit> = {};
+  const commits = Object.create(null) as Record<string, Commit>;
   for (const [id, rawCommit] of Object.entries(source)) {
     const commitPath = `${path}.${id}`;
     const raw = record(rawCommit, commitPath, issues);
@@ -158,6 +163,62 @@ function parseTarget(value: unknown, path: string, issues: ValidationIssue[]): P
   return { branch, snapshot, ...(branchHeads ? { branchHeads } : {}), ...(requiredProvenance ? { requiredProvenance } : {}) };
 }
 
+function parseActionRequirements(value: unknown, path: string, issues: ValidationIssue[]): ActionRequirement[] | undefined {
+  if (!Array.isArray(value)) {
+    issue(issues, "schema.invalid-type", "Expected an array of action requirements.", path);
+    return undefined;
+  }
+
+  const requirements: ActionRequirement[] = [];
+  value.forEach((raw, index) => {
+    const itemPath = `${path}[${index}]`;
+    const source = record(raw, itemPath, issues);
+    if (!source) return;
+    const type = enumValue(source.type, commands, `${itemPath}.type`, issues);
+    if (!type) return;
+
+    switch (type) {
+      case "log": {
+        rejectUnknownKeys(source, ["type", "all"], itemPath, issues);
+        const all = boolean(source.all, `${itemPath}.all`, issues);
+        if (all !== undefined) requirements.push({ type, all });
+        return;
+      }
+      case "merge": {
+        rejectUnknownKeys(source, ["type", "ffOnly"], itemPath, issues);
+        const ffOnly = boolean(source.ffOnly, `${itemPath}.ffOnly`, issues);
+        if (ffOnly !== undefined) requirements.push({ type, ffOnly });
+        return;
+      }
+      case "switch": {
+        rejectUnknownKeys(source, ["type", "branch"], itemPath, issues);
+        const branch = optionalString(source.branch, `${itemPath}.branch`, issues);
+        if (branch !== undefined || source.branch === undefined) {
+          requirements.push({ type, ...(branch === undefined ? {} : { branch }) });
+        }
+        return;
+      }
+      case "cherry-pick": {
+        rejectUnknownKeys(source, ["type", "commit"], itemPath, issues);
+        const commit = optionalString(source.commit, `${itemPath}.commit`, issues);
+        if (commit !== undefined || source.commit === undefined) {
+          requirements.push({ type, ...(commit === undefined ? {} : { commit }) });
+        }
+        return;
+      }
+      case "revert": {
+        rejectUnknownKeys(source, ["type", "commit"], itemPath, issues);
+        const commit = optionalString(source.commit, `${itemPath}.commit`, issues);
+        if (commit !== undefined || source.commit === undefined) {
+          requirements.push({ type, ...(commit === undefined ? {} : { commit }) });
+        }
+        return;
+      }
+    }
+  });
+  return requirements;
+}
+
 function parseRequiredProvenance(value: unknown, path: string, issues: ValidationIssue[]) {
   if (!Array.isArray(value)) {
     issue(issues, "schema.invalid-type", "Expected an array.", path);
@@ -196,7 +257,7 @@ function record(value: unknown, path: string, issues: ValidationIssue[]): Unknow
 function stringRecord(value: unknown, path: string, issues: ValidationIssue[]): Record<string, string> | undefined {
   const source = record(value, path, issues);
   if (!source) return undefined;
-  const result: Record<string, string> = {};
+  const result = Object.create(null) as Record<string, string>;
   for (const [key, item] of Object.entries(source)) {
     const parsed = string(item, `${path}.${key}`, issues);
     if (parsed !== undefined) result[key] = parsed;
@@ -207,7 +268,7 @@ function stringRecord(value: unknown, path: string, issues: ValidationIssue[]): 
 function jsonRecord(value: unknown, path: string, issues: ValidationIssue[]): Record<string, JsonValue> | undefined {
   const source = record(value, path, issues);
   if (!source) return undefined;
-  const result: Record<string, JsonValue> = {};
+  const result = Object.create(null) as Record<string, JsonValue>;
   for (const [key, item] of Object.entries(source)) {
     const parsed = jsonValue(item, `${path}.${key}`, issues);
     if (parsed !== undefined) result[key] = parsed;
@@ -245,7 +306,7 @@ function jsonValue(
     issue(issues, "semantic.non-json-value", "Semantic values must be plain JSON objects.", path);
     return undefined;
   }
-  const result: Record<string, JsonValue> = {};
+  const result = Object.create(null) as Record<string, JsonValue>;
   Object.entries(value).forEach(([key, item]) => {
     const parsed = jsonValue(item, `${path}.${key}`, issues, nextAncestors, remainingDepth - 1);
     if (parsed !== undefined) result[key] = parsed;
@@ -256,6 +317,18 @@ function jsonValue(
 function string(value: unknown, path: string, issues: ValidationIssue[]): string | undefined {
   if (typeof value !== "string") {
     issue(issues, "schema.invalid-type", "Expected a string.", path);
+    return undefined;
+  }
+  return value;
+}
+
+function optionalString(value: unknown, path: string, issues: ValidationIssue[]): string | undefined {
+  return value === undefined ? undefined : string(value, path, issues);
+}
+
+function boolean(value: unknown, path: string, issues: ValidationIssue[]): boolean | undefined {
+  if (typeof value !== "boolean") {
+    issue(issues, "schema.invalid-type", "Expected a boolean.", path);
     return undefined;
   }
   return value;

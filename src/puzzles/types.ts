@@ -13,6 +13,18 @@ export type PuzzleDifficulty = "easy" | "medium" | "hard";
 export type SupportedCommand = GitAction["type"];
 
 /**
+ * A public, unordered completion condition. Fields constrain a command variant only
+ * when they are present; `log.all` and `merge.ffOnly` are required to distinguish
+ * their meaningful simulator variants.
+ */
+export type ActionRequirement =
+  | { type: "log"; all: boolean }
+  | { type: "merge"; ffOnly: boolean }
+  | { type: "switch"; branch?: string }
+  | { type: "cherry-pick"; commit?: string }
+  | { type: "revert"; commit?: string };
+
+/**
  * Safe to send to a player. It intentionally has no solution transcript.
  * `objectives` remains optional while the provisional UI is still present.
  */
@@ -30,6 +42,7 @@ export interface PublicPuzzleDefinition {
   target: PuzzleTarget;
   allowedCommands: SupportedCommand[];
   hints: string[];
+  actionRequirements?: ActionRequirement[];
 }
 
 /** Private data retained by a publisher for an explicit future solution reveal. */

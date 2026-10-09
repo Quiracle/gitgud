@@ -11,10 +11,10 @@ export function mergeBranch(
   branch: string,
   ffOnly: boolean,
 ): MutationResult {
-  const targetHead = source.branches[branch];
-  if (!targetHead) {
+  if (!Object.hasOwn(source.branches, branch)) {
     throw new GitSimulationError(`Unknown branch: ${branch}`);
   }
+  const targetHead = source.branches[branch];
 
   if (branch === source.currentBranch) {
     return { repository: source, output: ["Already up to date."], mutated: false };

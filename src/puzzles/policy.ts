@@ -15,7 +15,12 @@ export interface PuzzleLimits {
   maxCommits: number;
   maxBranches: number;
   maxChangesPerCommit: number;
+  maxParentsPerCommit: number;
   maxTotalChanges: number;
+  maxProvenanceSourcesPerCommit: number;
+  maxRequiredProvenance: number;
+  maxRequiredActions: number;
+  maxTargetBranchHeads: number;
   maxHints: number;
   maxObjectives: number;
   maxSolutionCommands: number;
@@ -36,7 +41,12 @@ export const DEFAULT_PUZZLE_LIMITS: PuzzleLimits = {
   maxCommits: 25,
   maxBranches: 8,
   maxChangesPerCommit: 12,
+  maxParentsPerCommit: 2,
   maxTotalChanges: 80,
+  maxProvenanceSourcesPerCommit: 4,
+  maxRequiredProvenance: 8,
+  maxRequiredActions: 6,
+  maxTargetBranchHeads: 8,
   maxHints: 6,
   maxObjectives: 10,
   maxSolutionCommands: 20,

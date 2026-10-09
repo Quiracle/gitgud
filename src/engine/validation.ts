@@ -8,9 +8,11 @@ export function validateRepository(
   target: PuzzleTarget,
 ): ValidationResult {
   const unmet: string[] = [];
-  const targetHead = repository.branches[target.branch];
+  const targetHead = Object.hasOwn(repository.branches, target.branch)
+    ? repository.branches[target.branch]
+    : undefined;
 
-  if (!targetHead) {
+  if (targetHead === undefined) {
     unmet.push(`The required branch '${target.branch}' does not exist.`);
   } else {
     const actual = getSnapshot(repository, targetHead);
@@ -26,7 +28,7 @@ export function validateRepository(
   }
 
   for (const [branch, expectedHead] of Object.entries(target.branchHeads ?? {})) {
-    if (repository.branches[branch] !== expectedHead) {
+    if (!Object.hasOwn(repository.branches, branch) || repository.branches[branch] !== expectedHead) {
       unmet.push(`Branch '${branch}' does not point to the required commit.`);
     }
   }

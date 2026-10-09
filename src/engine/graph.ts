@@ -2,11 +2,10 @@ import { GitSimulationError } from "./errors";
 import type { Commit, Repository } from "./types";
 
 export function getCommit(repository: Repository, commitId: string): Commit {
-  const commit = repository.commits[commitId];
-  if (!commit) {
+  if (!Object.hasOwn(repository.commits, commitId)) {
     throw new GitSimulationError(`Unknown commit: ${commitId}`);
   }
-  return commit;
+  return repository.commits[commitId];
 }
 
 export function getAncestorDistances(

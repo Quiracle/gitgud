@@ -2,8 +2,8 @@ import {
   cloneRepository,
   executeCommand,
   parseGitCommand,
-  validateRepository,
   type Commit,
+  type GitAction,
   type Repository,
   type SemanticChange,
 } from "../engine";
@@ -20,6 +20,7 @@ import {
   type SemanticPolicy,
 } from "./policy";
 import { parsePuzzleCandidate } from "./schema";
+import { validatePuzzleCompletion } from "./completion";
 import type {
   JsonValue,
   PuzzleCandidate,
@@ -49,13 +50,19 @@ export function validatePuzzleCandidate(
   validateSemanticState(candidate, config.semantic, limits, issues);
   validateTarget(candidate, config.semantic, limits, issues);
   validateAllowedCommands(candidate, issues);
+  validateActionRequirements(candidate, limits, issues);
   validateDifficulty(candidate, limits, config.difficultyPolicy ?? DEFAULT_DIFFICULTY_POLICY, issues);
 
   if (issues.length > 0) return { ok: false, issues };
 
   // Structural validation above makes the established engine safe to use as the sole source
   // of Git behavior and victory rules.
-  const initialValidation = validateRepository(candidate.initialRepository, candidate.target);
+  const initialValidation = validatePuzzleCompletion(
+    candidate.initialRepository,
+    candidate.target,
+    [],
+    candidate.actionRequirements,
+  );
   if (initialValidation.solved) {
     add(issues, "target.initially-solved", "The initial repository already satisfies the target.", "$.initialRepository");
   } else {
@@ -113,21 +120,22 @@ function validateRepositoryStructure(repository: Repository, limits: PuzzleLimit
     }
     if (commit.id !== id) add(issues, "repository.commit-id-mismatch", "The commit object's id must match its map key.", `${path}.id`);
     text(commit.message, limits.maxCommitMessageLength, `${path}.message`, issues);
+    if (commit.parents.length > limits.maxParentsPerCommit) add(issues, "limits.parents-per-commit", `A commit may contain at most ${limits.maxParentsPerCommit} parents.`, `${path}.parents`);
     if (commit.changes.length > limits.maxChangesPerCommit) add(issues, "limits.changes-per-commit", `A commit may contain at most ${limits.maxChangesPerCommit} changes.`, `${path}.changes`);
     changeCount += commit.changes.length;
     for (const [parentIndex, parent] of commit.parents.entries()) {
-      if (!repository.commits[parent]) add(issues, "repository.missing-parent", `Parent commit '${parent}' does not exist.`, `${path}.parents[${parentIndex}]`);
+      if (!Object.hasOwn(repository.commits, parent)) add(issues, "repository.missing-parent", `Parent commit '${parent}' does not exist.`, `${path}.parents[${parentIndex}]`);
     }
   }
   if (changeCount > limits.maxTotalChanges) add(issues, "limits.total-changes", `Repository contains more than ${limits.maxTotalChanges} semantic changes.`, "$.initialRepository.commits");
 
   for (const [branch, head] of branches) {
     if (!validBranchName(branch, limits)) add(issues, "repository.invalid-branch-name", "Branch names must start with a letter and use only letters, numbers, dots, underscores, hyphens, or slashes within the configured length limit.", `$.initialRepository.branches.${branch}`);
-    if (!repository.commits[head]) add(issues, "repository.missing-branch-head", `Branch '${branch}' points to unknown commit '${head}'.`, `$.initialRepository.branches.${branch}`);
+    if (!Object.hasOwn(repository.commits, head)) add(issues, "repository.missing-branch-head", `Branch '${branch}' points to unknown commit '${head}'.`, `$.initialRepository.branches.${branch}`);
   }
   if (!Object.hasOwn(repository.branches, repository.currentBranch)) add(issues, "repository.missing-current-branch", "currentBranch must name an existing branch.", "$.initialRepository.currentBranch");
-  if (!repository.commits[repository.head]) add(issues, "repository.missing-head", "head must reference an existing commit.", "$.initialRepository.head");
-  if (repository.branches[repository.currentBranch] !== repository.head) add(issues, "repository.head-mismatch", "head must equal the current branch head.", "$.initialRepository.head");
+  if (!Object.hasOwn(repository.commits, repository.head)) add(issues, "repository.missing-head", "head must reference an existing commit.", "$.initialRepository.head");
+  if (!Object.hasOwn(repository.branches, repository.currentBranch) || repository.branches[repository.currentBranch] !== repository.head) add(issues, "repository.head-mismatch", "head must equal the current branch head.", "$.initialRepository.head");
   if (!hasParentReferenceIssues(repository, issues) && hasCycle(repository)) add(issues, "repository.cyclic-graph", "The commit graph must be acyclic.", "$.initialRepository.commits");
 }
 
@@ -135,22 +143,24 @@ function validateSemanticState(candidate: PuzzleCandidate, policy: SemanticPolic
   validateSnapshot(candidate.initialRepository.initialState, policy, limits, "$.initialRepository.initialState", issues);
   for (const [id, commit] of Object.entries(candidate.initialRepository.commits)) {
     commit.changes.forEach((change, index) => validateChange(change, policy, limits, `$.initialRepository.commits.${id}.changes[${index}]`, issues));
-    validateProvenance(commit, candidate.initialRepository, `$.initialRepository.commits.${id}.provenance`, issues);
+    validateProvenance(commit, candidate.initialRepository, limits, `$.initialRepository.commits.${id}.provenance`, issues);
   }
 }
 
 function validateTarget(candidate: PuzzleCandidate, policy: SemanticPolicy, limits: PuzzleLimits, issues: ValidationIssue[]) {
   const { target, initialRepository: repository } = candidate;
   if (!validBranchName(target.branch, limits)) add(issues, "target.invalid-branch", "The required target branch name is invalid.", "$.target.branch");
-  if (!repository.branches[target.branch]) add(issues, "target.missing-branch", `The required target branch '${target.branch}' does not exist.`, "$.target.branch");
+  if (!Object.hasOwn(repository.branches, target.branch)) add(issues, "target.missing-branch", `The required target branch '${target.branch}' does not exist.`, "$.target.branch");
   validateSnapshot(target.snapshot, policy, limits, "$.target.snapshot", issues);
+  if (Object.keys(target.branchHeads ?? {}).length > limits.maxTargetBranchHeads) add(issues, "limits.target-branch-heads", `At most ${limits.maxTargetBranchHeads} target branch-head invariants are allowed.`, "$.target.branchHeads");
   for (const [branch, commit] of Object.entries(target.branchHeads ?? {})) {
     if (!validBranchName(branch, limits)) add(issues, "target.invalid-branch", "A target branch invariant has an invalid branch name.", `$.target.branchHeads.${branch}`);
-    if (!repository.branches[branch]) add(issues, "target.missing-invariant-branch", `Target invariant references unknown branch '${branch}'.`, `$.target.branchHeads.${branch}`);
-    if (!repository.commits[commit]) add(issues, "target.missing-invariant-commit", `Target invariant references unknown commit '${commit}'.`, `$.target.branchHeads.${branch}`);
+    if (!Object.hasOwn(repository.branches, branch)) add(issues, "target.missing-invariant-branch", `Target invariant references unknown branch '${branch}'.`, `$.target.branchHeads.${branch}`);
+    if (!Object.hasOwn(repository.commits, commit)) add(issues, "target.missing-invariant-commit", `Target invariant references unknown commit '${commit}'.`, `$.target.branchHeads.${branch}`);
   }
+  if ((target.requiredProvenance ?? []).length > limits.maxRequiredProvenance) add(issues, "limits.required-provenance", `At most ${limits.maxRequiredProvenance} history requirements are allowed.`, "$.target.requiredProvenance");
   (target.requiredProvenance ?? []).forEach((requirement, index) => {
-    if (!repository.commits[requirement.sourceCommit]) add(issues, "target.missing-provenance-source", `History requirement references unknown commit '${requirement.sourceCommit}'.`, `$.target.requiredProvenance[${index}].sourceCommit`);
+    if (!Object.hasOwn(repository.commits, requirement.sourceCommit)) add(issues, "target.missing-provenance-source", `History requirement references unknown commit '${requirement.sourceCommit}'.`, `$.target.requiredProvenance[${index}].sourceCommit`);
   });
 }
 
@@ -181,10 +191,11 @@ function validateValue(value: unknown, property: string, policy: SemanticPolicy,
   if (allowed && !allowed.some((candidate) => semanticEqual(candidate, value))) add(issues, "semantic.disallowed-value", `Value is not allowed for semantic property '${property}'.`, path);
 }
 
-function validateProvenance(commit: Commit, repository: Repository, path: string, issues: ValidationIssue[]) {
+function validateProvenance(commit: Commit, repository: Repository, limits: PuzzleLimits, path: string, issues: ValidationIssue[]) {
   if (!commit.provenance) return;
+  if ((commit.provenance.sourceCommits ?? []).length > limits.maxProvenanceSourcesPerCommit) add(issues, "limits.provenance-sources-per-commit", `A commit may list at most ${limits.maxProvenanceSourcesPerCommit} provenance sources.`, `${path}.sourceCommits`);
   for (const [index, source] of (commit.provenance.sourceCommits ?? []).entries()) {
-    if (!repository.commits[source]) add(issues, "repository.missing-provenance-source", `Provenance references unknown commit '${source}'.`, `${path}.sourceCommits[${index}]`);
+    if (!Object.hasOwn(repository.commits, source)) add(issues, "repository.missing-provenance-source", `Provenance references unknown commit '${source}'.`, `${path}.sourceCommits[${index}]`);
   }
 }
 
@@ -192,6 +203,12 @@ function validateAllowedCommands(candidate: PuzzleCandidate, issues: ValidationI
   const unique = new Set(candidate.allowedCommands);
   if (unique.size !== candidate.allowedCommands.length) add(issues, "commands.duplicate-allowed-command", "allowedCommands must not contain duplicates.", "$.allowedCommands");
   if (candidate.allowedCommands.length === 0) add(issues, "commands.empty-allowed-commands", "A puzzle must allow at least one supported command.", "$.allowedCommands");
+}
+
+function validateActionRequirements(candidate: PuzzleCandidate, limits: PuzzleLimits, issues: ValidationIssue[]) {
+  if ((candidate.actionRequirements ?? []).length > limits.maxRequiredActions) {
+    add(issues, "limits.required-actions", `At most ${limits.maxRequiredActions} action requirements are allowed.`, "$.actionRequirements");
+  }
 }
 
 function validateDifficulty(candidate: PuzzleCandidate, limits: PuzzleLimits, policy: Record<string, DifficultyConstraint>, issues: ValidationIssue[]) {
@@ -214,6 +231,7 @@ function validateDifficulty(candidate: PuzzleCandidate, limits: PuzzleLimits, po
 
 function replaySolution(candidate: PuzzleCandidate, issues: ValidationIssue[]) {
   let repository = cloneRepository(candidate.initialRepository);
+  const actions: GitAction[] = [];
   candidate.solutionCommands.forEach((command, index) => {
     const path = `$.solutionCommands[${index}]`;
     const parsed = parseGitCommand(command);
@@ -232,9 +250,15 @@ function replaySolution(candidate: PuzzleCandidate, issues: ValidationIssue[]) {
       return;
     }
     repository = result.repository;
+    actions.push(result.action);
   });
   if (issues.some((item) => item.path.startsWith("$.solutionCommands"))) return;
-  const validation = validateRepository(repository, candidate.target);
+  const validation = validatePuzzleCompletion(
+    repository,
+    candidate.target,
+    actions,
+    candidate.actionRequirements,
+  );
   if (!validation.solved) add(issues, "solution.target-not-met", validation.unmet.join(" "), "$.solutionCommands");
 }
 
@@ -248,6 +272,7 @@ function hasCycle(repository: Repository): boolean {
   const visit = (id: string): boolean => {
     if (visiting.has(id)) return true;
     if (visited.has(id)) return false;
+    if (!Object.hasOwn(repository.commits, id)) return false;
     visiting.add(id);
     const cyclic = repository.commits[id].parents.some(visit);
     visiting.delete(id);

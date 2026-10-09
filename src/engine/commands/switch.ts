@@ -7,10 +7,10 @@ export function switchBranch(
   source: Repository,
   branch: string,
 ): MutationResult {
-  const branchHead = source.branches[branch];
-  if (!branchHead) {
+  if (!Object.hasOwn(source.branches, branch)) {
     throw new GitSimulationError(`Unknown branch: ${branch}`);
   }
+  const branchHead = source.branches[branch];
 
   if (source.currentBranch === branch) {
     return {

@@ -17,7 +17,7 @@ export function appendGeneratedCommit(
   const repository = cloneRepository(source);
   let id = `g${repository.nextGeneratedId}`;
 
-  while (repository.commits[id]) {
+  while (Object.hasOwn(repository.commits, id)) {
     repository.nextGeneratedId += 1;
     id = `g${repository.nextGeneratedId}`;
   }
