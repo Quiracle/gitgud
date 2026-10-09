@@ -391,17 +391,17 @@ Restart behavior:
 - Clear terminal output and any interactive-rebase UI for the current run.
 - Keep the current puzzle, help text, and authenticated user.
 - Increment the attempt's `restartCount` by one.
-- Restart the run timer.
+- Keep the original attempt start time and continue the same timer.
 - Preserve saved completion history and personal bests.
 - Ask for confirmation only when the current run has meaningful progress.
 
-For scoring, a retry is an explicit restart. Invalid commands, failed conflict-producing commands, and opening a hint do not increment retries; hints are tracked separately.
+For scoring, a retry is an explicit restart. Invalid commands, failed conflict-producing commands, and opening a hint do not increment retries; hints are tracked separately. Restarting resets only the simulated repository and puzzle UI state. It must never reset or reduce elapsed time: after any number of retries, `elapsedMs` is still measured from the first start of that attempt, subject only to the documented hidden-page pause policy.
 
 Giving up marks the run as surrendered and pauses it. Show a result popup that lets the player restart or reveal the solution. Revealing the solution marks that puzzle/date as assisted. The player may still restart and complete it, but the completion earns zero points and is excluded from ranked leaderboard submission. Do not clear the assisted flag by refreshing or restarting.
 
 Record every submitted command in the run transcript, including failed and unsupported commands, its relative timestamp, and its user-facing result. This is the source for the command-history view and optional debugging; it is not a prescribed solution sequence.
 
-Persist an active attempt so refresh does not silently create a faster fresh attempt. The timer may pause when the page is hidden, but its behavior must be consistent and documented. Prefer active elapsed time for the hackathon.
+Persist an active attempt so refresh, navigation, or restart cannot silently create a faster fresh attempt. The timer may pause when the page is hidden, but its behavior must be consistent and documented. Prefer cumulative active elapsed time from the initial start for the hackathon.
 
 ```ts
 interface PuzzleAttempt {
@@ -904,6 +904,7 @@ At minimum, test:
 - Multiple command orders satisfying the same puzzle.
 - Invalid final states being rejected.
 - Restart restoring the exact initial repository and incrementing restart count.
+- Restart preserving the initial attempt start time and cumulative elapsed time, including after many retries.
 - Archive lookup by stable ID, version, and date.
 - Daily-candidate schema rejection for malformed, oversized, cyclic, unsupported, or unsafe responses.
 - Hidden solution replay proving an AI candidate is solvable with the normal engine.

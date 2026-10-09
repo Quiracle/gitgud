@@ -96,6 +96,7 @@ Add versioned localStorage support first, then a persistence interface suitable 
 
 - Active attempt recovery.
 - Explicit restart counting.
+- Cumulative timing from the first attempt start; retries reset puzzle state but never the timer.
 - Per-attempt command transcripts, including failed commands and output.
 - Give-up/surrender state, controlled solution reveal, and a persistent assisted flag.
 - Best result retention.
