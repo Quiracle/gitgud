@@ -49,6 +49,6 @@ Add focused automated tests for:
 - A valid alternative history satisfying the same final target.
 - Confirmation that public validated data omits the hidden solution.
 
-Preserve current engine behavior and tests. Update existing puzzle fixtures to the new schema only where necessary. Avoid UI/browser tests; the user will perform those. Run `pnpm test` and `pnpm build`, fix all failures, and commit the finished work with a focused conventional commit. In the final response report the branch, commit, key files, test count, build result, assumptions, and any deliberately deferred work.
+Preserve current engine behavior and tests. Update existing puzzle fixtures to the new schema only where necessary. Do not run UI, browser, visual, component-UI, or end-to-end UI checks; the human user always owns those checks. Run only the non-UI `pnpm test` suite and `pnpm build`, fix all failures, and commit the finished work with a focused conventional commit. In the final response report the branch, commit, key files, test count, build result, assumptions, and any deliberately deferred work.
 
 ---

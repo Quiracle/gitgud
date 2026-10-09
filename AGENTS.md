@@ -922,6 +922,10 @@ At minimum, test:
 
 Do not make network access a requirement for engine tests.
 
+### UI verification ownership
+
+The human user performs all UI verification. AI models and coding agents must not run browser-based, interactive, visual, screenshot, component-UI, or end-to-end UI checks for this project. They may run non-UI unit and integration tests, static analysis, and production builds. When a change affects the interface, report that UI verification remains for the user instead of claiming visual correctness.
+
 ---
 
 ## Definition of done for the hackathon MVP

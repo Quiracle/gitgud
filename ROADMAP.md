@@ -155,5 +155,5 @@ Final mobile design can evolve independently once the gameplay contracts stabili
 - Use final repository state, target branch state, and explicit history invariants—not fixed command sequences.
 - Add regression tests for every reported gameplay bug.
 - Run `pnpm test` and `pnpm build` before committing.
-- The user will perform UI testing unless they explicitly request otherwise.
+- The human user always performs UI checks. AI models and coding agents must not run browser, visual, component-UI, or end-to-end UI tests; they may run non-UI automated tests and production builds.
 
