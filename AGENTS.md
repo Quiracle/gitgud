@@ -60,44 +60,61 @@ The official AI-generated daily puzzle is a required hackathon feature. Topic-ba
 ## Main user flow
 
 ```text
-Splash
-  -> Log in or continue as guest
+Home (guest play is immediately available)
+  -> First visit: "New to Git?"
+       -> Yes: Learn Git Basics
+       -> No: stay on Home
+  -> Optional login
        -> Sign in with Google or GitHub
-       -> Validate OAuth callback and session
-  -> Home
-       -> Show today's difficulty, daily status, and streak count
-       -> If new to Git, offer a popup linking to Learn Basics
-       -> Daily challenge
-            -> Result
+       -> Validate OAuth callback/session and return to Home
+  -> Contextual daily action
+       -> Not played: Start daily game
+       -> Active: Continue daily game
+       -> Surrendered: Try again
+       -> Completed: See result and leaderboard
+  -> Daily challenge
+       -> View command history
+       -> View goals and hints
+       -> Exit to Home without losing the active attempt
+       -> Give up
+            -> Try again
+            -> Reveal solution/result (assisted, zero points)
+       -> Solve
+            -> Result popup
+                 -> Time, retries, points, and assisted status
+                 -> General progression for the last 30 days
                  -> Daily leaderboard
                       -> Global ranking
                       -> Friends ranking
                  -> Share result
-                 -> Return home
-       -> Challenge archive
-            -> Select previous date
-            -> Play or replay historical challenge
-       -> Guided learning
-            -> Learn Git Basics
-                 -> Lesson list
-                 -> Guided puzzle
-            -> AI-guided lessons (lower priority)
-                 -> Enter a topic or learning goal
-                 -> Generate and validate a practice lesson
-       -> Leaderboard
-            -> Global daily ranking
-            -> Friends daily ranking
-                 -> Invite friends
-       -> User account
-            -> Achievements
-            -> Settings
-            -> Log out
-            -> Delete account
+                 -> Return Home
+  -> Challenge archive
+       -> Select a previous date
+       -> Play or replay the historical challenge
+  -> Guided learning
+       -> Learn Git Basics
+            -> Lesson list
+            -> Guided puzzle
+            -> After the final lesson, offer the daily game
+       -> AI-guided lessons (lower priority)
+            -> Enter a topic or learning goal
+            -> Generate and validate a practice lesson
+  -> Leaderboard
+       -> Global daily ranking
+       -> Friends daily ranking
+            -> Invite friends
+  -> User account
+       -> Achievements
+       -> Settings
+       -> Log out
+       -> Delete account
 ```
 
-Google and GitHub OAuth are the account paths. Guest play must remain possible. Prompt guests to sign in when they try to sync progress, submit a leaderboard result, add friends, or use AI-guided lessons.
+Google and GitHub OAuth are accessible from Home. Login is not a prerequisite for playing: guest play must remain possible. Prompt guests to sign in when they try to sync progress, submit a leaderboard result, add friends, or use AI-guided lessons.
 
-The diagram's account-validation step is the OAuth callback/session validation state, not a custom email-verification flow.
+The account-validation step is the OAuth callback/session validation state, not a custom email-verification flow. The challenge archive and the randomly selected easy, medium, or hard daily difficulty remain requirements even if they are omitted from a simplified flow diagram.
+
+The Home call to action is derived from durable attempt state, not from temporary component state. Refreshing or returning from a puzzle must preserve whether today's challenge is unplayed, active, surrendered, or completed.
 
 ---
 
@@ -365,7 +382,7 @@ Guidelines:
 
 ## Puzzle sessions, restart, and timing
 
-Every playable puzzle must have a visible **Restart puzzle** action.
+Every playable puzzle must have visible **Restart puzzle** and **Give up** actions. The puzzle screen must also expose the current goals and a per-run command history without requiring terminal output to remain on screen forever.
 
 Restart behavior:
 
@@ -380,6 +397,10 @@ Restart behavior:
 
 For scoring, a retry is an explicit restart. Invalid commands, failed conflict-producing commands, and opening a hint do not increment retries; hints are tracked separately.
 
+Giving up marks the run as surrendered and pauses it. Show a result popup that lets the player restart or reveal the solution. Revealing the solution marks that puzzle/date as assisted. The player may still restart and complete it, but the completion earns zero points and is excluded from ranked leaderboard submission. Do not clear the assisted flag by refreshing or restarting.
+
+Record every submitted command in the run transcript, including failed and unsupported commands, its relative timestamp, and its user-facing result. This is the source for the command-history view and optional debugging; it is not a prescribed solution sequence.
+
 Persist an active attempt so refresh does not silently create a faster fresh attempt. The timer may pause when the page is hidden, but its behavior must be consistent and documented. Prefer active elapsed time for the hackathon.
 
 ```ts
@@ -388,13 +409,24 @@ interface PuzzleAttempt {
   puzzleId: string;
   puzzleVersion: number;
   userId?: string;
-  status: "active" | "completed" | "abandoned";
+  status: "active" | "surrendered" | "completed" | "abandoned";
   startedAt: string;
   completedAt?: string;
   elapsedMs?: number;
   restartCount: number;
   commandCount: number;
   hintsUsed: number;
+  assisted: boolean;
+  solutionRevealedAt?: string;
+  points?: number;
+  commands: AttemptCommand[];
+}
+
+interface AttemptCommand {
+  command: string;
+  elapsedMs: number;
+  ok: boolean;
+  output: string;
 }
 ```
 
@@ -412,6 +444,9 @@ Store and display:
 - Restarts/retries for the best result.
 - Command count and hints used when available.
 - Recent attempts, including replays, without overwriting prior completions.
+- Surrendered runs and whether a solution was revealed.
+- The command transcript for the active/recent attempt.
+- A compact completion/progression summary for the last 30 days.
 
 localStorage is the source for guests and an offline cache for signed-in users. Supabase is the durable cross-device source for signed-in users.
 
@@ -428,7 +463,9 @@ Version the localStorage schema and provide migrations or a safe fallback when i
 
 ## Leaderboard
 
-The primary leaderboard is per daily challenge, not one all-time table. Only authenticated, completed attempts may be submitted. Historical challenges retain their own leaderboards.
+The primary leaderboard is per daily challenge, not one all-time table. Only authenticated, completed, unassisted attempts may be submitted. Historical challenges retain their own leaderboards. A player who revealed the solution receives zero points and may finish for learning/progress, but that result is not ranked.
+
+Solve time and restart count are the canonical scoring inputs shown in the final flow. Keep the exact points formula in one versioned scoring-policy module so it can be tuned without rewriting stored attempts. Persist the raw inputs even when displaying derived points. Until a points formula is approved, use the deterministic ordering below and do not invent constants in UI components.
 
 Order entries by:
 

@@ -29,7 +29,7 @@ Requirements:
    - Allowed commands must be supported by the current simulator.
    - Add configurable starting constraints for easy, medium, and hard candidates.
    - Keep difficulty limits in a policy/configuration module, not scattered conditionals.
-6. Separate player-facing puzzle data from private validation metadata. A candidate may include hidden `solutionCommands`, but validated public puzzle data must not expose them by default.
+6. Separate player-facing puzzle data from private validation metadata. A candidate may include hidden `solutionCommands`, but validated public puzzle data must not expose them by default. Design the boundary so a later controlled give-up/result flow can reveal a solution deliberately without including it in the normal public puzzle payload.
 7. Prove solvability by replaying hidden solution commands through the existing `executeCommand` engine, starting from a fresh clone of the initial repository. Reject the candidate if parsing or execution fails, a semantic conflict occurs, the solution uses a disallowed command, or the final repository fails the existing target-branch/state/history validator.
 8. Reject a puzzle whose initial repository already satisfies the victory target.
 9. Reuse the existing engine and validator. Do not duplicate Git behavior or create a weaker AI-only validator.

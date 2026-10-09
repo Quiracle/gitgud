@@ -96,10 +96,15 @@ Add versioned localStorage support first, then a persistence interface suitable 
 
 - Active attempt recovery.
 - Explicit restart counting.
+- Per-attempt command transcripts, including failed commands and output.
+- Give-up/surrender state, controlled solution reveal, and a persistent assisted flag.
 - Best result retention.
 - Lesson completion.
+- A post-course call to action that offers the daily game.
 - Historical daily challenge archive.
 - Streak calculation from canonical UTC completion dates.
+- A compact 30-day progress summary for the result screen.
+- A Home daily-action selector for unplayed, active, surrendered, and completed states.
 - Guest-to-account merge rules.
 
 ### 6. Authentication and account management
@@ -117,6 +122,8 @@ Use separate branches when practical:
 - `codex/friends-and-invites`
 
 Implement daily best-score ordering, server-side submission boundaries, deterministic achievements, accepted friendships, invite links, and friends-only ranking filters.
+
+Keep solve time and retries as canonical raw score inputs. Put any derived points formula in a versioned policy module; solution-revealed attempts receive zero points and are excluded from ranked submissions.
 
 ### 8. Final mobile visual design
 
