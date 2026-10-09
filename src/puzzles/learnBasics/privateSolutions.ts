@@ -14,4 +14,11 @@ export const learnBasicsSolutions: Partial<
   "basics-05-three-way-merge": ["git log --all", "git merge feature"],
   "basics-06-cherry-pick": ["git cherry-pick c20"],
   "basics-07-revert": ["git revert b20"],
+  "basics-08-rebase": ["git rebase main"],
+  "basics-09-interactive-rebase": ["git rebase -i main\npick c31\nsquash c32"],
+  "basics-10-capstone": [
+    "git revert b20",
+    "git merge feature",
+    "git cherry-pick x21",
+  ],
 };

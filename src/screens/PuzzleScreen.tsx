@@ -4,12 +4,16 @@ import { GitGraph } from "../components/GitGraph/GitGraph";
 import { GitLog } from "../components/GitLog/GitLog";
 import { GoalPanel } from "../components/GoalPanel/GoalPanel";
 import { ChickenIllustration } from "../components/Illustration/ChickenIllustration";
+import { InteractiveRebaseDialog } from "../components/RebaseDialog/InteractiveRebaseDialog";
 import { Terminal, type TerminalEntry } from "../components/Terminal/Terminal";
 import {
   executeCommand,
+  formatInteractiveRebaseCommand,
   getSnapshot,
   parseGitCommand,
+  planInteractiveRebase,
   type GitAction,
+  type InteractiveRebaseTodoEntry,
   type Repository,
 } from "../engine";
 import {
@@ -43,6 +47,10 @@ export function PuzzleScreen({
   const [commandCount, setCommandCount] = useState(0);
   const [startedAt] = useState(() => Date.now());
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [pendingRebase, setPendingRebase] = useState<{
+    onto: string;
+    todo: InteractiveRebaseTodoEntry[];
+  } | null>(null);
 
   const validation = useMemo(
     () =>
@@ -67,6 +75,17 @@ export function PuzzleScreen({
   function runCommand(command: string) {
     const parsed = parseGitCommand(command);
     const commandAllowed = !parsed.ok || puzzle.allowedCommands.includes(parsed.action.type);
+
+    // An interactive rebase with commits to edit opens the todo dialog first; the
+    // edited todo list is then run as one command so the transcript can replay it.
+    if (commandAllowed && parsed.ok && parsed.action.type === "interactive-rebase" && !parsed.action.todo) {
+      const plan = planInteractiveRebase(repository, parsed.action.onto);
+      if (plan.ok && plan.todo.length > 0) {
+        setPendingRebase({ onto: plan.onto, todo: plan.todo });
+        return;
+      }
+    }
+
     const result = commandAllowed
       ? executeCommand(repository, command)
       : {
@@ -109,6 +128,20 @@ export function PuzzleScreen({
     setRepository(result.repository);
   }
 
+  function cancelRebase() {
+    if (!pendingRebase) return;
+    setPendingRebase(null);
+    setCommandCount((count) => count + 1);
+    setEntries([
+      ...entries,
+      {
+        id: entries.length,
+        command: `git rebase -i ${pendingRebase.onto}`,
+        lines: ["Interactive rebase cancelled. Nothing changed."],
+      },
+    ]);
+  }
+
   function restartPuzzle() {
     if (
       commandCount > 0 &&
@@ -119,6 +152,7 @@ export function PuzzleScreen({
       return;
     }
 
+    setPendingRebase(null);
     setRepository(structuredClone(puzzle.initialRepository));
     setEntries([welcomeEntry(puzzle)]);
     setActions([]);
@@ -213,6 +247,19 @@ export function PuzzleScreen({
           </div>
         </div>
       </main>
+
+      {pendingRebase && (
+        <InteractiveRebaseDialog
+          onto={pendingRebase.onto}
+          branch={repository.currentBranch}
+          todo={pendingRebase.todo}
+          onCancel={cancelRebase}
+          onConfirm={(todo) => {
+            setPendingRebase(null);
+            runCommand(formatInteractiveRebaseCommand(pendingRebase.onto, todo));
+          }}
+        />
+      )}
     </div>
   );
 }

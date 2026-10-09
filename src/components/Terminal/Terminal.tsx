@@ -45,7 +45,7 @@ export function Terminal({
         {entries.map((entry) => (
           <div key={entry.id} className="mb-3 last:mb-0">
             {entry.command && (
-              <div className="text-slate-100">
+              <div className="whitespace-pre-wrap text-slate-100">
                 <span className="mr-2 text-emerald-400">$</span>
                 {entry.command}
               </div>

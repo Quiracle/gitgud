@@ -1,8 +1,11 @@
 import {
+  capstonePuzzle,
   cherryPickPuzzle,
   fastForwardMergePuzzle,
   ffOnlyMergePuzzle,
   inspectHistoryPuzzle,
+  interactiveRebasePuzzle,
+  rebasePuzzle,
   revertPuzzle,
   switchBranchesPuzzle,
   threeWayMergePuzzle,
@@ -12,7 +15,7 @@ import type {
   LearnBasicsLessonId,
 } from "./types";
 
-export const learnBasicsCatalog = [
+export const learnBasicsCatalog: readonly LearnBasicsLesson[] = [
   {
     id: "basics-01-inspect-history",
     order: 1,
@@ -79,31 +82,31 @@ export const learnBasicsCatalog = [
   {
     id: "basics-08-rebase",
     order: 8,
-    title: "Replay work onto a new base",
+    title: rebasePuzzle.title,
     summary: "Rebuild a branch on top of another branch.",
     featuredCommands: ["git rebase <branch>"],
-    status: "coming-soon",
-    blockedBy: "rebase-engine",
+    status: "available",
+    puzzle: rebasePuzzle,
   },
   {
     id: "basics-09-interactive-rebase",
     order: 9,
-    title: "Combine related commits",
+    title: interactiveRebasePuzzle.title,
     summary: "Use pick and squash to clean up a short history.",
     featuredCommands: ["git rebase -i <branch>"],
-    status: "coming-soon",
-    blockedBy: "rebase-engine",
+    status: "available",
+    puzzle: interactiveRebasePuzzle,
   },
   {
     id: "basics-10-capstone",
     order: 10,
-    title: "Git Basics capstone",
+    title: capstonePuzzle.title,
     summary: "Solve a multi-command puzzle using the complete course toolkit.",
     featuredCommands: ["Multiple commands"],
-    status: "coming-soon",
-    blockedBy: "rebase-engine",
+    status: "available",
+    puzzle: capstonePuzzle,
   },
-] as const satisfies readonly LearnBasicsLesson[];
+];
 
 export function getLearnBasicsLesson(
   id: LearnBasicsLessonId,

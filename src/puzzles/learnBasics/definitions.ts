@@ -291,6 +291,166 @@ export const revertPuzzle: PublicPuzzleDefinition = {
   hints: ["Use git revert followed by the commit ID to create a safe undo commit."],
 };
 
+export const rebasePuzzle: PublicPuzzleDefinition = {
+  schemaVersion: PUZZLE_SCHEMA_VERSION,
+  id: "basics-08-rebase",
+  version: 1,
+  kind: "lesson",
+  slug: "rebase",
+  title: "Replay work onto a new base",
+  description:
+    "Main gained a blue hat after feature started. Replay the feature's scarf commit on top of main so feature has both, without a merge commit.",
+  difficulty: "easy",
+  objectives: [
+    "Rebase feature onto main.",
+    "Keep main unchanged.",
+    "Finish on feature with the hat and the scarf.",
+  ],
+  initialRepository: repository(
+    {
+      a10: originalCommit("a10", [], "Start the chicken portrait"),
+      m20: originalCommit("m20", ["a10"], "Add a blue hat", [
+        { type: "set", property: "hat", from: "none", to: "blue" },
+      ]),
+      f20: originalCommit("f20", ["a10"], "Add a turquoise scarf", [
+        { type: "set", property: "scarf", from: "none", to: "turquoise" },
+      ]),
+    },
+    { main: "m20", feature: "f20" },
+    "feature",
+  ),
+  target: {
+    branch: "feature",
+    snapshot: {
+      sunglasses: false,
+      hat: "blue",
+      scarf: "turquoise",
+      crest: "none",
+    },
+    branchHeads: { main: "m20" },
+    requiredProvenance: [{ type: "rebase", sourceCommit: "f20" }],
+  },
+  allowedCommands: ["log", "switch", "rebase"],
+  actionRequirements: [{ type: "rebase", onto: "main" }],
+  hints: [
+    "You are already on feature. Rebase takes the branch to build on.",
+    "Run git rebase main.",
+  ],
+};
+
+export const interactiveRebasePuzzle: PublicPuzzleDefinition = {
+  schemaVersion: PUZZLE_SCHEMA_VERSION,
+  id: "basics-09-interactive-rebase",
+  version: 1,
+  kind: "lesson",
+  slug: "interactive-rebase",
+  title: "Combine related commits",
+  description:
+    "Feature sketched a crest outline and then colored it red. Squash both steps into one tidy commit.",
+  difficulty: "easy",
+  objectives: [
+    "Start an interactive rebase onto main.",
+    "Pick c31 and squash c32 into it.",
+    "Finish on feature with a red crest.",
+  ],
+  initialRepository: repository(
+    {
+      a10: originalCommit("a10", [], "Start the chicken portrait"),
+      c31: originalCommit("c31", ["a10"], "Sketch a crest outline", [
+        { type: "set", property: "crest", from: "none", to: "outline" },
+      ]),
+      c32: originalCommit("c32", ["c31"], "Color the crest red", [
+        { type: "set", property: "crest", from: "outline", to: "red" },
+      ]),
+    },
+    { main: "a10", feature: "c32" },
+    "feature",
+  ),
+  target: {
+    branch: "feature",
+    snapshot: {
+      sunglasses: false,
+      hat: "none",
+      scarf: "none",
+      crest: "red",
+    },
+    branchHeads: { main: "a10" },
+    requiredProvenance: [
+      { type: "squash", sourceCommit: "c31" },
+      { type: "squash", sourceCommit: "c32" },
+    ],
+  },
+  allowedCommands: ["log", "switch", "interactive-rebase"],
+  actionRequirements: [{ type: "interactive-rebase", onto: "main" }],
+  hints: [
+    "Run git rebase -i main to open the todo list.",
+    "Keep the first commit as pick and change the second one to squash.",
+  ],
+};
+
+export const capstonePuzzle: PublicPuzzleDefinition = {
+  schemaVersion: PUZZLE_SCHEMA_VERSION,
+  id: "basics-10-capstone",
+  version: 1,
+  kind: "lesson",
+  slug: "capstone",
+  title: "Git Basics capstone",
+  description:
+    "Main has unwanted sunglasses. Undo them safely, bring in the blue hat from feature, and take only the scarf from experiment, not its crest sketch.",
+  difficulty: "medium",
+  objectives: [
+    "Undo b20 without rewriting main.",
+    "Bring the blue hat from feature into main.",
+    "Copy only the scarf commit from experiment.",
+    "Finish on main.",
+  ],
+  initialRepository: repository(
+    {
+      a10: originalCommit("a10", [], "Start the chicken portrait"),
+      b20: originalCommit("b20", ["a10"], "Add sunglasses nobody asked for", [
+        { type: "set", property: "sunglasses", from: false, to: true },
+      ]),
+      f20: originalCommit("f20", ["a10"], "Add a blue hat", [
+        { type: "set", property: "hat", from: "none", to: "blue" },
+      ]),
+      x20: originalCommit("x20", ["a10"], "Sketch a crest outline", [
+        { type: "set", property: "crest", from: "none", to: "outline" },
+      ]),
+      x21: originalCommit("x21", ["x20"], "Add a turquoise scarf", [
+        { type: "set", property: "scarf", from: "none", to: "turquoise" },
+      ]),
+    },
+    { main: "b20", feature: "f20", experiment: "x21" },
+  ),
+  target: {
+    branch: "main",
+    snapshot: {
+      sunglasses: false,
+      hat: "blue",
+      scarf: "turquoise",
+      crest: "none",
+    },
+    requiredProvenance: [
+      { type: "revert", sourceCommit: "b20" },
+      { type: "cherry-pick", sourceCommit: "x21" },
+    ],
+  },
+  allowedCommands: [
+    "log",
+    "switch",
+    "merge",
+    "cherry-pick",
+    "revert",
+    "rebase",
+    "interactive-rebase",
+  ],
+  hints: [
+    "Use git log --all to see every branch.",
+    "Revert removes the sunglasses with a new commit.",
+    "Any order works: merge or rebase the hat in, and cherry-pick only x21.",
+  ],
+};
+
 export const availableLessonPuzzles = [
   inspectHistoryPuzzle,
   switchBranchesPuzzle,
@@ -299,4 +459,7 @@ export const availableLessonPuzzles = [
   threeWayMergePuzzle,
   cherryPickPuzzle,
   revertPuzzle,
+  rebasePuzzle,
+  interactiveRebasePuzzle,
+  capstonePuzzle,
 ] as const satisfies readonly PublicPuzzleDefinition[];
