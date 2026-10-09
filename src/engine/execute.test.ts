@@ -51,6 +51,18 @@ function divergentRepository(): Repository {
 }
 
 describe("executeCommand", () => {
+  it("shows only current history by default and all branch history with --all", () => {
+    const repository = puzzleRepository();
+    const currentLog = executeCommand(repository, "git log");
+    const allLog = executeCommand(repository, "git log --all");
+
+    expect(currentLog.output.join("\n")).toContain("commit b22 (main)");
+    expect(currentLog.output.join("\n")).not.toContain("commit s14");
+    expect(allLog.output.join("\n")).toContain("commit b22 (main)");
+    expect(allLog.output.join("\n")).toContain("commit s14 (style)");
+    expect(allLog.repository).toBe(repository);
+  });
+
   it("accepts both valid command orders for a final-state puzzle", () => {
     let first = puzzleRepository();
     first = run(first, "git revert b22");

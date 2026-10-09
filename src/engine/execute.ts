@@ -40,7 +40,7 @@ function executeAction(repository: Repository, action: GitAction) {
     case "switch":
       return switchBranch(repository, action.branch);
     case "log":
-      return showLog(repository);
+      return showLog(repository, action.all);
     case "merge":
       return mergeBranch(repository, action.branch, action.ffOnly);
     case "cherry-pick":

@@ -5,7 +5,11 @@ describe("parseGitCommand", () => {
   it("parses every MVP command into a typed action", () => {
     expect(parseGitCommand("git log")).toEqual({
       ok: true,
-      action: { type: "log" },
+      action: { type: "log", all: false },
+    });
+    expect(parseGitCommand("git log --all")).toEqual({
+      ok: true,
+      action: { type: "log", all: true },
     });
     expect(parseGitCommand("git switch style")).toEqual({
       ok: true,
@@ -41,6 +45,10 @@ describe("parseGitCommand", () => {
     });
     expect(parseGitCommand("git merge --squash style")).toMatchObject({
       ok: false,
+    });
+    expect(parseGitCommand("git log --graph")).toEqual({
+      ok: false,
+      error: "This simulator supports `git log` and `git log --all`.",
     });
   });
 });

@@ -39,7 +39,7 @@ export interface Repository {
 
 export type GitAction =
   | { type: "switch"; branch: string }
-  | { type: "log" }
+  | { type: "log"; all: boolean }
   | { type: "merge"; branch: string; ffOnly: boolean }
   | { type: "cherry-pick"; commit: string }
   | { type: "revert"; commit: string };

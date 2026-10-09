@@ -4,6 +4,7 @@ export { getSnapshot, applyChanges, diffSnapshots } from "./snapshot";
 export {
   findMergeBase,
   getReachableCommits,
+  getReachableCommitsFrom,
   isAncestor,
 } from "./graph";
 export { validateRepository } from "./validation";

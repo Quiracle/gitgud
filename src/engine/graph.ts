@@ -69,9 +69,16 @@ export function getReachableCommits(
   repository: Repository,
   startId = repository.head,
 ): Commit[] {
+  return getReachableCommitsFrom(repository, [startId]);
+}
+
+export function getReachableCommitsFrom(
+  repository: Repository,
+  startIds: string[],
+): Commit[] {
   const commits: Commit[] = [];
   const visited = new Set<string>();
-  const queue = [startId];
+  const queue = [...startIds];
 
   while (queue.length > 0) {
     const id = queue.shift();

@@ -10,6 +10,7 @@ The first implementation includes a purpose-built TypeScript Git engine and a ba
 git switch <branch>
 git checkout <branch>
 git log
+git log --all
 git merge <branch>
 git merge --ff-only <branch>
 git cherry-pick <commit>

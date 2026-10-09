@@ -31,10 +31,16 @@ export function parseGitCommand(input: string): ParseResult {
 
   switch (command) {
     case "log":
-      if (tokens.length !== 2) {
-        return { ok: false, error: "This simulator supports `git log` without options." };
+      if (tokens.length === 2) {
+        return { ok: true, action: { type: "log", all: false } };
       }
-      return { ok: true, action: { type: "log" } };
+      if (tokens.length === 3 && tokens[2] === "--all") {
+        return { ok: true, action: { type: "log", all: true } };
+      }
+      return {
+        ok: false,
+        error: "This simulator supports `git log` and `git log --all`.",
+      };
 
     case "switch":
     case "checkout":

@@ -13,7 +13,7 @@ interface TerminalProps {
   onCommand: (command: string) => void;
 }
 
-const examples = ["git log", "git revert b22", "git cherry-pick s14"];
+const examples = ["git log --all", "git revert b22", "git cherry-pick s14"];
 
 export function Terminal({ entries, disabled, onCommand }: TerminalProps) {
   const [command, setCommand] = useState("");
