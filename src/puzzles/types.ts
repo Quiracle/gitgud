@@ -22,7 +22,9 @@ export type ActionRequirement =
   | { type: "merge"; ffOnly: boolean }
   | { type: "switch"; branch?: string }
   | { type: "cherry-pick"; commit?: string }
-  | { type: "revert"; commit?: string };
+  | { type: "revert"; commit?: string }
+  | { type: "rebase"; onto?: string }
+  | { type: "interactive-rebase"; onto?: string };
 
 /**
  * Safe to send to a player. It intentionally has no solution transcript.

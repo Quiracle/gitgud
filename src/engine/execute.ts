@@ -1,6 +1,7 @@
 import { cherryPick } from "./commands/cherryPick";
 import { showLog } from "./commands/log";
 import { mergeBranch } from "./commands/merge";
+import { interactiveRebase, rebaseBranch } from "./commands/rebase";
 import { revertCommit } from "./commands/revert";
 import { switchBranch } from "./commands/switch";
 import { GitSimulationError } from "./errors";
@@ -47,5 +48,9 @@ function executeAction(repository: Repository, action: GitAction) {
       return cherryPick(repository, action.commit);
     case "revert":
       return revertCommit(repository, action.commit);
+    case "rebase":
+      return rebaseBranch(repository, action.onto);
+    case "interactive-rebase":
+      return interactiveRebase(repository, action.onto, action.todo);
   }
 }
