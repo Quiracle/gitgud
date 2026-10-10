@@ -166,6 +166,20 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
   );
 }
 
+type StepTone = "you" | "winner" | "other";
+
+/** Your step is green; the winner's step is white unless the winner is you. */
+function stepTone(entry: LeaderboardEntry | undefined, first: boolean): StepTone {
+  if (entry?.isCurrentUser) return "you";
+  return first && entry ? "winner" : "other";
+}
+
+const STEP_STYLES: Record<StepTone, { block: string; number: string }> = {
+  you: { block: "border-lime-400 bg-lime-400", number: "text-green-950" },
+  winner: { block: "border-grey-50 bg-grey-50", number: "text-green-950" },
+  other: { block: "border-grey-700 bg-green-900", number: "text-grey-300" },
+};
+
 const PODIUM_ORDER = [2, 1, 3];
 const PODIUM_HEIGHT: Record<number, number> = { 1: 96, 2: 72, 3: 56 };
 
@@ -200,15 +214,13 @@ function Podium({ entries }: { entries: LeaderboardEntry[] }) {
               <div className="h-[60px]" />
             )}
             <motion.div
-              className={`flex w-full items-start justify-center rounded border pt-2 ${
-                first ? "border-lime-400 bg-lime-400/15" : "border-grey-700 bg-green-900"
-              }`}
+              className={`flex w-full items-start justify-center rounded border pt-2 ${STEP_STYLES[stepTone(entry, first)].block}`}
               style={{ height: PODIUM_HEIGHT[rank], originY: 1 }}
               initial={{ scaleY: 0 }}
               animate={{ scaleY: 1 }}
               transition={{ ...spring.soft, delay: index * 0.1 }}
             >
-              <span className={`text-2xl leading-8 ${first ? "text-lime-400" : "text-grey-300"}`}>{rank}</span>
+              <span className={`text-2xl leading-8 ${STEP_STYLES[stepTone(entry, first)].number}`}>{rank}</span>
             </motion.div>
           </div>
         );
