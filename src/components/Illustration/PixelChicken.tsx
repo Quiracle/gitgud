@@ -193,7 +193,8 @@ export function PixelChicken({ look, size = 48, className = "", label }: PixelCh
           )}
           {PART_ORDER.map((part) => {
             const tint = look.parts[part];
-            if (!tint) return null;
+            // A hat sits where the crest is, so the crest would poke out under the brim.
+            if (!tint || (part === "crest" && look.parts.hat)) return null;
             const t = tone(part, tint);
             return (
               <AnimatedLayer
