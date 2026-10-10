@@ -1,5 +1,5 @@
-import { motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
+import { motion, useInView } from "motion/react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Button } from "../components/Button/Button";
 import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { CommitTree } from "../components/GitGraph/CommitTree";
@@ -49,6 +49,10 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
       : null,
   );
   const courses = useDragScroll<HTMLUListElement>();
+  // Drive the reveal through `animate` rather than `whileInView`: cards that mount after the list
+  // came into view (the daily loads async) only inherit `animate`, so they'd otherwise stay hidden.
+  const recommended = useRef<HTMLUListElement>(null);
+  const recommendedInView = useInView(recommended, { once: true, margin: "-40px" });
   const [tutorial, setTutorial] = useState(false);
   const closeTutorial = useCallback(() => {
     markWelcomeSeen();
@@ -119,11 +123,11 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           <div className="flex flex-col gap-4">
             <SectionTitle>{t("home.recommended")}</SectionTitle>
             <motion.ul
+              ref={recommended}
               className="flex flex-col gap-2"
               variants={stagger(0.08)}
               initial="hidden"
-              whileInView="show"
-              viewport={{ once: true, margin: "-40px" }}
+              animate={recommendedInView ? "show" : "hidden"}
             >
               {learnBasicsCatalog
                 .filter((lesson) => RECOMMENDED_LESSONS.includes(lesson.id) && lesson.status === "available")
@@ -140,7 +144,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                     />
                   ) : null,
                 )}
-              {daily.status === "ready" && (
+              {daily.status === "ready" && !solvedToday && (
                 <RecommendedCard
                   href="/play"
                   icon="extension"
