@@ -15,7 +15,7 @@ export function DifficultyBadge({ difficulty, className = "" }: { difficulty: Pu
         {BAR_HEIGHTS.map((height, index) => (
           <span
             key={height}
-            className="relative w-1 overflow-hidden rounded-[1px] border-[0.8px] border-green-950"
+            className="relative w-1 overflow-hidden rounded border-[0.8px] border-green-950"
             style={{ height }}
           >
             {index < level && (

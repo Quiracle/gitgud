@@ -19,6 +19,10 @@ export default {
   },
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
+    // Design rule: every corner radius is 2px, whatever utility a component uses.
+    borderRadius: Object.fromEntries(
+      ["DEFAULT", "sm", "md", "lg", "xl", "2xl", "3xl", "full"].map((key) => [key, "2px"]),
+    ),
     extend: {
       colors: {
         grey: scale("grey"),
@@ -45,9 +49,6 @@ export default {
         "4xl": type("4xl", "4xl"),
         "5xl": type("5xl", "5xl"),
         "6xl": type("6xl", "6xl"),
-      },
-      borderRadius: {
-        DEFAULT: "2px",
       },
       height: {
         dvh: "100dvh",
