@@ -79,7 +79,6 @@ export const ca: LegalDocument = {
             "<b>Supabase</b>: base de dades, inici de sessió i funcions de servidor.",
             "<b>Vercel</b>: allotja el web.",
             "<b>OpenAI</b>: genera els trencaclosques. Només rep el text de la teva pràctica, mai el teu nom ni el teu correu.",
-            "<b>Google Fonts</b>: serveix les tipografies, de manera que Google rep la teva adreça IP quan es carrega la pàgina.",
             "<b>Google i GitHub</b>: gestionen l'inici de sessió segons les seves pròpies polítiques de privacitat.",
             "<b>LinkedIn</b>: només si el connectes, segons la seva pròpia política de privacitat.",
           ],
