@@ -22,6 +22,9 @@ const UNOWNED = "rgb(var(--colors-grey-500))";
 /* Figma "HEAD" (node 89:161752) plus the pointed end the auto layout can't draw. */
 const HEAD_TIP = 10;
 const HEAD_GAP = 4;
+/** Label padding: Figma's 4px, tightened by 2px on the side next to the tip. */
+const HEAD_PAD = 4;
+const HEAD_TIP_PAD = HEAD_PAD - 2;
 /** Room the HEAD pointer takes beside a card: gap, tip and the "HEAD" label. */
 const HEAD_EXTENT = 50;
 
@@ -164,8 +167,8 @@ export function CommitTree({
         // One pointer for the whole tree, so it glides from card to card as HEAD moves.
         <motion.div
           className="absolute"
-          initial={{ opacity: 0, left: headLeft(headAt.x, headSide), top: headAt.y }}
-          animate={{ opacity: 1, left: headLeft(headAt.x, headSide), top: headAt.y }}
+          initial={{ opacity: 0, ...headPlacement(headAt.x, headSide), top: headAt.y }}
+          animate={{ opacity: 1, ...headPlacement(headAt.x, headSide), top: headAt.y }}
           transition={{ ...spring.snappy, opacity: { duration: 0.2, delay: delayFor(headAt.row, headAt.x) + 0.3 } }}
         >
           <HeadPointer side={headSide} />
@@ -463,9 +466,9 @@ export function CommitCard({
   );
 }
 
-/** Where the HEAD pointer starts so its tip sits HEAD_GAP from the card's side. */
-function headLeft(cardX: number, side: "left" | "right"): number {
-  return side === "right" ? cardX + CARD_W + HEAD_GAP : cardX - HEAD_EXTENT;
+/** Places the HEAD pointer so its tip sits HEAD_GAP from the card's side; it hugs its label. */
+function headPlacement(cardX: number, side: "left" | "right"): { left: number; x: number | string } {
+  return side === "right" ? { left: cardX + CARD_W + HEAD_GAP, x: 0 } : { left: cardX - HEAD_GAP, x: "-100%" };
 }
 
 /** Lime "HEAD" label level with the branch tag; `side` is where it sits, tip facing the card. */
@@ -474,15 +477,15 @@ export function HeadPointer({ side }: { side: "left" | "right" }) {
   return (
     <div
       aria-label="HEAD"
-      className="flex items-center justify-center bg-lime-400 text-2xs text-green-950"
+      className="flex items-center whitespace-nowrap bg-lime-400 text-2xs text-green-950"
       style={{
-        width: HEAD_EXTENT - HEAD_GAP,
         height: TAG_H,
         clipPath:
           side === "right"
             ? `polygon(0 50%, ${tip} 0, 100% 0, 100% 100%, ${tip} 100%)`
             : `polygon(0 0, calc(100% - ${tip}) 0, 100% 50%, calc(100% - ${tip}) 100%, 0 100%)`,
-        [side === "right" ? "paddingLeft" : "paddingRight"]: HEAD_TIP,
+        paddingLeft: side === "right" ? HEAD_TIP + HEAD_TIP_PAD : HEAD_PAD,
+        paddingRight: side === "right" ? HEAD_PAD : HEAD_TIP + HEAD_TIP_PAD,
       }}
     >
       HEAD
