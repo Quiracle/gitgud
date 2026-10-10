@@ -2,14 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Design tokens mirrored from the Figma "Basics" variable collection.
+   Colors are space-separated RGB channels so Tailwind can apply opacity modifiers. */
 :root {
-  color-scheme: dark;
-  font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-    sans-serif;
-  background: #020617;
+  --colors-grey-50: 250 250 250; /* #fafafa */
+  --colors-grey-100: 245 245 245; /* #f5f5f5 */
+  --colors-grey-200: 230 230 230; /* #e6e6e6 */
+  --colors-grey-300: 211 211 211; /* #d3d3d3 */
+  --colors-grey-400: 163 163 163; /* #a3a3a3 */
+  --colors-grey-500: 114 114 114; /* #727272 */
+  --colors-grey-600: 83 83 83; /* #535353 */
+  --colors-grey-700: 64 64 64; /* #404040 */
+  --colors-grey-800: 39 39 39; /* #272727 */
+  --colors-grey-900: 26 26 26; /* #1a1a1a */
+  --colors-grey-950: 11 11 11; /* #0b0b0b */
+
+  --colors-lime-50: 247 254 231; /* #f7fee7 */
+  --colors-lime-100: 236 253 202; /* #ecfdca */
+  --colors-lime-200: 216 250 156; /* #d8fa9c */
+  --colors-lime-300: 189 244 98; /* #bdf462 */
+  --colors-lime-400: 158 232 43; /* #9ee82b */
+  --colors-lime-500: 130 207 19; /* #82cf13 */
+  --colors-lime-600: 99 165 11; /* #63a50b */
+  --colors-lime-700: 76 126 13; /* #4c7e0d */
+  --colors-lime-800: 62 99 17; /* #3e6311 */
+  --colors-lime-900: 53 84 19; /* #355413 */
+  --colors-lime-950: 25 47 4; /* #192f04 */
+
+  --colors-yellow-50: 254 252 232; /* #fefce8 */
+  --colors-yellow-100: 253 249 196; /* #fdf9c4 */
+  --colors-yellow-200: 253 240 139; /* #fdf08b */
+  --colors-yellow-300: 251 221 49; /* #fbdd31 */
+  --colors-yellow-400: 248 205 23; /* #f8cd17 */
+  --colors-yellow-500: 232 180 10; /* #e8b40a */
+  --colors-yellow-600: 200 139 6; /* #c88b06 */
+  --colors-yellow-700: 160 99 8; /* #a06308 */
+  --colors-yellow-800: 132 78 15; /* #844e0f */
+  --colors-yellow-900: 112 64 19; /* #704013 */
+  --colors-yellow-950: 65 33 7; /* #412107 */
+
+  --colors-orange-50: 255 247 237; /* #fff7ed */
+  --colors-orange-100: 255 236 213; /* #ffecd5 */
+  --colors-orange-200: 254 214 170; /* #fed6aa */
+  --colors-orange-300: 253 184 116; /* #fdb874 */
+  --colors-orange-400: 251 137 49; /* #fb8931 */
+  --colors-orange-500: 249 112 22; /* #f97016 */
+  --colors-orange-600: 234 85 12; /* #ea550c */
+  --colors-orange-700: 194 62 12; /* #c23e0c */
+  --colors-orange-800: 154 50 18; /* #9a3212 */
+  --colors-orange-900: 124 43 18; /* #7c2b12 */
+  --colors-orange-950: 67 19 7; /* #431307 */
+
+  --colors-red-50: 255 242 241; /* #fff2f1 */
+  --colors-red-100: 255 226 223; /* #ffe2df */
+  --colors-red-200: 255 203 197; /* #ffcbc5 */
+  --colors-red-300: 255 167 157; /* #ffa79d */
+  --colors-red-400: 255 115 100; /* #ff7364 */
+  --colors-red-500: 255 71 51; /* #ff4733 */
+  --colors-red-600: 237 42 21; /* #ed2a15 */
+  --colors-red-700: 200 31 13; /* #c81f0d */
+  --colors-red-800: 165 30 15; /* #a51e0f */
+  --colors-red-900: 136 31 20; /* #881f14 */
+  --colors-red-950: 75 11 4; /* #4b0b04 */
+
+  --colors-green-50: 243 250 244; /* #f3faf4 */
+  --colors-green-100: 214 241 218; /* #d6f1da */
+  --colors-green-200: 173 226 182; /* #ade2b6 */
+  --colors-green-300: 125 203 141; /* #7dcb8d */
+  --colors-green-400: 82 175 103; /* #52af67 */
+  --colors-green-500: 56 148 79; /* #38944f */
+  --colors-green-600: 43 118 63; /* #2b763f */
+  --colors-green-700: 38 95 54; /* #265f36 */
+  --colors-green-800: 34 77 47; /* #224d2f */
+  --colors-green-900: 25 29 27; /* #191d1b */
+  --colors-green-950: 5 14 8; /* #050e08 */
+
+  --type-font-primary: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --type-font-secondary: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
+  --type-weight-light: 300;
+  --type-weight-regular: 400;
+
+  --type-size-2xs: 10px;  --type-line-2xs: 14px;
+  --type-size-xs: 12px;   --type-line-xs: 16px;
+  --type-size-sm: 14px;   --type-line-sm: 20px;
+  --type-size-paragraph: 16px; --type-line-paragraph: 24px;
+  --type-size-code: 15px; --type-line-code: 24px;
+  --type-size-xl: 20px;   --type-line-xl: 28px;
+  --type-size-2xl: 24px;  --type-line-2xl: 32px;
+  --type-size-3xl: 30px;  --type-line-3xl: 38px;
+  --type-size-4xl: 36px;  --type-line-4xl: 44px;
+  --type-size-5xl: 48px;  --type-line-5xl: 58px;
+  --type-size-6xl: 60px;  --type-line-6xl: 72px;
+
+  /* Space reserved for the floating bottom navigation. */
+  --nav-clearance: calc(65px + 32px + env(safe-area-inset-bottom));
+
+  color-scheme: light;
+  font-family: var(--type-font-primary);
+  font-weight: var(--type-weight-regular);
+  background: rgb(var(--colors-green-50));
+  color: rgb(var(--colors-grey-950));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
@@ -44,4 +140,22 @@ input {
 
 button {
   touch-action: manipulation;
+}
+
+/* Inputs at 16px+ stop iOS Safari zooming on focus. */
+input,
+textarea {
+  font-size: max(16px, 1em);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--colors-lime-400));
+  outline-offset: 2px;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
