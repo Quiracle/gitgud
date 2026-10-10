@@ -14,7 +14,7 @@ import {
 import { validatePuzzleCompletion, type PublicPuzzleDefinition } from "../puzzles";
 import { claimDailyCompletion, startDailyAttempt, submitDailyResult } from "../services/leaderboard";
 import { openProgressStore } from "../storage/browserProgress";
-import type { CompletionRecord, LocalProgressStore, StoredAttempt } from "../storage/progress";
+import { bankedActiveMs, type CompletionRecord, type LocalProgressStore, type StoredAttempt } from "../storage/progress";
 
 export type SessionStatus = "active" | "surrendered" | "completed";
 
@@ -77,10 +77,47 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const locked = puzzle.kind === "daily" && status === "completed";
   const serverAttempt = useRef<Promise<string>>();
 
-  const elapsedMs = useCallback(
-    () => completion?.elapsedMs ?? Math.max(0, Date.now() - Date.parse(attempt.startedAt)),
-    [attempt.startedAt, completion],
+  // Active play time: it only runs while this puzzle is open, visible, and in play.
+  const banked = useRef(bankedActiveMs(boot.attempt));
+  const openSince = useRef<number | null>(null);
+  const activeMs = useCallback(
+    () => Math.round(banked.current + (openSince.current === null ? 0 : Date.now() - openSince.current)),
+    [],
   );
+  const bank = useCallback(() => {
+    if (openSince.current === null) return;
+    const now = Date.now();
+    banked.current += now - openSince.current;
+    openSince.current = now;
+    const total = Math.round(banked.current);
+    setAttempt((current) => store.setActiveMs(current, total));
+  }, [store]);
+
+  const running = status === "active" && !completion;
+  useEffect(() => {
+    if (!running) return;
+    const resume = () => {
+      if (document.visibilityState === "visible" && openSince.current === null) openSince.current = Date.now();
+    };
+    const pause = () => {
+      bank();
+      openSince.current = null;
+    };
+    const onVisibility = () => (document.visibilityState === "visible" ? resume() : pause());
+    resume();
+    // Bank regularly so a crash or a killed tab loses at most a few seconds.
+    const heartbeat = window.setInterval(bank, 5_000);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", pause);
+    return () => {
+      window.clearInterval(heartbeat);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", pause);
+      pause();
+    };
+  }, [bank, running]);
+
+  const elapsedMs = useCallback(() => completion?.elapsedMs ?? activeMs(), [activeMs, completion]);
 
   const validation = useMemo(
     () => validatePuzzleCompletion(repository, puzzle.target, actions, puzzle.actionRequirements),
@@ -151,11 +188,11 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const runCommand = useCallback(
     (command: string): CommandOutcome => {
       if (locked) return { ok: false, mutated: false, solved: true };
+      // Every puzzle accepts every simulated command; victory is judged on the final state.
       const parsed = parseGitCommand(command);
-      const allowed = !parsed.ok || puzzle.allowedCommands.includes(parsed.action.type);
 
       // An interactive rebase with commits to edit opens the todo dialog first.
-      if (allowed && parsed.ok && parsed.action.type === "interactive-rebase" && !parsed.action.todo) {
+      if (parsed.ok && parsed.action.type === "interactive-rebase" && !parsed.action.todo) {
         const plan = planInteractiveRebase(repository, parsed.action.onto);
         if (plan.ok && plan.todo.length > 0) {
           setPendingRebase({ onto: plan.onto, todo: plan.todo });
@@ -163,13 +200,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
         }
       }
 
-      const result = allowed
-        ? executeCommand(repository, command)
-        : {
-            ok: false as const,
-            repository,
-            output: [`This puzzle doesn't use \`git ${command.split(/\s+/)[1] ?? "command"}\`.`, `Try: ${puzzle.allowedCommands.join(", ")}.`],
-          };
+      const result = executeCommand(repository, command);
       const nextActions = result.ok ? [...actions, result.action] : actions;
       const next = result.ok
         ? validatePuzzleCompletion(result.repository, puzzle.target, nextActions, puzzle.actionRequirements)
@@ -178,7 +209,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
 
       const nextAttempt = store.recordCommand(
         attempt,
-        { command, elapsedMs: Date.now() - Date.parse(attempt.startedAt), ok: result.ok, output: result.output.join("\n") },
+        { command, elapsedMs: activeMs(), ok: result.ok, output: result.output.join("\n") },
         result.ok,
       );
       record({ command, lines: result.output, tone: result.ok ? "normal" : "error" });
@@ -196,20 +227,25 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
 
       if (solved && !validation.solved) {
         record({ lines: ["Puzzle solved!"], tone: "success" });
-        const done = store.complete(nextAttempt, false);
+        // Stop the clock first, so nothing banks into the finished attempt.
+        const finalMs = activeMs();
+        openSince.current = null;
+        const done = store.complete(nextAttempt, false, finalMs);
         setCompletion(done);
         setStatus("completed");
         void submit(nextAttempt, done, assisted);
       }
       return { ok: result.ok, mutated: result.ok && result.mutated, solved };
     },
-    [actions, assisted, attempt, locked, puzzle, record, repository, store, submit, validation.solved],
+    [actions, activeMs, assisted, attempt, locked, puzzle, record, repository, store, submit, validation.solved],
   );
 
   const restart = useCallback(() => {
     if (locked) return;
     // After a solved lesson, a restart is a fresh replay attempt; earlier completions stay saved.
     const next = completion ? store.start(puzzle) : store.restart(attempt);
+    // A replay after a solve is a new attempt with its own clock; a restart keeps it running.
+    if (completion) banked.current = bankedActiveMs(next);
     if (completion) {
       serverAttempt.current = undefined;
       setCompletion(undefined);
@@ -245,10 +281,10 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
     const output = "Interactive rebase cancelled. Nothing changed.";
     setPendingRebase(null);
     setAttempt((current) =>
-      store.recordCommand(current, { command, elapsedMs: Date.now() - Date.parse(current.startedAt), ok: false, output }, false),
+      store.recordCommand(current, { command, elapsedMs: activeMs(), ok: false, output }, false),
     );
     record({ command, lines: [output] });
-  }, [pendingRebase, record, store]);
+  }, [activeMs, pendingRebase, record, store]);
 
   const confirmRebase = useCallback(
     (todo: RebaseTodoItem[]) => {
@@ -312,7 +348,7 @@ function restoreRun(puzzle: PublicPuzzleDefinition, attempt: StoredAttempt) {
   const actions: GitAction[] = [];
   for (const command of attempt.runCommands) {
     const parsed = parseGitCommand(command);
-    if (!parsed.ok || !puzzle.allowedCommands.includes(parsed.action.type)) continue;
+    if (!parsed.ok) continue;
     const result = executeCommand(repository, command);
     repository = result.repository;
     if (result.ok) actions.push(result.action);

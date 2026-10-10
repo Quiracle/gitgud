@@ -1,18 +1,22 @@
 import { formatElapsed, type LeaderboardEntry } from "../../services/leaderboard";
-import { buildTimeHistogram } from "./histogramBins";
+import { buildTimeHistogram, percentAxisMax } from "./histogramBins";
 
+const TICKS = 5;
+
+/** LeetCode-style solve-time distribution: thin bars from 0 to past the slowest solve. */
 export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[] }) {
   const bins = buildTimeHistogram(entries.map((entry) => entry.elapsedMs));
   if (bins.length === 0) return null;
 
-  const largestCount = Math.max(...bins.map((bin) => bin.count));
+  const axisMax = percentAxisMax(bins);
   const currentUserEntry = entries.find((entry) => entry.isCurrentUser);
+  const currentBin = currentUserEntry
+    ? bins.findIndex((bin) => currentUserEntry.elapsedMs >= bin.startMs && currentUserEntry.elapsedMs < bin.endMs)
+    : -1;
+  const tickEvery = Math.max(1, Math.ceil(bins.length / TICKS));
 
   return (
-    <section
-      aria-labelledby="time-distribution-title"
-      className="flex flex-col gap-1 pt-4"
-    >
+    <section aria-labelledby="time-distribution-title" className="flex flex-col gap-1 pt-4">
       <h2 id="time-distribution-title" className="text-xl leading-[25px] text-green-950">
         Solve times
       </h2>
@@ -23,52 +27,66 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
         </p>
       )}
 
-      <ul
-        className="mt-4 grid gap-1"
-        style={{ gridTemplateColumns: `repeat(${bins.length}, minmax(0, 1fr))` }}
-        aria-label={histogramSummary(entries.length, bins.length)}
-      >
-        {bins.map((bin) => {
-          const height = largestCount === 0 || bin.count === 0
-            ? 0
-            : Math.max(8, (bin.count / largestCount) * 82);
-          const containsCurrentUser = Boolean(
-            currentUserEntry &&
-            currentUserEntry.elapsedMs >= bin.startMs &&
-            currentUserEntry.elapsedMs < bin.endMs + 1_000,
-          );
-          return (
-            <li
-              key={`${bin.startMs}-${bin.endMs}`}
-              className="flex min-w-0 flex-col text-center"
-              aria-label={`${bin.label}: ${bin.count} ${bin.count === 1 ? "solve" : "solves"}${containsCurrentUser ? "; includes your solve" : ""}`}
-            >
-              <div className="flex h-40 flex-col justify-end" aria-hidden="true">
+      <div className="mt-4 flex gap-2" aria-label={histogramSummary(entries.length, bins)} role="img">
+        {/* Percentage axis */}
+        <div className="flex h-40 flex-col justify-between py-0 font-secondary text-2xs tabular-nums text-grey-700" aria-hidden="true">
+          <span className="-translate-y-1/2">{axisMax}%</span>
+          <span>{axisMax / 2}%</span>
+          <span className="translate-y-1/2">0%</span>
+        </div>
+
+        <div className="min-w-0 flex-1" aria-hidden="true">
+          <div className="relative h-40">
+            {/* Gridlines at the top, middle, and baseline */}
+            {[0, 50, 100].map((offset) => (
+              <div key={offset} className="absolute inset-x-0 border-t border-grey-300" style={{ top: `${offset}%` }} />
+            ))}
+            <div className="absolute inset-0 flex items-end gap-px sm:gap-0.5">
+              {bins.map((bin, index) => {
+                const mine = index === currentBin;
+                const height = bin.count === 0 ? 0 : Math.max(3, (bin.percent / axisMax) * 100);
+                return (
+                  <div
+                    key={bin.startMs}
+                    className="relative flex h-full min-w-0 flex-1 flex-col justify-end"
+                    title={`${bin.label}: ${bin.count} ${bin.count === 1 ? "solve" : "solves"} (${Math.round(bin.percent)}%)`}
+                  >
+                    {mine && (
+                      <span
+                        className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap rounded bg-lime-500 px-1 font-secondary text-2xs leading-4 text-green-950"
+                        style={{ bottom: `calc(${height}% + 4px)` }}
+                      >
+                        You
+                      </span>
+                    )}
+                    <div
+                      className={`w-full rounded-t-full transition-[height] duration-300 motion-reduce:transition-none ${
+                        mine ? "bg-lime-500" : "bg-grey-500"
+                      }`}
+                      style={{ height: `${height}%` }}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Time axis */}
+          <div className="relative mt-2 h-4 font-secondary text-2xs tabular-nums text-grey-700">
+            {bins.map((bin, index) =>
+              index % tickEvery === 0 ? (
                 <span
-                  className={`mb-1 font-secondary text-xs tabular-nums ${
-                    containsCurrentUser ? "text-green-950" : "text-grey-700"
-                  }`}
+                  key={bin.startMs}
+                  className="absolute -translate-x-1/2 first:translate-x-0"
+                  style={{ left: `${(index / bins.length) * 100}%` }}
                 >
-                  {bin.count}
+                  {formatTick(bin.startMs)}
                 </span>
-                <div
-                  className={`w-full rounded transition-[height] duration-300 motion-reduce:transition-none ${
-                    containsCurrentUser ? "bg-lime-500" : "bg-grey-500"
-                  }`}
-                  style={{ height: `${height}%` }}
-                />
-              </div>
-              <span
-                className={`truncate py-2 font-secondary text-xs tabular-nums ${
-                  containsCurrentUser ? "text-green-950" : "text-grey-700"
-                }`}
-              >
-                {formatTick(bin.startMs)}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
+              ) : null,
+            )}
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -77,10 +95,11 @@ function formatTick(elapsedMs: number): string {
   const totalSeconds = Math.floor(elapsedMs / 1_000);
   if (totalSeconds < 60) return `${totalSeconds}s`;
   const minutes = Math.floor(totalSeconds / 60);
-  return `${minutes}:${(totalSeconds % 60).toString().padStart(2, "0")}`;
+  const seconds = totalSeconds % 60;
+  return seconds === 0 ? `${minutes}m` : `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-function histogramSummary(solveCount: number, binCount: number): string {
-  return `Distribution of ${solveCount} ranked ${solveCount === 1 ? "solve" : "solves"} across ${binCount} time ${binCount === 1 ? "range" : "ranges"}.`;
+function histogramSummary(solveCount: number, bins: ReturnType<typeof buildTimeHistogram>): string {
+  const busiest = bins.reduce((best, bin) => (bin.count > best.count ? bin : best), bins[0]);
+  return `Distribution of ${solveCount} ranked ${solveCount === 1 ? "solve" : "solves"} from 0:00 to ${formatElapsed(bins.at(-1)!.endMs)}. Most solves took ${busiest.label}.`;
 }
-

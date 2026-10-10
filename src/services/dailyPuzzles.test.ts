@@ -1,13 +1,39 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createDailyFixture } from "../puzzles/dailyFixture";
 import { parsePublicPuzzleDefinition } from "../puzzles/schema";
-import { FixtureDailyPuzzleSource, utcDate } from "./dailyPuzzles";
+import { FixtureDailyPuzzleSource, SupabaseDailyPuzzleSource, utcDate } from "./dailyPuzzles";
 
 describe("daily puzzle delivery", () => {
   it("loads the requested canonical fixture date", async () => {
     const puzzle = await new FixtureDailyPuzzleSource().getByDate("2026-10-10");
     expect(puzzle.id).toBe("daily-2026-10-10");
     expect(puzzle.publishedOn).toBe("2026-10-10");
+  });
+
+  it("replaces a cached daily with the republished current version", async () => {
+    const storage = new Map<string, string>();
+    vi.stubGlobal("window", {
+      localStorage: { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => void storage.set(key, value) },
+    });
+    const v1 = createDailyFixture("2026-10-10");
+    const v2 = { ...v1, id: "daily-2026-10-10-v2", slug: "daily-2026-10-10-v2", version: 2, title: "Corrected" };
+    let current: unknown = v1;
+    let reachable = true;
+    const query = {
+      select: () => query,
+      eq: () => query,
+      maybeSingle: async () => (reachable ? { data: { definition: current }, error: null } : { data: null, error: { message: "offline" } }),
+    };
+    const source = new SupabaseDailyPuzzleSource({ from: () => query } as never);
+
+    expect((await source.getByDate("2026-10-10")).version).toBe(1);
+    current = v2;
+    expect((await source.getByDate("2026-10-10")).id).toBe("daily-2026-10-10-v2");
+
+    // Offline, the last version seen is still playable.
+    reachable = false;
+    expect((await source.getByDate("2026-10-10")).id).toBe("daily-2026-10-10-v2");
+    vi.unstubAllGlobals();
   });
 
   it("derives dates in UTC", () => {

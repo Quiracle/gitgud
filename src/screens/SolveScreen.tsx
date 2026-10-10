@@ -17,6 +17,7 @@ import { useVisualViewport } from "../hooks/useVisualViewport";
 import { clearCanvasOrigin, peekCanvasOrigin } from "../lib/canvasTransition";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
+import { SUPPORTED_ACTION_TYPES } from "../engine";
 import type { PublicPuzzleDefinition } from "../puzzles";
 
 interface SolveScreenProps {
@@ -427,7 +428,7 @@ export function SolveScreen({
           )}
           <HowToPlaySteps />
           <div className="flex flex-wrap gap-1">
-            {puzzle.allowedCommands.map((command) => (
+            {SUPPORTED_ACTION_TYPES.map((command) => (
               <span key={command} className="rounded bg-green-900 px-2 py-1 font-secondary text-xs text-lime-400">
                 git {command === "interactive-rebase" ? "rebase -i" : command}
               </span>

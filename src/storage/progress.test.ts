@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createDailyFixture } from "../puzzles/dailyFixture";
-import { LocalProgressStore } from "./progress";
+import { bankedActiveMs, LocalProgressStore } from "./progress";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -41,6 +41,40 @@ describe("LocalProgressStore", () => {
     expect(completion.restartCount).toBe(1);
     expect(completion.commandCount).toBe(1);
     expect(completion.commands[0].command).toBe("git log");
+  });
+
+  it("scores active play time, not time the app sat closed", () => {
+    let now = Date.parse("2026-10-10T10:00:00Z");
+    const storage = new MemoryStorage();
+    const store = new LocalProgressStore(storage, () => now, () => "attempt-1");
+    let attempt = store.start(createDailyFixture("2026-10-10"));
+    attempt = store.setActiveMs(attempt, 30_000);
+
+    // Closed for two hours, then reopened from storage and played 15 more seconds.
+    now += 2 * 60 * 60_000;
+    const reopened = new LocalProgressStore(storage, () => now).start(createDailyFixture("2026-10-10"));
+    expect(bankedActiveMs(reopened)).toBe(30_000);
+    const completion = store.complete(reopened, false, 45_000);
+
+    expect(completion.elapsedMs).toBe(45_000);
+  });
+
+  it("never rolls banked active time back from a stale copy", () => {
+    const store = new LocalProgressStore(new MemoryStorage(), Date.now, () => "attempt-1");
+    const stale = store.start(createDailyFixture("2026-10-10"));
+    store.setActiveMs(stale, 20_000);
+
+    const afterCommand = store.recordCommand(stale, { command: "git log", elapsedMs: 21_000, ok: true, output: "" });
+    expect(store.setActiveMs(afterCommand, 5_000).activeMs).toBe(20_000);
+    expect(store.complete(afterCommand, false).elapsedMs).toBe(20_000);
+  });
+
+  it("estimates active time for attempts started before active timing", () => {
+    const store = new LocalProgressStore(new MemoryStorage(), Date.now, () => "attempt-1");
+    const legacy = store.recordCommand(store.start(createDailyFixture("2026-10-10")), {
+      command: "git log", elapsedMs: 12_000, ok: true, output: "",
+    });
+    expect(bankedActiveMs({ ...legacy, activeMs: undefined })).toBe(12_000);
   });
 
   it("calculates replay-safe aggregate statistics", () => {
