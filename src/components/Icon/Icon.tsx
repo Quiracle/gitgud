@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 import accountCircle from "../../assets/icons/account_circle.svg";
 import arrowBackIosNew from "../../assets/icons/arrow_back_ios_new.svg";
+import arrowForwardIos from "../../assets/icons/arrow_forward_ios.svg";
 import crown from "../../assets/icons/crown.svg";
 import extension from "../../assets/icons/extension.svg";
 import flag2 from "../../assets/icons/flag_2.svg";
@@ -10,6 +11,7 @@ import importContacts from "../../assets/icons/import_contacts.svg";
 const ICONS = {
   account_circle: accountCircle,
   arrow_back_ios_new: arrowBackIosNew,
+  arrow_forward_ios: arrowForwardIos,
   crown,
   extension,
   flag_2: flag2,
