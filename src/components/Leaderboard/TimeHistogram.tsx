@@ -7,6 +7,10 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
 
   const largestCount = Math.max(...bins.map((bin) => bin.count));
   const currentUserEntry = entries.find((entry) => entry.isCurrentUser);
+  // The winner's bar is white, unless the winner is you (your bar is always green).
+  const winnerEntry = entries.find((entry) => entry.rank === 1 && !entry.isCurrentUser);
+  const inBin = (entry: LeaderboardEntry | undefined, bin: { startMs: number; endMs: number }) =>
+    Boolean(entry && entry.elapsedMs >= bin.startMs && entry.elapsedMs < bin.endMs + 1_000);
 
   return (
     <section
@@ -18,12 +22,20 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
       </h2>
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-grey-700">
         <p>Ranked finishes, faster to slower.</p>
-        {currentUserEntry && (
-          <p className="flex items-center gap-2 text-green-950">
-            <span className="size-2.5 rounded bg-lime-500" aria-hidden="true" />
-            Your solve: {formatElapsed(currentUserEntry.elapsedMs)}
-          </p>
-        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          {winnerEntry && (
+            <p className="flex items-center gap-2 text-green-950">
+              <span className="size-2.5 rounded border border-grey-400 bg-grey-50" aria-hidden="true" />
+              Winner: {formatElapsed(winnerEntry.elapsedMs)}
+            </p>
+          )}
+          {currentUserEntry && (
+            <p className="flex items-center gap-2 text-green-950">
+              <span className="size-2.5 rounded bg-lime-500" aria-hidden="true" />
+              Your solve: {formatElapsed(currentUserEntry.elapsedMs)}
+            </p>
+          )}
+        </div>
       </div>
 
       <ul
@@ -35,16 +47,13 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
           const height = largestCount === 0 || bin.count === 0
             ? 0
             : Math.max(8, (bin.count / largestCount) * 82);
-          const containsCurrentUser = Boolean(
-            currentUserEntry &&
-            currentUserEntry.elapsedMs >= bin.startMs &&
-            currentUserEntry.elapsedMs < bin.endMs + 1_000,
-          );
+          const containsCurrentUser = inBin(currentUserEntry, bin);
+          const containsWinner = !containsCurrentUser && inBin(winnerEntry, bin);
           return (
             <li
               key={`${bin.startMs}-${bin.endMs}`}
               className="flex min-w-0 flex-col text-center"
-              aria-label={`${bin.label}: ${bin.count} ${bin.count === 1 ? "solve" : "solves"}${containsCurrentUser ? "; includes your solve" : ""}`}
+              aria-label={`${bin.label}: ${bin.count} ${bin.count === 1 ? "solve" : "solves"}${containsCurrentUser ? "; includes your solve" : ""}${containsWinner ? "; includes the winner" : ""}`}
             >
               <div className="flex h-40 flex-col justify-end" aria-hidden="true">
                 <span
@@ -56,7 +65,11 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
                 </span>
                 <div
                   className={`w-full rounded transition-[height] duration-300 motion-reduce:transition-none ${
-                    containsCurrentUser ? "bg-lime-500" : "bg-grey-500"
+                    containsCurrentUser
+                      ? "bg-lime-500"
+                      : containsWinner
+                        ? "border border-grey-400 bg-grey-50"
+                        : "bg-grey-500"
                   }`}
                   style={{ height: `${height}%` }}
                 />
