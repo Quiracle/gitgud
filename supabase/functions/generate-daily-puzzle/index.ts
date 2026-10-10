@@ -71,13 +71,16 @@ Deno.serve(async (request) => {
     if (run.error) throw run.error;
 
     let previousIssues: string[] = [];
-    const generationDeadline = Date.now() + 45_000;
+    // Keep the whole generation phase below Supabase's hosted wall-clock limit,
+    // while giving a structured puzzle substantially longer than the tiny preflight.
+    const generationDeadline = Date.now() + 120_000;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       const remainingMs = generationDeadline - Date.now();
-      if (remainingMs < 5_000) break;
+      const attemptTimeoutMs = Math.min(config.requestTimeoutMs, remainingMs - 10_000);
+      if (attemptTimeoutMs < 10_000) break;
       await supabase.from("daily_generation_runs").update({ attempt_number: attempt }).eq("id", run.data.id);
       try {
-        const draft = await requestOpenAI(config, brief, previousIssues, Math.min(20_000, remainingMs));
+        const draft = await requestOpenAI(config, brief, previousIssues, attemptTimeoutMs);
         const candidate = materializeCandidate(draft, date);
         const validation = validateCandidateAgainstBrief(candidate, brief);
         if (validation.ok) {
@@ -167,7 +170,7 @@ async function seedFallbacks(
   const seed = crypto.randomUUID();
   const brief = createGenerationBrief("2099-01-01", difficulty, seed);
   try {
-    const draft = await requestOpenAI(config, brief, [], 25_000);
+    const draft = await requestOpenAI(config, brief, [], config.requestTimeoutMs);
     const candidate = materializeCandidate(draft, "2099-01-01");
     const validation = validateCandidateAgainstBrief(candidate, brief);
     if (!validation.ok) {
@@ -250,14 +253,22 @@ async function requestOpenAI(
   config: ReturnType<typeof readConfig>,
   brief: Record<string, unknown>,
   previousIssues: string[],
-  timeoutMs = 25_000,
+  timeoutMs: number,
 ) {
-  const request = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { authorization: `Bearer ${config.openAiKey}`, "content-type": "application/json" },
-    signal: AbortSignal.timeout(timeoutMs),
-    body: JSON.stringify(createPuzzleRequestBody(config, generationPrompt(brief, previousIssues))),
-  });
+  let request: Response;
+  try {
+    request = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { authorization: `Bearer ${config.openAiKey}`, "content-type": "application/json" },
+      signal: AbortSignal.timeout(timeoutMs),
+      body: JSON.stringify(createPuzzleRequestBody(config, generationPrompt(brief, previousIssues))),
+    });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new Error(`OpenAI puzzle generation exceeded ${Math.round(timeoutMs / 1000)} seconds and was aborted by GitGud.`);
+    }
+    throw error;
+  }
   const payload = await request.json();
   if (!request.ok) throw new Error(`OpenAI ${request.status}: ${payload?.error?.message ?? "request failed"}`);
   const text = payload.output?.flatMap((item: any) => item.content ?? []).find((item: any) => item.type === "output_text")?.text;
@@ -273,6 +284,10 @@ function readConfig() {
   };
   const temperature = Number(Deno.env.get("OPENAI_PUZZLE_TEMPERATURE") ?? "1.8");
   if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw new Error("OPENAI_PUZZLE_TEMPERATURE must be between 0 and 2.");
+  const requestTimeoutMs = Number(Deno.env.get("OPENAI_REQUEST_TIMEOUT_MS") ?? "60000");
+  if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 10_000 || requestTimeoutMs > 90_000) {
+    throw new Error("OPENAI_REQUEST_TIMEOUT_MS must be an integer between 10000 and 90000.");
+  }
   return {
     supabaseUrl: value("SUPABASE_URL"),
     serviceRoleKey: value("SUPABASE_SERVICE_ROLE_KEY"),
@@ -280,6 +295,7 @@ function readConfig() {
     generationSecret: value("DAILY_GENERATION_SECRET"),
     model: Deno.env.get("OPENAI_PUZZLE_MODEL") ?? "gpt-4.1-mini",
     temperature,
+    requestTimeoutMs,
   };
 }
 
@@ -291,6 +307,14 @@ function tomorrowUtcDate() {
 
 function safeError(error: unknown) {
   return (error instanceof Error ? error.message : String(error)).slice(0, 2000);
+}
+
+function isTimeoutError(error: unknown) {
+  return error instanceof Error && (
+    error.name === "TimeoutError" ||
+    error.name === "AbortError" ||
+    error.message.toLowerCase().includes("signal timed out")
+  );
 }
 
 function response(body: unknown, status = 200) {
