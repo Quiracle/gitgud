@@ -29,7 +29,7 @@ export const dailyPuzzleDraftSchema = {
   properties: {
     title: boundedString(openAIDraftLimits.title),
     description: boundedString(openAIDraftLimits.description),
-    objectives: { type: "array", items: boundedString(openAIDraftLimits.objective) },
+    objectives: { type: "array", minItems: 1, maxItems: 10, items: boundedString(openAIDraftLimits.objective) },
     difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
     initialRepository: {
       type: "object",
@@ -37,14 +37,17 @@ export const dailyPuzzleDraftSchema = {
       properties: {
         commits: {
           type: "array",
+          minItems: 1,
+          maxItems: 25,
           items: {
             type: "object",
             additionalProperties: false,
             properties: {
-              id: commitId, parents: { type: "array", items: commitId },
+              id: commitId, parents: { type: "array", maxItems: 2, items: commitId },
               message: boundedString(openAIDraftLimits.commitMessage),
               changes: {
                 type: "array",
+                maxItems: 5,
                 items: {
                   type: "object", additionalProperties: false,
                   properties: { type: { type: "string", enum: ["set"] }, property: { type: "string", enum: ["sunglasses", "hat", "scarf", "crest", "longLegs"] }, from: accessoryValue, to: accessoryValue },
@@ -53,7 +56,7 @@ export const dailyPuzzleDraftSchema = {
               },
               provenance: {
                 type: "object", additionalProperties: false,
-                properties: { type: { type: "string", enum: ["original"] }, sourceCommits: { type: "array", items: commitId } },
+                properties: { type: { type: "string", enum: ["original"] }, sourceCommits: { type: "array", maxItems: 4, items: commitId } },
                 required: ["type", "sourceCommits"],
               },
             },
@@ -62,6 +65,8 @@ export const dailyPuzzleDraftSchema = {
         },
         branches: {
           type: "array",
+          minItems: 1,
+          maxItems: 8,
           items: { type: "object", additionalProperties: false, properties: { name: branchName, head: commitId }, required: ["name", "head"] },
         },
         currentBranch: branchName, head: commitId, initialState: state,
@@ -73,17 +78,45 @@ export const dailyPuzzleDraftSchema = {
       type: "object", additionalProperties: false,
       properties: {
         branch: branchName, snapshot: state,
-        branchHeads: { type: "array", items: { type: "object", additionalProperties: false, properties: { branch: branchName, commit: commitId }, required: ["branch", "commit"] } },
-        requiredProvenance: { type: "array", items: { type: "object", additionalProperties: false, properties: { type: { type: "string", enum: ["cherry-pick", "revert", "merge"] }, sourceCommit: commitId }, required: ["type", "sourceCommit"] } },
+        branchHeads: { type: "array", maxItems: 8, items: { type: "object", additionalProperties: false, properties: { branch: branchName, commit: commitId }, required: ["branch", "commit"] } },
+        requiredProvenance: { type: "array", maxItems: 8, items: { type: "object", additionalProperties: false, properties: { type: { type: "string", enum: ["cherry-pick", "revert", "merge"] }, sourceCommit: commitId }, required: ["type", "sourceCommit"] } },
       },
       required: ["branch", "snapshot", "branchHeads", "requiredProvenance"],
     },
-    allowedCommands: { type: "array", items: { type: "string", enum: ["log", "switch", "merge", "cherry-pick", "revert"] } },
-    hints: { type: "array", items: boundedString(openAIDraftLimits.hint) },
-    solutionCommands: { type: "array", items: boundedString(openAIDraftLimits.solutionCommand) },
+    allowedCommands: { type: "array", minItems: 1, maxItems: 5, items: { type: "string", enum: ["log", "switch", "merge", "cherry-pick", "revert"] } },
+    hints: { type: "array", maxItems: 6, items: boundedString(openAIDraftLimits.hint) },
+    solutionCommands: { type: "array", minItems: 1, maxItems: 20, items: boundedString(openAIDraftLimits.solutionCommand) },
   },
   required: ["title", "description", "objectives", "difficulty", "initialRepository", "target", "allowedCommands", "hints", "solutionCommands"],
 } as const;
+
+/** Tighten the general safety schema to the exact persisted generation brief. */
+export function createDailyPuzzleDraftSchema(brief: Record<string, any>) {
+  const schema = structuredClone(dailyPuzzleDraftSchema) as any;
+  const exact = (target: Record<string, unknown>, count: unknown) => {
+    if (!Number.isInteger(count) || (count as number) < 0) throw new Error("Generation brief contains an invalid item count.");
+    target.minItems = count;
+    target.maxItems = count;
+  };
+
+  exact(schema.properties.initialRepository.properties.commits, brief.commitCount);
+  exact(schema.properties.initialRepository.properties.branches, brief.branchCount);
+  exact(schema.properties.hints, brief.hintCount);
+
+  const solutionLength = brief.solutionLength;
+  if (
+    !solutionLength ||
+    !Number.isInteger(solutionLength.min) ||
+    !Number.isInteger(solutionLength.max) ||
+    solutionLength.min < 1 ||
+    solutionLength.max < solutionLength.min
+  ) {
+    throw new Error("Generation brief contains an invalid solution length.");
+  }
+  schema.properties.solutionCommands.minItems = solutionLength.min;
+  schema.properties.solutionCommands.maxItems = solutionLength.max;
+  return schema;
+}
 
 export function materializeCandidate(draft: Record<string, any>, date: string) {
   const repository = draft.initialRepository;

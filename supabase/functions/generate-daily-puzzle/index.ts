@@ -6,7 +6,7 @@ import {
   validatePuzzleCandidate,
 } from "../_shared/domain.bundle.js";
 import { materializeCandidate } from "../_shared/openaiSchema.ts";
-import { createPreflightRequestBody, createPuzzleRequestBody } from "../_shared/openaiRequest.ts";
+import { createPreflightRequestBody, createPuzzleRequestBody, parsePuzzleResponsePayload } from "../_shared/openaiRequest.ts";
 import { generationPrompt } from "../_shared/prompt.ts";
 
 type Difficulty = "easy" | "medium" | "hard";
@@ -261,7 +261,7 @@ async function requestOpenAI(
       method: "POST",
       headers: { authorization: `Bearer ${config.openAiKey}`, "content-type": "application/json" },
       signal: AbortSignal.timeout(timeoutMs),
-      body: JSON.stringify(createPuzzleRequestBody(config, generationPrompt(brief, previousIssues))),
+      body: JSON.stringify(createPuzzleRequestBody(config, generationPrompt(brief, previousIssues), brief)),
     });
   } catch (error) {
     if (isTimeoutError(error)) {
@@ -271,9 +271,7 @@ async function requestOpenAI(
   }
   const payload = await request.json();
   if (!request.ok) throw new Error(`OpenAI ${request.status}: ${payload?.error?.message ?? "request failed"}`);
-  const text = payload.output?.flatMap((item: any) => item.content ?? []).find((item: any) => item.type === "output_text")?.text;
-  if (!text) throw new Error("OpenAI returned no structured puzzle output.");
-  return JSON.parse(text);
+  return parsePuzzleResponsePayload(payload);
 }
 
 function readConfig() {

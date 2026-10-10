@@ -1,11 +1,15 @@
-import { dailyPuzzleDraftSchema } from "./openaiSchema.ts";
+import { createDailyPuzzleDraftSchema, dailyPuzzleDraftSchema } from "./openaiSchema.ts";
 
 export interface OpenAIRequestConfig {
   model: string;
   temperature: number;
 }
 
-export function createPuzzleRequestBody(config: OpenAIRequestConfig, prompt: string) {
+export function createPuzzleRequestBody(
+  config: OpenAIRequestConfig,
+  prompt: string,
+  brief?: Record<string, any>,
+) {
   return {
     model: config.model,
     temperature: config.temperature,
@@ -19,10 +23,33 @@ export function createPuzzleRequestBody(config: OpenAIRequestConfig, prompt: str
         type: "json_schema",
         name: "daily_chicken_puzzle",
         strict: true,
-        schema: dailyPuzzleDraftSchema,
+        schema: brief ? createDailyPuzzleDraftSchema(brief) : dailyPuzzleDraftSchema,
       },
     },
   };
+}
+
+export function parsePuzzleResponsePayload(payload: any) {
+  if (payload?.status === "incomplete") {
+    const reason = payload.incomplete_details?.reason ?? "unknown reason";
+    throw new Error(`OpenAI returned an incomplete structured response (${reason}).`);
+  }
+  if (payload?.status && payload.status !== "completed") {
+    throw new Error(`OpenAI response ended with status '${payload.status}'.`);
+  }
+
+  const content = payload?.output?.flatMap((item: any) => item.content ?? []) ?? [];
+  const refusal = content.find((item: any) => item.type === "refusal")?.refusal;
+  if (refusal) throw new Error(`OpenAI refused puzzle generation: ${refusal}`);
+
+  const text = content.find((item: any) => item.type === "output_text")?.text;
+  if (!text) throw new Error("OpenAI returned no structured puzzle output.");
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`OpenAI returned malformed structured output: ${detail}`);
+  }
 }
 
 export function createPreflightRequestBody(config: OpenAIRequestConfig) {

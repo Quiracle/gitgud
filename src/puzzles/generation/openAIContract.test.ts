@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createPreflightRequestBody,
   createPuzzleRequestBody,
+  parsePuzzleResponsePayload,
 } from "../../../supabase/functions/_shared/openaiRequest";
 import { openAIDraftLimits } from "../../../supabase/functions/_shared/openaiSchema";
 import { DEFAULT_PUZZLE_LIMITS } from "../policy";
@@ -39,5 +40,36 @@ describe("OpenAI generation request contract", () => {
     expect(schema.properties.hints.items.maxLength).toBe(DEFAULT_PUZZLE_LIMITS.maxHintLength);
     expect(schema.properties.initialRepository.properties.commits.items.properties.message.maxLength)
       .toBe(DEFAULT_PUZZLE_LIMITS.maxCommitMessageLength);
+  });
+
+  it("constrains generated arrays to the persisted brief", () => {
+    const brief = {
+      commitCount: 8,
+      branchCount: 3,
+      hintCount: 2,
+      solutionLength: { min: 3, max: 7 },
+    };
+    const schema = createPuzzleRequestBody(config, "prompt", brief).text.format.schema;
+
+    expect(schema.properties.initialRepository.properties.commits).toMatchObject({ minItems: 8, maxItems: 8 });
+    expect(schema.properties.initialRepository.properties.branches).toMatchObject({ minItems: 3, maxItems: 3 });
+    expect(schema.properties.hints).toMatchObject({ minItems: 2, maxItems: 2 });
+    expect(schema.properties.solutionCommands).toMatchObject({ minItems: 3, maxItems: 7 });
+    expect(schema.properties.initialRepository.properties.commits.items.properties.changes.maxItems).toBe(5);
+  });
+
+  it("reports incomplete responses before attempting to parse their partial JSON", () => {
+    expect(() => parsePuzzleResponsePayload({
+      status: "incomplete",
+      incomplete_details: { reason: "max_output_tokens" },
+      output: [{ content: [{ type: "output_text", text: '{"partial":' }] }],
+    })).toThrow("incomplete structured response (max_output_tokens)");
+  });
+
+  it("parses completed structured responses", () => {
+    expect(parsePuzzleResponsePayload({
+      status: "completed",
+      output: [{ content: [{ type: "output_text", text: '{"ok":true}' }] }],
+    })).toEqual({ ok: true });
   });
 });
