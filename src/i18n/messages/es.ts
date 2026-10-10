@@ -53,6 +53,20 @@ export const es: Messages = {
 
   "legal.back": "Volver",
 
+  "consent.title": "¿Cookies?",
+
+  "consent.body": "Nos gustaría usar cookies de Google Analytics para ver cómo se juega a GitGud y mejorarlo. Solo se instalan si aceptas. <policy>Política de cookies</policy>",
+
+  "consent.accept": "Aceptar",
+
+  "consent.reject": "Rechazar",
+
+  "consent.currentAccepted": "Has aceptado las cookies de analítica.",
+
+  "consent.currentRejected": "Has rechazado las cookies de analítica.",
+
+  "consent.settings": "Configuración de cookies",
+
   "streak.days_one": "¡Racha de {count} día!",
   "streak.days_other": "¡Racha de {count} días!",
   "streak.start": "¡Empieza tu racha!",

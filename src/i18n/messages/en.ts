@@ -56,6 +56,20 @@ export const en = {
 
   "legal.back": "Go back",
 
+  "consent.title": "Cookies?",
+
+  "consent.body": "We'd like to use Google Analytics cookies to see how GitGud is played and make it better. They're only set if you accept. <policy>Cookie policy</policy>",
+
+  "consent.accept": "Accept",
+
+  "consent.reject": "Reject",
+
+  "consent.currentAccepted": "You've accepted analytics cookies.",
+
+  "consent.currentRejected": "You've rejected analytics cookies.",
+
+  "consent.settings": "Cookie settings",
+
   "streak.days_one": "{count}-day streak!",
   "streak.days_other": "{count}-day streak!",
   "streak.start": "Start your streak!",

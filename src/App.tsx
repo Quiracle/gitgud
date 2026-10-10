@@ -6,6 +6,7 @@ import { useI18n } from "./i18n/I18nProvider";
 import { claimGuestDailies } from "./services/leaderboard";
 import { openProgressStore } from "./storage/browserProgress";
 import { BottomNav } from "./components/BottomNav/BottomNav";
+import { CookieBanner } from "./components/Consent/CookieBanner";
 import { peekCanvasOrigin } from "./lib/canvasTransition";
 import { spring } from "./lib/motion";
 import { learnBasicsCatalog } from "./puzzles";
@@ -80,6 +81,7 @@ export default function App() {
         </motion.div>
       </AnimatePresence>
       {showsBottomNav(path) && <BottomNav path={path} onNavigate={navigate} />}
+      <CookieBanner visible={showsBottomNav(path) || path === "/legal"} aboveNav={showsBottomNav(path)} onNavigate={navigate} />
     </MotionConfig>
   );
 }

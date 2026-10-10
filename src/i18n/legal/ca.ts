@@ -56,6 +56,12 @@ export const ca: LegalDocument = {
               "Fins que desconnectis, caduqui el testimoni o eliminis el compte",
             ],
             [
+              "Estadístiques d'ús de Google Analytics: pàgines visitades, tipus de dispositiu i navegador, ubicació aproximada i un ID aleatori en una galeta",
+              "Entendre com es juga a GitGud i millorar-lo",
+              "El teu consentiment (art. 6.1.a), que pots retirar a Configuració de galetes",
+              "Fins a 14 mesos",
+            ],
+            [
               "Adreça IP i dades del navegador als registres tècnics dels nostres proveïdors",
               "Mantenir el servei en funcionament i segur",
               "Interès legítim (art. 6.1.f)",
@@ -65,7 +71,7 @@ export const ca: LegalDocument = {
         },
         {
           kind: "p",
-          text: "No venem les teves dades, no mostrem anuncis, no fem servir analítica ni seguiment i no prenem decisions automatitzades amb efectes jurídics o igualment significatius sobre tu.",
+          text: "No venem les teves dades, no mostrem anuncis i no prenem decisions automatitzades amb efectes jurídics o igualment significatius sobre tu. Només fem servir analítica si acceptes les galetes d'analítica.",
         },
         { kind: "h3", text: "Què veuen altres jugadors" },
         {
@@ -78,6 +84,7 @@ export const ca: LegalDocument = {
           items: [
             "<b>Supabase</b>: base de dades, inici de sessió i funcions de servidor.",
             "<b>Vercel</b>: allotja el web.",
+            "<b>Google Analytics</b>: estadístiques d'ús, només si acceptes les galetes d'analítica.",
             "<b>OpenAI</b>: genera els trencaclosques. Només rep el text de la teva pràctica, mai el teu nom ni el teu correu.",
             "<b>Google i GitHub</b>: gestionen l'inici de sessió segons les seves pròpies polítiques de privacitat.",
             "<b>LinkedIn</b>: només si el connectes, segons la seva pròpia política de privacitat.",
@@ -116,7 +123,7 @@ export const ca: LegalDocument = {
       blocks: [
         {
           kind: "p",
-          text: "GitGud no fa servir galetes publicitàries, d'analítica ni de seguiment. Desa a l'emmagatzematge del teu navegador uns quants elements que el joc necessita per funcionar, de manera que no requereixen consentiment:",
+          text: "GitGud no fa servir galetes publicitàries. Desa a l'emmagatzematge del teu navegador uns quants elements que el joc necessita per funcionar, de manera que no requereixen consentiment:",
         },
         {
           kind: "table",
@@ -128,6 +135,7 @@ export const ca: LegalDocument = {
             ["gitgud:guided-lessons:v1", "Els teus trencaclosques de pràctica amb IA recents", "Fins que l'esborris"],
             ["gitgud:auth:v1", "Manté la sessió iniciada", "Fins que tanquis la sessió"],
             ["gitgud:locale:v1", "L'idioma que has triat", "Fins que l'esborris"],
+            ["gitgud:consent:v1", "Recorda la teva elecció sobre les galetes", "24 mesos"],
             ["gitgud:welcome-seen:v1", "Recorda que ja has vist la benvinguda", "Fins que l'esborris"],
             ["gitgud:guided-goal-draft:v1, gitgud:linkedin:resume-share", "Desa un objectiu de pràctica o una publicació de LinkedIn sense enviar mentre no hi ets", "Fins que tanquis la pestanya"],
           ],
@@ -136,6 +144,25 @@ export const ca: LegalDocument = {
           kind: "p",
           text: "Els pots esborrar quan vulguis des de la configuració del lloc del teu navegador. Si jugues com a convidat, en esborrar-los perds el teu progrés.",
         },
+        { kind: "h3", text: "Galetes d'analítica, només si acceptes" },
+        {
+          kind: "p",
+          text: "Si acceptes, Google Analytics instal·la aquestes galetes perquè puguem comptar les visites i veure quines parts de GitGud es fan servir. Google Signals i les funcions publicitàries estan desactivades. Si rebutges, Google Analytics no es carrega.",
+        },
+        {
+          kind: "table",
+          code: true,
+          head: ["Galeta", "Finalitat", "Conservació"],
+          rows: [
+            ["_ga", "Google Analytics: distingeix les visites amb un ID aleatori", "2 anys"],
+            ["_ga_BFBC4GRELH", "Google Analytics: manté l'estat de la teva visita", "2 anys"],
+          ],
+        },
+        {
+          kind: "p",
+          text: "Pots canviar la teva elecció quan vulguis des de Configuració de galetes, al peu de la pàgina, o amb el botó de sota. Si rebutges més tard, aquestes galetes s'esborren.",
+        },
+        { kind: "consent" },
       ],
     },
     {

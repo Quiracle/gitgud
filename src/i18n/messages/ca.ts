@@ -53,6 +53,20 @@ export const ca: Messages = {
 
   "legal.back": "Torna",
 
+  "consent.title": "Galetes?",
+
+  "consent.body": "Ens agradaria fer servir galetes de Google Analytics per veure com es juga a GitGud i millorar-lo. Només s'instal·len si acceptes. <policy>Política de galetes</policy>",
+
+  "consent.accept": "Acceptar",
+
+  "consent.reject": "Rebutjar",
+
+  "consent.currentAccepted": "Has acceptat les galetes d'analítica.",
+
+  "consent.currentRejected": "Has rebutjat les galetes d'analítica.",
+
+  "consent.settings": "Configuració de galetes",
+
   "streak.days_one": "Ratxa d'{count} dia!",
   "streak.days_other": "Ratxa de {count} dies!",
   "streak.start": "Comença la teva ratxa!",

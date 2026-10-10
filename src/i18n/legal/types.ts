@@ -18,7 +18,9 @@ export type LegalBlock =
   | { kind: "p"; text: string }
   | { kind: "list"; items: string[] }
   /** Rows render as cards titled by their first cell; `code` sets that title in monospace. */
-  | { kind: "table"; head: string[]; rows: string[][]; code?: boolean };
+  | { kind: "table"; head: string[]; rows: string[][]; code?: boolean }
+  /** A Cookie settings button that reopens the consent banner. */
+  | { kind: "consent" };
 
 export interface LegalSection {
   id: LegalSectionId;

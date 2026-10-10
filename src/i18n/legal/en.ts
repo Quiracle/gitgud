@@ -56,6 +56,12 @@ export const en: LegalDocument = {
               "Until you disconnect, the token expires or you delete your account",
             ],
             [
+              "Usage statistics from Google Analytics: pages visited, device and browser type, approximate location and a random cookie ID",
+              "Understand how GitGud is played and improve it",
+              "Your consent (Art. 6.1.a), which you can withdraw in Cookie settings",
+              "Up to 14 months",
+            ],
+            [
               "IP address and browser details in our providers' technical logs",
               "Keep the service running and secure",
               "Legitimate interest (Art. 6.1.f)",
@@ -65,7 +71,7 @@ export const en: LegalDocument = {
         },
         {
           kind: "p",
-          text: "We don't sell your data, show ads, use analytics or tracking, or make automated decisions with legal or similarly significant effects about you.",
+          text: "We don't sell your data, show ads, or make automated decisions with legal or similarly significant effects about you. We only use analytics if you accept analytics cookies.",
         },
         { kind: "h3", text: "What other players see" },
         {
@@ -78,6 +84,7 @@ export const en: LegalDocument = {
           items: [
             "<b>Supabase</b>: database, sign-in and server functions.",
             "<b>Vercel</b>: hosts the website.",
+            "<b>Google Analytics</b>: usage statistics, only if you accept analytics cookies.",
             "<b>OpenAI</b>: generates puzzles. It receives only your practice text, never your name or email.",
             "<b>Google and GitHub</b>: sign you in under their own privacy policies.",
             "<b>LinkedIn</b>: only if you connect it, under its own privacy policy.",
@@ -116,7 +123,7 @@ export const en: LegalDocument = {
       blocks: [
         {
           kind: "p",
-          text: "GitGud uses no advertising, analytics or tracking cookies. It saves a few items in your browser's storage that the game needs to work, so they don't require consent:",
+          text: "GitGud uses no advertising cookies. It saves a few items in your browser's storage that the game needs to work, so they don't require consent:",
         },
         {
           kind: "table",
@@ -128,6 +135,7 @@ export const en: LegalDocument = {
             ["gitgud:guided-lessons:v1", "Your recent AI practice puzzles", "Until you clear it"],
             ["gitgud:auth:v1", "Keeps you signed in", "Until you log out"],
             ["gitgud:locale:v1", "Your chosen language", "Until you clear it"],
+            ["gitgud:consent:v1", "Remembers your cookie choice", "24 months"],
             ["gitgud:welcome-seen:v1", "Remembers you've seen the welcome", "Until you clear it"],
             ["gitgud:guided-goal-draft:v1, gitgud:linkedin:resume-share", "Keeps an unsent practice goal or LinkedIn post while you're away", "Until you close the tab"],
           ],
@@ -136,6 +144,25 @@ export const en: LegalDocument = {
           kind: "p",
           text: "You can delete these at any time in your browser's site settings. Deleting them as a guest erases your guest progress.",
         },
+        { kind: "h3", text: "Analytics cookies, only if you accept" },
+        {
+          kind: "p",
+          text: "If you accept, Google Analytics sets these cookies so we can count visits and see which parts of GitGud are used. Google Signals and advertising features are off. If you reject, Google Analytics isn't loaded at all.",
+        },
+        {
+          kind: "table",
+          code: true,
+          head: ["Cookie", "Purpose", "Kept"],
+          rows: [
+            ["_ga", "Google Analytics: tells visits apart with a random ID", "2 years"],
+            ["_ga_BFBC4GRELH", "Google Analytics: keeps the state of your visit", "2 years"],
+          ],
+        },
+        {
+          kind: "p",
+          text: "You can change your choice at any time with Cookie settings at the bottom of the page or the button below. Rejecting later deletes these cookies.",
+        },
+        { kind: "consent" },
       ],
     },
     {

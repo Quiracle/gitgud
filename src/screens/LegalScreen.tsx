@@ -2,6 +2,7 @@ import { motion } from "motion/react";
 import { useEffect, type ReactNode } from "react";
 import { Icon } from "../components/Icon/Icon";
 import { SiteFooter } from "../components/Layout/SiteFooter";
+import { openCookieSettings } from "../hooks/useCookieConsent";
 import { useI18n } from "../i18n/I18nProvider";
 import { LEGAL, LEGAL_UPDATED_ON, type LegalBlock, type LegalSectionId } from "../i18n/legal";
 import { Rich } from "../i18n/Rich";
@@ -117,7 +118,18 @@ export function LegalScreen({ onNavigate }: LegalScreenProps) {
 }
 
 function Block({ block }: { block: LegalBlock }) {
+  const { t } = useI18n();
   switch (block.kind) {
+    case "consent":
+      return (
+        <button
+          type="button"
+          onClick={openCookieSettings}
+          className="flex min-h-11 items-center self-start rounded border border-green-950 px-4 text-paragraph text-green-950 transition-colors hover:bg-green-950/5 active:bg-green-950/10"
+        >
+          {t("consent.settings")}
+        </button>
+      );
     case "h3":
       return <h3 className="mt-3 text-xl leading-[25px] text-green-950">{block.text}</h3>;
     case "p":

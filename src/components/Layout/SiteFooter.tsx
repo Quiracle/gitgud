@@ -1,3 +1,4 @@
+import { openCookieSettings } from "../../hooks/useCookieConsent";
 import { useI18n } from "../../i18n/I18nProvider";
 import { AppLink } from "../AppLink";
 import { LanguagePicker } from "../LanguagePicker/LanguagePicker";
@@ -14,15 +15,21 @@ export function SiteFooter({ onNavigate }: { onNavigate: (path: string) => void 
           <AppLink
             href="/legal"
             onNavigate={onNavigate}
-            className="flex min-h-11 items-center text-xs text-grey-600 underline decoration-from-font underline-offset-2 transition-colors hover:text-grey-950"
+            className={FOOTER_LINK}
           >
             {t("footer.privacy")}
           </AppLink>
+          <button type="button" onClick={openCookieSettings} className={FOOTER_LINK}>
+            {t("consent.settings")}
+          </button>
         </div>
       </div>
     </footer>
   );
 }
+
+const FOOTER_LINK =
+  "flex min-h-11 items-center text-xs text-grey-600 underline decoration-from-font underline-offset-2 transition-colors hover:text-grey-950";
 
 /** Grey card from Figma; hover darkens the fill only, so the card never changes size. */
 export const CARD_SURFACE =

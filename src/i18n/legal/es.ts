@@ -56,6 +56,12 @@ export const es: LegalDocument = {
               "Hasta que desconectes, caduque el token o elimines tu cuenta",
             ],
             [
+              "Estadísticas de uso de Google Analytics: páginas visitadas, tipo de dispositivo y navegador, ubicación aproximada y un ID aleatorio en una cookie",
+              "Entender cómo se juega a GitGud y mejorarlo",
+              "Tu consentimiento (art. 6.1.a), que puedes retirar en Configuración de cookies",
+              "Hasta 14 meses",
+            ],
+            [
               "Dirección IP y datos del navegador en los registros técnicos de nuestros proveedores",
               "Mantener el servicio en funcionamiento y seguro",
               "Interés legítimo (art. 6.1.f)",
@@ -65,7 +71,7 @@ export const es: LegalDocument = {
         },
         {
           kind: "p",
-          text: "No vendemos tus datos, no mostramos anuncios, no usamos analítica ni seguimiento y no tomamos decisiones automatizadas con efectos jurídicos o igualmente significativos sobre ti.",
+          text: "No vendemos tus datos, no mostramos anuncios y no tomamos decisiones automatizadas con efectos jurídicos o igualmente significativos sobre ti. Solo usamos analítica si aceptas las cookies de analítica.",
         },
         { kind: "h3", text: "Qué ven otros jugadores" },
         {
@@ -78,6 +84,7 @@ export const es: LegalDocument = {
           items: [
             "<b>Supabase</b>: base de datos, inicio de sesión y funciones de servidor.",
             "<b>Vercel</b>: aloja la web.",
+            "<b>Google Analytics</b>: estadísticas de uso, solo si aceptas las cookies de analítica.",
             "<b>OpenAI</b>: genera los puzles. Solo recibe el texto de tu práctica, nunca tu nombre ni tu correo.",
             "<b>Google y GitHub</b>: gestionan el inicio de sesión según sus propias políticas de privacidad.",
             "<b>LinkedIn</b>: solo si lo conectas, según su propia política de privacidad.",
@@ -116,7 +123,7 @@ export const es: LegalDocument = {
       blocks: [
         {
           kind: "p",
-          text: "GitGud no usa cookies publicitarias, de analítica ni de seguimiento. Guarda en el almacenamiento de tu navegador unos pocos elementos que el juego necesita para funcionar, por lo que no requieren consentimiento:",
+          text: "GitGud no usa cookies publicitarias. Guarda en el almacenamiento de tu navegador unos pocos elementos que el juego necesita para funcionar, por lo que no requieren consentimiento:",
         },
         {
           kind: "table",
@@ -128,6 +135,7 @@ export const es: LegalDocument = {
             ["gitgud:guided-lessons:v1", "Tus puzles de práctica con IA recientes", "Hasta que lo borres"],
             ["gitgud:auth:v1", "Mantiene tu sesión iniciada", "Hasta que cierres sesión"],
             ["gitgud:locale:v1", "El idioma que has elegido", "Hasta que lo borres"],
+            ["gitgud:consent:v1", "Recuerda tu elección sobre las cookies", "24 meses"],
             ["gitgud:welcome-seen:v1", "Recuerda que ya has visto la bienvenida", "Hasta que lo borres"],
             ["gitgud:guided-goal-draft:v1, gitgud:linkedin:resume-share", "Guarda un objetivo de práctica o una publicación de LinkedIn sin enviar mientras no estás", "Hasta que cierres la pestaña"],
           ],
@@ -136,6 +144,25 @@ export const es: LegalDocument = {
           kind: "p",
           text: "Puedes borrarlos cuando quieras desde los ajustes del sitio de tu navegador. Si juegas como invitado, al borrarlos pierdes tu progreso.",
         },
+        { kind: "h3", text: "Cookies de analítica, solo si aceptas" },
+        {
+          kind: "p",
+          text: "Si aceptas, Google Analytics instala estas cookies para que podamos contar las visitas y ver qué partes de GitGud se usan. Google Signals y las funciones publicitarias están desactivadas. Si rechazas, Google Analytics no se carga.",
+        },
+        {
+          kind: "table",
+          code: true,
+          head: ["Cookie", "Finalidad", "Conservación"],
+          rows: [
+            ["_ga", "Google Analytics: distingue las visitas con un ID aleatorio", "2 años"],
+            ["_ga_BFBC4GRELH", "Google Analytics: mantiene el estado de tu visita", "2 años"],
+          ],
+        },
+        {
+          kind: "p",
+          text: "Puedes cambiar tu elección cuando quieras desde Configuración de cookies, al pie de la página, o con el botón de abajo. Si rechazas más tarde, estas cookies se borran.",
+        },
+        { kind: "consent" },
       ],
     },
     {

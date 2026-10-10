@@ -4,7 +4,13 @@ import { LEGAL, LEGAL_SECTION_IDS, type LegalBlock } from ".";
 
 const tags = (text: string) => [...text.matchAll(/<(\w+)>/g)].map((match) => match[1]).sort();
 const texts = (block: LegalBlock): string[] =>
-  block.kind === "list" ? block.items : block.kind === "table" ? [...block.head, ...block.rows.flat()] : [block.text];
+  block.kind === "consent"
+    ? []
+    : block.kind === "list"
+      ? block.items
+      : block.kind === "table"
+        ? [...block.head, ...block.rows.flat()]
+        : [block.text];
 const shape = (block: LegalBlock) =>
   block.kind === "list"
     ? `list:${block.items.length}`
