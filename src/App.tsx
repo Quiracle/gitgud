@@ -1,8 +1,6 @@
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
-import { AppLink } from "./components/AppLink";
 import { useAuth } from "./context/AuthContext";
-import { useI18n } from "./i18n/I18nProvider";
 import { claimGuestDailies } from "./services/leaderboard";
 import { openProgressStore } from "./storage/browserProgress";
 import { BottomNav } from "./components/BottomNav/BottomNav";
@@ -20,6 +18,7 @@ import { LinkedInCallbackScreen } from "./screens/LinkedInCallbackScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { AccountScreen } from "./screens/AccountScreen";
 import { LegalScreen } from "./screens/LegalScreen";
+import { NotFoundScreen } from "./screens/NotFoundScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -138,24 +137,5 @@ function renderScreen(
     }
   }
 
-  return <NotFound onNavigate={navigate} />;
-}
-
-function NotFound({ onNavigate }: { onNavigate: (path: string) => void }) {
-  const { t } = useI18n();
-  return (
-    <div className="grid min-h-dvh place-items-center bg-slate-950 px-6 text-slate-100">
-      <div className="max-w-md text-center">
-        <p className="text-sm font-bold uppercase tracking-[0.3em] text-rose-300">404</p>
-        <h1 className="mt-3 text-3xl font-black">{t("notFound.title")}</h1>
-        <AppLink
-          href="/"
-          onNavigate={onNavigate}
-          className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-white px-5 py-3 font-bold text-slate-950"
-        >
-          {t("common.returnHome")}
-        </AppLink>
-      </div>
-    </div>
-  );
+  return <NotFoundScreen onNavigate={navigate} />;
 }
