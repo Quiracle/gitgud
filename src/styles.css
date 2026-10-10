@@ -103,7 +103,9 @@
   color-scheme: light;
   font-family: var(--type-font-primary);
   font-weight: var(--type-weight-regular);
-  background: rgb(var(--colors-green-50));
+  /* Safari tints the status bar and top overscroll from the root background,
+     so it matches the dark screen headers; the light page lives on body. */
+  background: rgb(var(--colors-green-950));
   color: rgb(var(--colors-grey-950));
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -118,7 +120,7 @@ html {
 
 /* Puzzle screens fit the area above the keyboard; whatever Safari shows below it
    continues the terminal instead of the light page background. */
-html.dark-backdrop {
+html.dark-backdrop body {
   background: rgb(var(--colors-green-950));
 }
 
@@ -132,6 +134,7 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   overscroll-behavior-y: contain;
+  background: rgb(var(--colors-green-50));
 }
 
 #root {
