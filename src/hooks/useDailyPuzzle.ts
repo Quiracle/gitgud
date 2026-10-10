@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PublicPuzzleDefinition } from "../puzzles";
+import { t } from "../i18n/runtime";
 import { createDailyPuzzleSource, utcDate } from "../services/dailyPuzzles";
 
 export type DailyPuzzleState =
@@ -17,7 +18,7 @@ export function useDailyPuzzle(date = utcDate()) {
       const puzzle = await createDailyPuzzleSource().getByDate(date);
       setState({ status: "ready", puzzle });
     } catch (reason) {
-      setState({ status: "error", message: reason instanceof Error ? reason.message : "Unable to load today's puzzle." });
+      setState({ status: "error", message: reason instanceof Error ? reason.message : t("daily.loadFailed") });
     }
   }, [date]);
 

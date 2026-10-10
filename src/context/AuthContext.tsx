@@ -13,6 +13,7 @@ import {
   type AuthUser,
   type OAuthProvider,
 } from "../services/auth";
+import { t } from "../i18n/runtime";
 import { getSupabaseClient, isSupabaseConfigured } from "../services/supabase";
 
 type AuthStatus = "loading" | "guest" | "authenticated";
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let active = true;
     void client.auth.getSession().then(({ data, error: sessionError }) => {
       if (!active) return;
-      if (sessionError) setError(sessionError.message);
+      if (sessionError) setError(t("auth.sessionFailed"));
       setUser(data.session?.user ? toAuthUser(data.session.user) : undefined);
       setStatus(data.session ? "authenticated" : "guest");
     });
@@ -75,7 +76,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           await beginOAuthSignIn(provider, nextPath);
         } catch (reason) {
           setPendingProvider(undefined);
-          setError(reason instanceof Error ? reason.message : "Sign-in could not be started.");
+          console.warn(reason);
+          setError(t("auth.signInFailed"));
         }
       },
       async signOut() {
@@ -83,7 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           await signOutFromSupabase();
         } catch (reason) {
-          setError(reason instanceof Error ? reason.message : "Sign-out failed.");
+          console.warn(reason);
+          setError(t("auth.signOutFailed"));
         }
       },
       clearError: () => setError(undefined),

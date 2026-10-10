@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TerminalEntry } from "../components/Puzzle/CommandPanel";
 import { useAuth } from "../context/AuthContext";
+import { goalLabel } from "../i18n/goals";
+import { useI18n } from "../i18n/I18nProvider";
 import {
   executeCommand,
   formatInteractiveRebaseCommand,
@@ -40,6 +42,7 @@ interface PendingRebase {
  */
 export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const { status: authStatus, user } = useAuth();
+  const i18n = useI18n();
   const [boot] = useState(() => {
     const store = openProgressStore();
     // A daily can be solved once: reopening it shows the solved run, read-only.
@@ -47,7 +50,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
     if (solved) {
       const attempt = attemptFromCompletion(solved);
       const restored = restoreRun(puzzle, attempt);
-      restored.entries.push({ id: restored.entries.length, lines: ["Puzzle solved!"], tone: "success" });
+      restored.entries.push({ id: restored.entries.length, lines: [i18n.t("terminal.solved")], tone: "success" });
       return { store, attempt, restored, solved };
     }
     const attempt = store.start(puzzle);
@@ -215,9 +218,9 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
       record({ command, lines: result.output, tone: result.ok ? "normal" : "error" });
       // The state can look finished while history goals are still open: say which ones.
       if (result.ok && result.mutated && !solved && next.checks.find((check) => check.id === "snapshot")?.met) {
-        const open = next.checks.filter((check) => !check.met).map((check) => `  - ${check.label}`);
+        const open = next.checks.filter((check) => !check.met).map((check) => `  - ${goalLabel(check, i18n)}`);
         record({
-          lines: ["The state matches the goal, but the history doesn't yet:", ...open, "Tap Goal for the full checklist."],
+          lines: [i18n.t("terminal.historyOpen"), ...open, i18n.t("terminal.tapGoal")],
           tone: "info",
         });
       }
@@ -226,7 +229,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
       setAttempt(nextAttempt);
 
       if (solved && !validation.solved) {
-        record({ lines: ["Puzzle solved!"], tone: "success" });
+        record({ lines: [i18n.t("terminal.solved")], tone: "success" });
         // Stop the clock first, so nothing banks into the finished attempt.
         const finalMs = activeMs();
         openSince.current = null;
@@ -237,7 +240,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
       }
       return { ok: result.ok, mutated: result.ok && result.mutated, solved };
     },
-    [actions, activeMs, assisted, attempt, locked, puzzle, record, repository, store, submit, validation.solved],
+    [actions, activeMs, assisted, attempt, i18n, locked, puzzle, record, repository, store, submit, validation.solved],
   );
 
   const restart = useCallback(() => {

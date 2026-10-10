@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Locale } from "../i18n/locales";
+import { t } from "../i18n/runtime";
 import { GUIDED_GOAL_MAX_LENGTH } from "../puzzles/generation/guided";
 import { parsePublicPuzzleDefinition } from "../puzzles/schema";
 import type { PublicPuzzleDefinition } from "../puzzles/types";
@@ -9,6 +11,8 @@ export { GUIDED_GOAL_MAX_LENGTH };
 export interface GuidedLessonRequest {
   /** The learner's own words: a topic, a command, or a goal. Plain data, never instructions. */
   goal: string;
+  /** Language for the puzzle's prose. Git commands, branches, and IDs stay as they are. */
+  locale?: Locale;
 }
 
 export interface GuidedLesson {
@@ -38,20 +42,20 @@ export class GuidedLessonError extends Error {}
 export class ComingSoonGuidedLessonService implements GuidedLessonService {
   async generate(): Promise<GuidedLesson> {
     await new Promise((resolve) => setTimeout(resolve, 1200));
-    throw new GuidedLessonError("Personalised puzzles are coming soon. Continue with your lessons for now.");
+    throw new GuidedLessonError(t("guided.error.comingSoon"));
   }
 }
 
 export class SupabaseGuidedLessonService implements GuidedLessonService {
   constructor(private readonly client: SupabaseClient) {}
 
-  async generate({ goal }: GuidedLessonRequest): Promise<GuidedLesson> {
-    const { data, error } = await this.client.functions.invoke("generate-guided-lesson", { body: { goal } });
+  async generate({ goal, locale }: GuidedLessonRequest): Promise<GuidedLesson> {
+    const { data, error } = await this.client.functions.invoke("generate-guided-lesson", { body: { goal, locale } });
     if (error) throw new GuidedLessonError(await friendlyMessage(error));
 
     const parsed = parsePublicPuzzleDefinition(data?.puzzle);
     if (!parsed.puzzle || typeof data?.id !== "string") {
-      throw new GuidedLessonError("We couldn't build your puzzle. Please try again.");
+      throw new GuidedLessonError(t("guided.error.generic"));
     }
     const lesson: GuidedLesson = {
       id: data.id,
@@ -66,20 +70,17 @@ export class SupabaseGuidedLessonService implements GuidedLessonService {
   }
 }
 
-/** The Edge Function answers errors with `{ error }` written for the learner. */
+/** Maps the Edge Function's HTTP status to a message in the player's language. */
 async function friendlyMessage(error: { message?: string; context?: unknown }): Promise<string> {
   const context = error.context;
   if (context instanceof Response) {
-    try {
-      const body = await context.clone().json();
-      if (typeof body?.error === "string" && body.error.length <= 200) return body.error;
-    } catch {
-      // Fall through to the generic message.
-    }
-    if (context.status === 401) return "Sign in to build a personalised puzzle.";
-    if (context.status === 429) return "You've built a lot of puzzles recently. Try again a little later.";
+    if (context.status === 400) return t("guided.error.badGoal");
+    if (context.status === 401) return t("guided.error.signIn");
+    if (context.status === 429) return t("guided.error.rateLimited");
+    if (context.status === 503) return t("guided.error.busy");
+    return t("guided.error.generic");
   }
-  return "We couldn't reach the puzzle builder. Check your connection and try again.";
+  return t("guided.error.offline");
 }
 
 const CACHE_KEY = "gitgud:guided-lessons:v1";

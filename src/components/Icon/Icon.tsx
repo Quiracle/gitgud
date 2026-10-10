@@ -17,6 +17,7 @@ import forwardMedia from "../../assets/icons/forward_media.svg";
 import help from "../../assets/icons/help.svg";
 import home from "../../assets/icons/home.svg";
 import importContacts from "../../assets/icons/import_contacts.svg";
+import language from "../../assets/icons/language.svg";
 import lightbulb2 from "../../assets/icons/lightbulb_2.svg";
 import myLocation from "../../assets/icons/my_location.svg";
 import openInNew from "../../assets/icons/open_in_new.svg";
@@ -43,6 +44,7 @@ const ICONS = {
   help,
   home,
   import_contacts: importContacts,
+  language,
   lightbulb_2: lightbulb2,
   my_location: myLocation,
   open_in_new: openInNew,

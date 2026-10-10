@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
 import { Icon, type IconName } from "../Icon/Icon";
 
 interface ActionBarProps {
@@ -28,13 +29,14 @@ export function ActionBar({
   hintDisabled,
   className = "",
 }: ActionBarProps) {
+  const { t } = useI18n();
   return (
-    <nav aria-label="Puzzle actions" className={`flex items-center justify-between bg-green-950 px-6 py-1 ${className}`}>
-      <Action icon="arrow_back_ios_new" label="Exit" onClick={onExit} />
-      <Action icon="forward_media" label="Restart" compact onClick={onRestart} disabled={restartDisabled} />
-      <Action icon="help" label="Help" compact onClick={onHelp} />
-      <Action icon="lightbulb_2" label="Hint" compact onClick={onHint} disabled={hintDisabled} />
-      <Action icon="close" label="Give up" onClick={onGiveUp} disabled={giveUpDisabled} />
+    <nav aria-label={t("actions.label")} className={`flex items-center justify-between bg-green-950 px-6 py-1 ${className}`}>
+      <Action icon="arrow_back_ios_new" label={t("actions.exit")} onClick={onExit} />
+      <Action icon="forward_media" label={t("actions.restart")} compact onClick={onRestart} disabled={restartDisabled} />
+      <Action icon="help" label={t("actions.help")} compact onClick={onHelp} />
+      <Action icon="lightbulb_2" label={t("actions.hint")} compact onClick={onHint} disabled={hintDisabled} />
+      <Action icon="close" label={t("actions.giveUp")} onClick={onGiveUp} disabled={giveUpDisabled} />
     </nav>
   );
 }

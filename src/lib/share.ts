@@ -1,3 +1,4 @@
+import { currentLocale, t } from "../i18n/runtime";
 import type { PuzzleDifficulty } from "../puzzles/types";
 import { formatDuration } from "./format";
 
@@ -11,25 +12,32 @@ export interface ShareSummary {
   assisted: boolean;
 }
 
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-const DIFFICULTY: Record<PuzzleDifficulty, string> = { easy: "Easy", medium: "Medium", hard: "Hard" };
-
-/** "10 Oct 2026". Read straight from the string so no timezone can shift the day. */
+/** "10 Oct 2026" in the active language. Formatted in UTC so no timezone can shift the day. */
 export function formatPuzzleDate(publishedOn: string): string {
   const [year, month, day] = publishedOn.split("-").map(Number);
-  return `${day} ${MONTHS[month - 1]} ${year}`;
+  const locale = currentLocale();
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : locale, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(Date.UTC(year, month - 1, day));
 }
 
 export function retriesLabel(count: number): string {
-  return `${count} ${count === 1 ? "retry" : "retries"}`;
+  return t("leaderboard.retries", { count });
 }
 
 /** Spoiler-free post text: date, difficulty, time, and retries, never the commands. */
 export function shareText(summary: ShareSummary, url: string): string {
   const result = summary.assisted
-    ? "solved with help"
-    : `solved in ${formatDuration(summary.elapsedMs)} with ${retriesLabel(summary.restartCount)}`;
-  return `GitGud daily · ${formatPuzzleDate(summary.publishedOn)}\n${DIFFICULTY[summary.difficulty]} puzzle, ${result}.\nPlay today's puzzle: ${url}`;
+    ? t("share.solvedWithHelp")
+    : t("share.solvedIn", { time: formatDuration(summary.elapsedMs), retries: retriesLabel(summary.restartCount) });
+  return [
+    t("share.heading", { date: formatPuzzleDate(summary.publishedOn) }),
+    t("share.result", { difficulty: t(`difficulty.${summary.difficulty}`), result }),
+    t("share.cta", { url }),
+  ].join("\n");
 }
 
 /** LinkedIn only takes a URL here; the image has to be attached in the composer. */

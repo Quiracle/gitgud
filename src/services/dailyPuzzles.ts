@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { t } from "../i18n/runtime";
 import { createDailyFixture } from "../puzzles/dailyFixture";
 import { parsePublicPuzzleDefinition } from "../puzzles/schema";
 import type { PublicPuzzleDefinition } from "../puzzles/types";
@@ -40,12 +41,12 @@ export class SupabaseDailyPuzzleSource implements DailyPuzzleSource {
     if (error) {
       const cached = readCache(date);
       if (cached) return cached;
-      throw new Error(`Daily puzzle service is unavailable: ${error.message}`);
+      throw new Error(t("daily.unavailable"), { cause: error });
     }
-    if (!data) throw new Error("Today's puzzle has not been published yet. Please try again shortly.");
+    if (!data) throw new Error(t("daily.notPublished"));
 
     const parsed = parsePublicPuzzleDefinition(data.definition);
-    if (!parsed.puzzle) throw new Error("Today's published puzzle is invalid. Please contact the organizer.");
+    if (!parsed.puzzle) throw new Error(t("daily.invalid"));
     writeCache(date, parsed.puzzle);
     return parsed.puzzle;
   }

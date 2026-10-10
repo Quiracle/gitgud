@@ -9,6 +9,7 @@ import { SiteFooter } from "../components/Layout/SiteFooter";
 import { TimeHistogram } from "../components/Leaderboard/TimeHistogram";
 import { useAuth } from "../context/AuthContext";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
+import { useI18n } from "../i18n/I18nProvider";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
 import { getDailyLeaderboard, type LeaderboardEntry } from "../services/leaderboard";
@@ -50,6 +51,7 @@ const PLAIN_CHICKEN: ChickenLook = { chicken: true, body: "default", parts: { cr
 
 /** Daily leaderboard, built in the language of the Home and Learn screens. */
 export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
+  const { t, formatDate } = useI18n();
   const daily = useDailyPuzzle();
   const { status: authStatus } = useAuth();
   const signedIn = authStatus === "authenticated";
@@ -76,16 +78,14 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
         const message = reason instanceof Error ? reason.message : "";
         setBoard({
           status: "error",
-          message: message.includes("not configured")
-            ? "The leaderboard needs a connection. You can keep playing as a guest."
-            : "The leaderboard is unavailable right now. Try again in a moment.",
+          message: message.includes("not configured") ? t("leaderboard.needsConnection") : t("leaderboard.unavailable"),
         });
       });
     return () => {
       cancelled = true;
     };
     // Refetch after signing in so your own row is marked.
-  }, [puzzle, dailyError, signedIn]);
+  }, [puzzle, dailyError, signedIn, t]);
 
   const entries = board.status === "ready" ? board.entries : [];
   const podium = entries.filter((entry) => entry.rank <= 3);
@@ -102,7 +102,7 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={spring.soft}
             >
-              Leaderboard
+              {t("leaderboard.title")}
             </motion.h1>
             <motion.div
               className="flex items-center justify-between gap-3"
@@ -112,7 +112,7 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
             >
               <p className="flex items-center gap-1 text-paragraph leading-5 text-grey-50">
                 <Icon name="extension" size={16} />
-                Daily game · {formatDay(daily.date)}
+                {t("home.dailyGame", { date: formatDate(`${daily.date}T00:00:00Z`, { month: "short", day: "numeric", timeZone: "UTC" }) })}
               </p>
               {puzzle && <DifficultyBadge difficulty={puzzle.difficulty} />}
             </motion.div>
@@ -122,16 +122,16 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
             {board.status === "loading" && <PodiumSkeleton />}
             {board.status === "ready" && podium.length > 0 && <Podium entries={podium} />}
             {board.status === "ready" && podium.length === 0 && (
-              <EmptyState title="No ranked solves yet" body="Be the first chicken on today's podium." />
+              <EmptyState title={t("leaderboard.emptyTitle")} body={t("leaderboard.emptyBody")} />
             )}
-            {board.status === "error" && <EmptyState title="Leaderboard offline" body={board.message} />}
+            {board.status === "error" && <EmptyState title={t("leaderboard.offline")} body={board.message} />}
           </div>
 
           {!signedIn ? (
-            <Button onClick={() => setLoginOpen(true)}>Log in to get ranked</Button>
+            <Button onClick={() => setLoginOpen(true)}>{t("leaderboard.logIn")}</Button>
           ) : !solvedToday ? (
             <Button href="/play" onNavigate={onNavigate}>
-              Solve the puzzle!
+              {t("home.solve")}
             </Button>
           ) : null}
         </div>
@@ -141,8 +141,8 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
         <section className="px-6 py-6">
           <div className="mx-auto flex max-w-md flex-col gap-4">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-xl leading-[25px] text-green-950">Today's ranking</h2>
-              {me && <span className="text-xs text-grey-700">You're #{me.rank}</span>}
+              <h2 className="text-xl leading-[25px] text-green-950">{t("leaderboard.todaysRanking")}</h2>
+              {me && <span className="text-xs text-grey-700">{t("leaderboard.yourRank", { rank: me.rank })}</span>}
             </div>
             <motion.ol
               className="flex flex-col gap-2"
@@ -184,9 +184,10 @@ const PODIUM_HEIGHT: Record<number, number> = { 1: 96, 2: 72, 3: 56 };
 
 /** Top three on steps, winner in the middle. Steps rise, then the chickens drop on. */
 function Podium({ entries }: { entries: LeaderboardEntry[] }) {
+  const { t } = useI18n();
   const byRank = new Map(entries.map((entry) => [entry.rank, entry]));
   return (
-    <div className="flex items-end justify-center gap-3 pt-2" aria-label="Top three">
+    <div className="flex items-end justify-center gap-3 pt-2" aria-label={t("leaderboard.topThree")}>
       {PODIUM_ORDER.map((rank, index) => {
         const entry = byRank.get(rank);
         const first = rank === 1;
@@ -204,9 +205,9 @@ function Podium({ entries }: { entries: LeaderboardEntry[] }) {
                   look={PODIUM_LOOKS[rank]}
                   size={first ? 64 : 48}
                   className={`rounded ${entry.isCurrentUser ? "outline outline-2 outline-lime-400" : ""}`}
-                  label={`${entry.displayName}, rank ${rank}`}
+                  label={t("leaderboard.podiumLabel", { name: entry.displayName, rank })}
                 />
-                <p className="w-full truncate text-center text-xs text-grey-50">{entry.isCurrentUser ? "You" : entry.displayName}</p>
+                <p className="w-full truncate text-center text-xs text-grey-50">{entry.isCurrentUser ? t("leaderboard.you") : entry.displayName}</p>
                 <p className="text-xs text-grey-300">{formatDuration(entry.elapsedMs)}</p>
               </motion.div>
             ) : (
@@ -229,8 +230,9 @@ function Podium({ entries }: { entries: LeaderboardEntry[] }) {
 }
 
 function PodiumSkeleton() {
+  const { t } = useI18n();
   return (
-    <div className="flex items-end justify-center gap-3 pt-2" aria-label="Loading leaderboard">
+    <div className="flex items-end justify-center gap-3 pt-2" aria-label={t("leaderboard.loading")}>
       {PODIUM_ORDER.map((rank, index) => (
         <motion.div
           key={rank}
@@ -266,6 +268,7 @@ const rowVariants: Variants = {
 
 /** One ranked player. Your own row is outlined in lime. */
 function EntryRow({ entry }: { entry: LeaderboardEntry }) {
+  const { t } = useI18n();
   return (
     <motion.li
       variants={rowVariants}
@@ -290,10 +293,10 @@ function EntryRow({ entry }: { entry: LeaderboardEntry }) {
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="truncate text-paragraph leading-5 text-grey-950">
           {entry.displayName}
-          {entry.isCurrentUser && <span className="ml-2 rounded bg-lime-400 px-1 text-2xs text-green-950">You</span>}
+          {entry.isCurrentUser && <span className="ml-2 rounded bg-lime-400 px-1 text-2xs text-green-950">{t("leaderboard.you")}</span>}
         </p>
         <p className="text-xs leading-[15px] text-grey-700">
-          {entry.restartCount} {entry.restartCount === 1 ? "retry" : "retries"} · {entry.commandCount} commands
+          {t("leaderboard.retries", { count: entry.restartCount })} · {t("leaderboard.commands", { count: entry.commandCount })}
         </p>
       </div>
       <span className="shrink-0 font-secondary text-code leading-5 text-grey-950">{formatDuration(entry.elapsedMs)}</span>
@@ -301,6 +304,3 @@ function EntryRow({ entry }: { entry: LeaderboardEntry }) {
   );
 }
 
-function formatDay(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
-}

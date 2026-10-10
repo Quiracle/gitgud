@@ -94,11 +94,21 @@ export interface PuzzleTarget {
   requiredProvenance?: RequiredProvenance[];
 }
 
+/** What a goal asks for, as data, so interfaces can phrase it in any language. */
+export type GoalSpec =
+  | { type: "snapshot"; branch: string }
+  | { type: "head"; branch: string }
+  | { type: "branch-head"; branch: string; commit: string }
+  | { type: "provenance"; provenance: CommitProvenance["type"]; commits: string[] }
+  | { type: "action"; command: string };
+
 /** One player-facing completion condition and whether the repository meets it now. */
 export interface GoalCheck {
   id: string;
+  /** English wording; localized interfaces render from `goal` instead. */
   label: string;
   met: boolean;
+  goal: GoalSpec;
 }
 
 export interface ValidationResult {

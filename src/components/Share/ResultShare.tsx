@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
 import { canShareFile, copyImage, downloadImage, linkedInShareUrl, shareFileName, shareText, type ShareSummary } from "../../lib/share";
 import { renderShareCard } from "../../lib/shareCard";
 import type { PublicPuzzleDefinition } from "../../puzzles";
@@ -37,6 +38,7 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
     puzzle?.kind === "daily" && puzzle.publishedOn && result
       ? { publishedOn: puzzle.publishedOn, difficulty: puzzle.difficulty, ...result }
       : null;
+  const { t } = useI18n();
   const card = useShareCard(summary, puzzle);
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState<string | null>(null);
@@ -58,33 +60,33 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
   async function copy() {
     if (!card) return;
     const copied = await copyImage(card.blob);
-    setNote(copied ? "Image copied. Paste it into your LinkedIn post." : "This browser can't copy images. Download it instead.");
+    setNote(copied ? t("share.copied") : t("share.copyUnsupported"));
   }
 
   const dialog: ReactNode = (
-    <Dialog open={open && Boolean(card)} title="Share result" onClose={() => setOpen(false)}>
+    <Dialog open={open && Boolean(card)} title={t("result.share")} onClose={() => setOpen(false)}>
       {card && (
         <img
           src={card.url}
-          alt="Your result card: today's chicken, difficulty, time, and retries"
+          alt={t("share.cardAlt")}
           className="aspect-square w-full rounded"
         />
       )}
       <div className="flex flex-col gap-2">
         <Button onClick={copy}>
           <Icon name="content_copy" size={20} className="mr-2" />
-          Copy image
+          {t("share.copy")}
         </Button>
         <Button variant="outline" onClick={() => card && downloadImage(card.blob, card.file.name)}>
           <Icon name="download" size={20} className="mr-2" />
-          Download image
+          {t("share.download")}
         </Button>
         <Button
           variant="outline"
           onClick={() => window.open(linkedInShareUrl(window.location.origin), "_blank", "noopener,noreferrer")}
         >
           <Icon name="open_in_new" size={20} className="mr-2" />
-          Open LinkedIn
+          {t("share.linkedIn")}
         </Button>
       </div>
       <AnimatePresence mode="wait" initial={false}>
@@ -97,7 +99,7 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
           transition={{ duration: 0.18 }}
           aria-live="polite"
         >
-          {note ?? "Copy or download the image, then add it to your LinkedIn post."}
+          {note ?? t("share.help")}
         </motion.p>
       </AnimatePresence>
     </Dialog>
@@ -107,8 +109,10 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
 }
 
 function useShareCard(summary: ShareSummary | null, puzzle: PublicPuzzleDefinition | undefined): ShareCard | null {
+  const { locale } = useI18n();
   const [card, setCard] = useState<ShareCard | null>(null);
-  const key = summary && puzzle ? JSON.stringify([summary, puzzle.id, puzzle.version]) : null;
+  // The card is drawn with words, so a language change redraws it.
+  const key = summary && puzzle ? JSON.stringify([summary, puzzle.id, puzzle.version, locale]) : null;
 
   useEffect(() => {
     if (!summary || !puzzle) return;
@@ -136,10 +140,11 @@ function useShareCard(summary: ShareSummary | null, puzzle: PublicPuzzleDefiniti
 
 /** Compact outline "Share" button that sits beside another control. */
 export function ShareButton({ onClick, className = "" }: { onClick: () => void; className?: string }) {
+  const { t } = useI18n();
   return (
     <Button variant="outline" fullWidth={false} onClick={onClick} className={`shrink-0 ${className}`}>
       <Icon name="share" size={20} className="mr-2" />
-      Share
+      {t("share.button")}
     </Button>
   );
 }

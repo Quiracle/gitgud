@@ -5,6 +5,7 @@ import {
   type ChickenLook,
 } from "../components/Illustration/PixelChicken";
 import type { PuzzleDifficulty } from "../puzzles/types";
+import { currentLocale, t } from "../i18n/runtime";
 import { formatDuration } from "./format";
 import { formatPuzzleDate, type ShareSummary } from "./share";
 
@@ -25,7 +26,7 @@ const COLUMN = PAD + TILE + 56;
 const COLUMN_WIDTH = SIZE - PAD - COLUMN;
 
 const LEVEL: Record<PuzzleDifficulty, number> = { easy: 1, medium: 2, hard: 3 };
-const LABEL: Record<PuzzleDifficulty, string> = { easy: "Easy", medium: "Medium", hard: "Hard" };
+
 
 export interface ShareCardInput extends ShareSummary {
   look: ChickenLook;
@@ -53,20 +54,20 @@ export async function renderShareCard(input: ShareCardInput): Promise<Blob> {
   ctx.fillRect(0, 0, SIZE, SIZE);
 
   text(ctx, "GitGud", PAD, PAD + 48, `400 56px ${PRIMARY}`, LIME_400);
-  text(ctx, `Daily · ${formatPuzzleDate(input.publishedOn)}`, SIZE - PAD, PAD + 44, `400 32px ${MONO}`, GREY_400, "right");
+  text(ctx, t("shareCard.daily", { date: formatPuzzleDate(input.publishedOn) }), SIZE - PAD, PAD + 44, `400 32px ${MONO}`, GREY_400, "right");
 
   drawChicken(ctx, input.look, PAD, TILE_TOP);
 
   drawDifficulty(ctx, input.difficulty, COLUMN, TILE_TOP);
   if (input.assisted) {
-    text(ctx, "Result", COLUMN, TILE_TOP + 132, `400 32px ${PRIMARY}`, GREY_400);
-    fitted(ctx, "Solved with help", COLUMN, TILE_TOP + 216, 72, GREY_50);
+    text(ctx, t("shareCard.result"), COLUMN, TILE_TOP + 132, `400 32px ${PRIMARY}`, GREY_400);
+    fitted(ctx, t("result.assistedTitle"), COLUMN, TILE_TOP + 216, 72, GREY_50);
   } else {
-    text(ctx, "Time", COLUMN, TILE_TOP + 132, `400 32px ${PRIMARY}`, GREY_400);
+    text(ctx, t("shareCard.time"), COLUMN, TILE_TOP + 132, `400 32px ${PRIMARY}`, GREY_400);
     fitted(ctx, formatDuration(input.elapsedMs), COLUMN, TILE_TOP + 244, 112, GREY_50);
   }
-  text(ctx, "Retries", COLUMN, TILE_TOP + 332, `400 32px ${PRIMARY}`, GREY_400);
-  text(ctx, String(input.restartCount), COLUMN, TILE_TOP + 420, `400 72px ${PRIMARY}`, GREY_50);
+  text(ctx, t("shareCard.retries"), COLUMN, TILE_TOP + 332, `400 32px ${PRIMARY}`, GREY_400);
+  text(ctx, new Intl.NumberFormat(currentLocale()).format(input.restartCount), COLUMN, TILE_TOP + 420, `400 72px ${PRIMARY}`, GREY_50);
 
   text(ctx, input.site, SIZE - PAD, SIZE - PAD, `400 32px ${MONO}`, LIME_400, "right");
 
@@ -124,7 +125,7 @@ function drawDifficulty(ctx: CanvasRenderingContext2D, difficulty: PuzzleDifficu
   const barWidth = 10;
   const gap = 5;
   ctx.font = `400 30px ${PRIMARY}`;
-  const label = LABEL[difficulty];
+  const label = t(`difficulty.${difficulty}`);
   const width = 16 + bars.length * barWidth + (bars.length - 1) * gap + 14 + ctx.measureText(label).width + 16;
 
   ctx.fillStyle = GREY_50;

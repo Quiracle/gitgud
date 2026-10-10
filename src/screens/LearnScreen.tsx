@@ -7,9 +7,11 @@ import { Icon } from "../components/Icon/Icon";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
 import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
+import { useLessonCatalog } from "../hooks/useLessonCatalog";
 import { useLessonProgress } from "../hooks/useLessonProgress";
+import { useI18n } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/translate";
 import { spring } from "../lib/motion";
-import { learnBasicsCatalog } from "../puzzles";
 import { isAvailableLesson, type LearnBasicsLesson } from "../puzzles/learnBasics/types";
 
 interface LearnScreenProps {
@@ -20,6 +22,8 @@ type Step = "done" | "next" | "todo";
 
 /** Figma "learning" frame (node 39:120578). */
 export function LearnScreen({ onNavigate }: LearnScreenProps) {
+  const { t } = useI18n();
+  const learnBasicsCatalog = useLessonCatalog();
   const { lessons: completed } = useLessonProgress();
   const available = learnBasicsCatalog.filter(isAvailableLesson);
   const next = available.find((lesson) => !completed[lesson.id]);
@@ -37,7 +41,7 @@ export function LearnScreen({ onNavigate }: LearnScreenProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={spring.soft}
             >
-              Start learning!
+              {t("learn.title")}
             </motion.h1>
             <motion.div
               initial={{ opacity: 0, y: 8 }}
@@ -60,16 +64,16 @@ export function LearnScreen({ onNavigate }: LearnScreenProps) {
             {next ? (
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col gap-1">
-                  <p className="text-paragraph text-grey-50">Or continue with your lessons.</p>
-                  <p className="text-xs leading-[15px] text-grey-300">Next lesson:</p>
+                  <p className="text-paragraph text-grey-50">{t("learn.continue")}</p>
+                  <p className="text-xs leading-[15px] text-grey-300">{t("learn.nextLesson")}</p>
                 </div>
                 <LessonCard lesson={next} thumbnail="graph" onNavigate={onNavigate} />
               </div>
             ) : (
               <div className="flex flex-col gap-4">
-                <p className="text-paragraph text-grey-50">Or play today's daily game.</p>
+                <p className="text-paragraph text-grey-50">{t("learn.orDaily")}</p>
                 <Button variant="outline" href="/play" onNavigate={onNavigate}>
-                  Play the daily game
+                  {t("learn.playDaily")}
                 </Button>
               </div>
             )}
@@ -80,7 +84,7 @@ export function LearnScreen({ onNavigate }: LearnScreenProps) {
 
       <section className="px-6 py-6">
         <div className="mx-auto flex max-w-md flex-col gap-4">
-          <h2 className="text-xl leading-[25px] text-green-950">All the courses</h2>
+          <h2 className="text-xl leading-[25px] text-green-950">{t("learn.allCourses")}</h2>
           <motion.ol
             variants={{ show: { transition: { staggerChildren: 0.07 } } }}
             initial="hidden"
@@ -127,7 +131,7 @@ const STEP_STYLES: Record<Step, string> = {
   todo: "border border-green-800",
 };
 
-const STEP_LABELS: Record<Step, string> = { done: "Completed", next: "Up next", todo: "Not started" };
+const STEP_LABELS: Record<Step, TranslationKey> = { done: "learn.step.done", next: "learn.step.next", todo: "learn.step.todo" };
 
 interface CourseRowProps {
   lesson: LearnBasicsLesson;
@@ -142,6 +146,7 @@ interface CourseRowProps {
  * so each marker sits exactly at the card's vertical centre whatever the card height.
  */
 function CourseRow({ lesson, step, first, last, onNavigate }: CourseRowProps) {
+  const { t } = useI18n();
   return (
     <motion.li className="flex gap-4" variants={rowVariants}>
       <div className="flex w-3 shrink-0 flex-col items-center" aria-hidden>
@@ -158,7 +163,7 @@ function CourseRow({ lesson, step, first, last, onNavigate }: CourseRowProps) {
         {!last && <motion.span className="h-2 w-px origin-top bg-green-800" variants={railVariants} />}
       </div>
       <div className={`min-w-0 flex-1 ${last ? "" : "pb-2"}`}>
-        <span className="sr-only">{STEP_LABELS[step]}: </span>
+        <span className="sr-only">{t(STEP_LABELS[step])}: </span>
         <LessonCard lesson={lesson} thumbnail="chicken" onNavigate={onNavigate} />
       </div>
     </motion.li>
@@ -174,6 +179,7 @@ interface LessonCardProps {
 
 /** Grey course card (Figma node 45:158201). Lessons that aren't ready render dimmed. */
 function LessonCard({ lesson, thumbnail, onNavigate }: LessonCardProps) {
+  const { t } = useI18n();
   const available = isAvailableLesson(lesson);
   const href = `/course/${lesson.id}`;
   let picture: ReactNode;
@@ -198,11 +204,11 @@ function LessonCard({ lesson, thumbnail, onNavigate }: LessonCardProps) {
       {picture}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <div className="flex items-center gap-2 text-grey-700">
-          <span className="flex-1 text-xs leading-[15px]">Course {lesson.order}</span>
+          <span className="flex-1 text-xs leading-[15px]">{t("common.course", { number: lesson.order })}</span>
           {available ? (
             <Icon name="arrow_forward_ios" size={16} className="text-grey-950" />
           ) : (
-            <span className="text-2xs">Soon</span>
+            <span className="text-2xs">{t("common.soon")}</span>
           )}
         </div>
         <p className="text-paragraph leading-5 text-grey-950">{lesson.title}</p>

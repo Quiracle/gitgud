@@ -1,5 +1,8 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
+import { Rich } from "../../i18n/Rich";
+import type { TranslationKey } from "../../i18n/translate";
 import { spring } from "../../lib/motion";
 import { Button } from "../Button/Button";
 import { CommitCard } from "../GitGraph/CommitTree";
@@ -16,52 +19,16 @@ const HAT = chickenLookFromState({ scarf: true, hat: true });
 const LINK = "mb-[42px] h-px w-5 shrink-0 self-end origin-left bg-grey-500";
 
 interface Step {
-  title: string;
+  title: TranslationKey;
   scene: () => ReactNode;
-  text: ReactNode;
+  text: TranslationKey;
 }
 
 const STEPS: Step[] = [
-  {
-    title: "Welcome to gitgud!",
-    scene: () => <HistoryScene />,
-    text: (
-      <>
-        A new Git puzzle every day. This is a repository’s history: each card is a <Em>commit</Em> showing the
-        chicken at that moment.
-      </>
-    ),
-  },
-  {
-    title: "Branches and HEAD",
-    scene: () => <BranchesScene />,
-    text: (
-      <>
-        Tags like <Code>main</Code> are <Em>branches</Em>: names that point at a commit. The lime outline is{" "}
-        <Em>HEAD</Em>, the commit you’re on.
-      </>
-    ),
-  },
-  {
-    title: "Type Git commands",
-    scene: () => <CommandScene />,
-    text: (
-      <>
-        Change the history by typing commands in the terminal. Here <Code>git cherry-pick</Code> copied a hat from
-        another branch onto <Code>main</Code> as a new commit.
-      </>
-    ),
-  },
-  {
-    title: "Match the goal",
-    scene: () => <GoalScene />,
-    text: (
-      <>
-        You win when your branch’s chicken matches the <Em>Goal</Em>. Any order of commands works. Stuck? Take a
-        hint or restart: your timer keeps going.
-      </>
-    ),
-  },
+  { title: "tutorial.step1.title", scene: () => <HistoryScene />, text: "tutorial.step1.text" },
+  { title: "tutorial.step2.title", scene: () => <BranchesScene />, text: "tutorial.step2.text" },
+  { title: "tutorial.step3.title", scene: () => <CommandScene />, text: "tutorial.step3.text" },
+  { title: "tutorial.step4.title", scene: () => <GoalScene />, text: "tutorial.step4.text" },
 ];
 
 const LAST = STEPS.length - 1;
@@ -75,6 +42,8 @@ interface WelcomeTutorialProps {
 
 /** First-visit walkthrough: four animated steps, then the "New to Git?" choice. */
 export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialProps) {
+  const { t } = useI18n();
+  const rich = (key: TranslationKey) => <Rich text={t(key)} tags={{ em: Em, code: Code }} />;
   const [[step, direction], setStep] = useState<[number, number]>([0, 1]);
   const go = (next: number) => setStep(([current]) => [Math.max(0, Math.min(LAST, next)), next > current ? 1 : -1]);
 
@@ -101,7 +70,7 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
   };
 
   return (
-    <Dialog open={open} title={title} onClose={onClose}>
+    <Dialog open={open} title={t(title)} onClose={onClose}>
       <div className="flex flex-col gap-4">
         <div className="relative flex h-40 items-center justify-center overflow-hidden rounded border border-grey-800">
           <AnimatePresence mode="wait" custom={direction}>
@@ -123,7 +92,7 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
         <div className="grid text-sm text-grey-300">
           {STEPS.map((candidate) => (
             <p key={candidate.title} aria-hidden className="invisible [grid-area:1/1]">
-              {candidate.text}
+              {rich(candidate.text)}
             </p>
           ))}
           <AnimatePresence mode="wait" initial={false}>
@@ -134,7 +103,7 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, transition: { duration: 0.1 } }}
             >
-              {text}
+              {rich(text)}
             </motion.p>
           </AnimatePresence>
         </div>
@@ -147,7 +116,7 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
           <>
             <NextButton onClick={() => go(step + 1)} />
             <Button variant="tertiary" onClick={onClose}>
-              Skip tutorial
+              {t("tutorial.skip")}
             </Button>
           </>
         ) : step < LAST ? (
@@ -158,12 +127,12 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
           </div>
         ) : (
           <>
-            <p className="pb-2 text-paragraph leading-5 text-grey-50">New to Git?</p>
+            <p className="pb-2 text-paragraph leading-5 text-grey-50">{t("tutorial.newToGit")}</p>
             <Button href="/course" onNavigate={(path) => { onClose(); onNavigate(path); }}>
-              Yes, teach me the basics
+              {t("tutorial.teachMe")}
             </Button>
             <Button variant="outline" onClick={onClose}>
-              I know Git, let me play
+              {t("tutorial.letMePlay")}
             </Button>
             <BackButton variant="tertiary" onClick={() => go(step - 1)} />
           </>
@@ -174,29 +143,30 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
 }
 
 function NextButton({ onClick }: { onClick: () => void }) {
+  const { t } = useI18n();
   return (
     <Button className="flex-1 gap-2" onClick={onClick}>
-      Next
+      {t("tutorial.next")}
       <Icon name="arrow_forward_ios" size={16} />
     </Button>
   );
 }
 
 function BackButton({ variant, onClick }: { variant: "outline" | "tertiary"; onClick: () => void }) {
+  const { t } = useI18n();
   return (
     <Button variant={variant} className="flex-1 gap-2" onClick={onClick}>
       <Icon name="arrow_back_ios_new" size={16} />
-      Back
+      {t("tutorial.back")}
     </Button>
   );
 }
 
 function Progress({ step }: { step: number }) {
+  const { t } = useI18n();
   return (
     <div className="flex items-center justify-center gap-1.5">
-      <span className="sr-only">
-        Step {step + 1} of {STEPS.length}
-      </span>
+      <span className="sr-only">{t("tutorial.progress", { step: step + 1, total: STEPS.length })}</span>
       {STEPS.map((candidate, index) => (
         <motion.span
           key={candidate.title}
@@ -343,6 +313,7 @@ function CommandScene() {
 
 /** Step 4: the HEAD commit is compared with the goal and it's a match. */
 function GoalScene() {
+  const { t } = useI18n();
   const matched = useBeat(700);
   return (
     <Row>
@@ -373,7 +344,7 @@ function GoalScene() {
       >
         <div className="flex items-center gap-1 text-grey-950">
           <Icon name="flag_2" size={16} />
-          <span className="text-paragraph leading-5">Goal</span>
+          <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
         </div>
         <PixelChicken look={HAT} size={48} />
       </motion.div>

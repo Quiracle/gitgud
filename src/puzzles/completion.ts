@@ -24,7 +24,8 @@ export function validatePuzzleCompletion(
     if (!met) {
       unmet.push(`A required action has not been executed: ${formatRequirement(requirement)}.`);
     }
-    checks.push({ id: `action:${index}`, label: `Run ${formatRequirement(requirement)}`, met });
+    const command = formatRequirement(requirement);
+    checks.push({ id: `action:${index}`, label: `Run ${command}`, met, goal: { type: "action", command } });
   });
 
   return { solved: unmet.length === 0, unmet, checks };

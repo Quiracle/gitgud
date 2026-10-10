@@ -12,12 +12,14 @@ import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
 import { PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
+import { useLessonCatalog } from "../hooks/useLessonCatalog";
+import { useI18n } from "../i18n/I18nProvider";
 import { useDragScroll } from "../hooks/useDragScroll";
 import { useProgressInsights } from "../hooks/useProgressInsights";
 import { openProgressStore } from "../storage/browserProgress";
 import { hasSeenWelcome, markWelcomeSeen } from "../storage/onboarding";
 import { rise, spring, stagger } from "../lib/motion";
-import { learnBasicsCatalog, type PublicPuzzleDefinition } from "../puzzles";
+import type { PublicPuzzleDefinition } from "../puzzles";
 import type { LearnBasicsLesson } from "../puzzles/learnBasics/types";
 
 interface HomeScreenProps {
@@ -30,6 +32,8 @@ const RECOMMENDED_LESSONS = ["basics-05-three-way-merge", "basics-06-cherry-pick
 
 /** Figma home frame (node 24:33046). */
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
+  const { t, formatDate } = useI18n();
+  const learnBasicsCatalog = useLessonCatalog();
   const daily = useDailyPuzzle();
   const handOff = useCanvasHandOff(onNavigate);
   const { streak, recent } = useProgressInsights();
@@ -72,11 +76,11 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                   animate={{ opacity: 1, y: 0 }}
                   transition={spring.soft}
                 >
-                  Today’s challenge:
+                  {t("home.todaysChallenge")}
                 </motion.h1>
                 <StreakTrail
                   days={recent}
-                  label={streak > 0 ? `${streak}-day${streak === 1 ? "" : "s"} streak!` : "Start your streak!"}
+                  label={streak > 0 ? t("streak.days", { count: streak }) : t("streak.start")}
                 />
               </div>
               <PuzzlePreview
@@ -84,14 +88,14 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                 puzzle={daily.status === "ready" ? daily.puzzle : undefined}
                 onScale={handOff.onScale}
                 onOpen={() => handOff.open("/play")}
-                openLabel="Open today's puzzle"
+                openLabel={t("home.openPuzzle")}
                 showDifficulty
                 fallback={
                   daily.status === "error" ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
                       <p className="text-sm text-grey-200">{daily.message}</p>
                       <Button variant="outline" fullWidth={false} onClick={() => void daily.reload()}>
-                        Try again
+                        {t("common.tryAgain")}
                       </Button>
                     </div>
                   ) : undefined
@@ -103,7 +107,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           <div className="flex gap-2">
             <Button href="/play" onNavigate={handOff.open}>
               <Shimmer />
-              <span className="relative">{solvedToday ? "See your result" : "Solve the puzzle!"}</span>
+              <span className="relative">{solvedToday ? t("home.seeResult") : t("home.solve")}</span>
             </Button>
             {sharing.available && <ShareButton onClick={sharing.share} />}
           </div>
@@ -113,7 +117,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
       <section className="px-6 py-6">
         <div className="mx-auto flex max-w-md flex-col gap-6">
           <div className="flex flex-col gap-4">
-            <SectionTitle>Recommended for you</SectionTitle>
+            <SectionTitle>{t("home.recommended")}</SectionTitle>
             <motion.ul
               className="flex flex-col gap-2"
               variants={stagger(0.08)}
@@ -140,7 +144,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                 <RecommendedCard
                   href="/play"
                   icon="extension"
-                  title={`Daily game · ${formatDay(daily.date)}`}
+                  title={t("home.dailyGame", { date: formatDate(`${daily.date}T00:00:00Z`, { month: "short", day: "numeric", timeZone: "UTC" }) })}
                   puzzle={daily.puzzle}
                   onNavigate={onNavigate}
                 />
@@ -149,7 +153,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           </div>
 
           <div className="flex flex-col gap-4">
-            <SectionTitle>Start here</SectionTitle>
+            <SectionTitle>{t("home.startHere")}</SectionTitle>
             <motion.ul
               ref={courses}
               className="no-scrollbar -mx-6 -my-2 flex cursor-grab select-none snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-6 px-6 py-2"
@@ -234,6 +238,7 @@ function RecommendedCard({ href, icon, title, description, puzzle, onNavigate }:
 
 /** Figma "Start here" course card (node 24:42427). */
 function CourseCard({ lesson, onNavigate }: { lesson: LearnBasicsLesson; onNavigate: (path: string) => void }) {
+  const { t } = useI18n();
   const available = lesson.status === "available";
   const look = chickenLookFromState(available ? lesson.puzzle.target.snapshot : {});
   const content = (
@@ -241,8 +246,8 @@ function CourseCard({ lesson, onNavigate }: { lesson: LearnBasicsLesson; onNavig
       <PixelChicken look={look} size={106} className="rounded" />
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2 text-grey-700">
-          <span className="flex-1 text-xs leading-[15px]">Course {lesson.order}</span>
-          {available ? <Icon name="arrow_forward_ios" size={16} className="text-grey-950" /> : <span className="text-2xs">Soon</span>}
+          <span className="flex-1 text-xs leading-[15px]">{t("common.course", { number: lesson.order })}</span>
+          {available ? <Icon name="arrow_forward_ios" size={16} className="text-grey-950" /> : <span className="text-2xs">{t("common.soon")}</span>}
         </div>
         <p className="line-clamp-2 text-xs leading-[15px] text-grey-950">{lesson.title}</p>
       </div>
@@ -275,6 +280,3 @@ function follow(event: MouseEvent<HTMLAnchorElement>, href: string, onNavigate: 
   onNavigate(href);
 }
 
-function formatDay(date: string): string {
-  return new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
-}

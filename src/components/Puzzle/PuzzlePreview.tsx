@@ -1,5 +1,6 @@
 import { motion } from "motion/react";
 import { useRef, type ReactNode, type RefObject } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
 import { setCanvasOrigin } from "../../lib/canvasTransition";
 import { spring } from "../../lib/motion";
 import type { PublicPuzzleDefinition } from "../../puzzles";
@@ -77,6 +78,7 @@ export function PuzzlePreview({ canvasRef, puzzle, onScale, onOpen, openLabel, s
 
 /** Figma goal card (node 24:33070). */
 function GoalCard({ puzzle }: { puzzle: PublicPuzzleDefinition }) {
+  const { t } = useI18n();
   return (
     <motion.div
       className="absolute right-2 top-2 flex flex-col rounded border border-grey-300 bg-grey-50 p-2 shadow-[0_8px_24px_-12px_rgb(0_0_0/0.6)]"
@@ -87,7 +89,7 @@ function GoalCard({ puzzle }: { puzzle: PublicPuzzleDefinition }) {
       <motion.div animate={{ y: [0, -3, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}>
         <div className="flex items-center gap-1 text-grey-950">
           <Icon name="flag_2" size={16} />
-          <span className="text-paragraph leading-5">Goal</span>
+          <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
         </div>
         <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
       </motion.div>
@@ -96,8 +98,9 @@ function GoalCard({ puzzle }: { puzzle: PublicPuzzleDefinition }) {
 }
 
 function PreviewSkeleton() {
+  const { t } = useI18n();
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-10" aria-label="Loading puzzle">
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-10" aria-label={t("preview.loading")}>
       {[1, 2].map((row) => (
         <div key={row} className="flex gap-16">
           {Array.from({ length: row }, (_, index) => (

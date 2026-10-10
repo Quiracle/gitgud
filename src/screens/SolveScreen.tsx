@@ -18,6 +18,9 @@ import { clearCanvasOrigin, peekCanvasOrigin } from "../lib/canvasTransition";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
 import { SUPPORTED_ACTION_TYPES } from "../engine";
+import { goalLabel } from "../i18n/goals";
+import { useI18n } from "../i18n/I18nProvider";
+import type { TranslationKey } from "../i18n/translate";
 import type { PublicPuzzleDefinition } from "../puzzles";
 
 interface SolveScreenProps {
@@ -39,9 +42,12 @@ export function SolveScreen({
   puzzle,
   exitHref = "/",
   onNavigate,
-  resultAction = { label: "See leaderboard", icon: "crown", href: "/leaderboard" },
+  resultAction,
   intro,
 }: SolveScreenProps) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const action = resultAction ?? { label: t("solve.seeLeaderboard"), icon: "crown" as const, href: "/leaderboard" };
   const session = usePuzzleSession(puzzle);
   const desktop = useMediaQuery("(min-width: 1024px)");
   // Tablets and narrow desktop windows: terminal stays at the bottom but shows history.
@@ -171,18 +177,18 @@ export function SolveScreen({
           ref={goal}
           type="button"
           onClick={() => setPanel("goals")}
-          aria-label={`Goals: ${goalsMet} of ${checks.length} done`}
+          aria-label={t("solve.goalsAria", { met: goalsMet, total: checks.length })}
           className="absolute right-6 top-6 flex flex-col items-center rounded border border-grey-300 bg-grey-50 p-2 shadow-[0_8px_24px_-12px_rgb(0_0_0/0.6)]"
           animate={solved ? { y: [0, -14, 0], rotate: [0, -4, 4, 0] } : {}}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
           <div className="flex items-center gap-1 self-start text-grey-950">
             <Icon name="flag_2" size={16} />
-            <span className="text-paragraph leading-5">Goal</span>
+            <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
           </div>
           <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
           <span className="mt-1 rounded-sm bg-green-950 px-1.5 font-secondary text-xs leading-5 text-lime-400">
-            {goalsMet}/{checks.length} goals
+            {t("solve.goalsCount", { met: goalsMet, count: checks.length })}
           </span>
         </motion.button>
       </motion.div>
@@ -238,8 +244,8 @@ export function SolveScreen({
             trailing={sharing.available ? <ShareButton onClick={sharing.share} className="self-stretch" /> : undefined}
             disabledPlaceholder={
               session.locked
-                ? `Solved in ${formatDuration(session.finalElapsedMs ?? 0)}. Come back tomorrow!`
-                : "Solved! Exit to play more."
+                ? t("solve.lockedPlaceholder", { time: formatDuration(session.finalElapsedMs ?? 0) })
+                : t("solve.solvedPlaceholder")
             }
           />
         </div>
@@ -248,11 +254,11 @@ export function SolveScreen({
       {confetti && <Confetti key={confetti.key} x={confetti.x} y={confetti.y} />}
 
       {/* No close: a solved puzzle is finished, so the popup only leads onward. */}
-      <Dialog open={panel === "result" && !sharing.open} title={session.assisted ? "Solved with help" : "Congrats!"}>
+      <Dialog open={panel === "result" && !sharing.open} title={session.assisted ? t("result.assistedTitle") : t("result.title")}>
         <div className="flex flex-col gap-1">
-          <StatRow label="Retries:" value={session.restartCount} />
-          <StatRow label="Time taken:" value={formatDuration(session.finalElapsedMs ?? session.elapsedMs())} large />
-          {session.assisted && <StatRow label="Points:" value="0 (solution revealed)" />}
+          <StatRow label={t("result.retries")} value={i18n.formatNumber(session.restartCount)} />
+          <StatRow label={t("result.time")} value={formatDuration(session.finalElapsedMs ?? session.elapsedMs())} large />
+          {session.assisted && <StatRow label={t("result.points")} value={t("result.pointsAssisted")} />}
         </div>
         <AnimatePresence mode="wait" initial={false}>
           <motion.p
@@ -264,60 +270,55 @@ export function SolveScreen({
             transition={{ duration: 0.18 }}
             aria-live="polite"
           >
-            {submissionMessage(session.submission.state, session.submission.error)}
+            {t(SUBMISSION_MESSAGES[session.submission.state])}
           </motion.p>
         </AnimatePresence>
         <div className="flex flex-col gap-2">
-          <Button onClick={() => onNavigate(resultAction.href)}>
-            <span>{resultAction.label}</span>
-            <Icon name={resultAction.icon} size={20} className="ml-2" />
+          <Button onClick={() => onNavigate(action.href)}>
+            <span>{action.label}</span>
+            <Icon name={action.icon} size={20} className="ml-2" />
           </Button>
           {sharing.available && (
             <Button variant="outline" onClick={sharing.share}>
               <Icon name="share" size={20} className="mr-2" />
-              Share result
+              {t("result.share")}
             </Button>
           )}
           <Button variant="tertiary" onClick={() => onNavigate("/")}>
-            Back home
+            {t("common.backHome")}
           </Button>
         </div>
       </Dialog>
 
       {sharing.dialog}
 
-      <Dialog open={panel === "restart"} title="Restart puzzle?" onClose={closePanel}>
-        <p className="text-sm text-grey-300">
-          The repository goes back to the start. Your timer keeps running and this counts as a retry.
-        </p>
+      <Dialog open={panel === "restart"} title={t("restart.title")} onClose={closePanel}>
+        <p className="text-sm text-grey-300">{t("restart.body")}</p>
         <div className="flex flex-col gap-2">
           <Button onClick={restart}>
             <Icon name="forward_media" size={20} className="mr-2" />
-            Restart
+            {t("actions.restart")}
           </Button>
           <Button variant="outline" onClick={closePanel}>
-            Keep playing
+            {t("restart.keepPlaying")}
           </Button>
         </div>
       </Dialog>
 
-      <Dialog open={panel === "give-up"} title="Give up?" onClose={() => { session.resume(); closePanel(); }}>
-        <p className="text-sm text-grey-300">
-          Start over with the same timer, or reveal how to solve it. Revealing marks this puzzle as assisted and it
-          earns 0 points.
-        </p>
+      <Dialog open={panel === "give-up"} title={t("giveUp.title")} onClose={() => { session.resume(); closePanel(); }}>
+        <p className="text-sm text-grey-300">{t("giveUp.body")}</p>
         <div className="flex flex-col gap-2">
           <Button onClick={restart}>
             <Icon name="forward_media" size={20} className="mr-2" />
-            Try again
+            {t("common.tryAgain")}
           </Button>
           <Button variant="outline" onClick={() => { session.revealSolution(); setPanel("solution"); }}>
-            Reveal solution
+            {t("giveUp.reveal")}
           </Button>
         </div>
       </Dialog>
 
-      <Dialog size="wide" open={panel === "solution"} title="How to solve it" onClose={() => { session.resume(); closePanel(); }}>
+      <Dialog size="wide" open={panel === "solution"} title={t("solution.title")} onClose={() => { session.resume(); closePanel(); }}>
         <ol className="flex flex-col gap-2 text-sm text-grey-50">
           {puzzle.hints.map((hint, index) => (
             <motion.li
@@ -332,13 +333,13 @@ export function SolveScreen({
             </motion.li>
           ))}
         </ol>
-        <p className="text-xs text-grey-400">Assisted run: you can still finish it, but it won't be ranked.</p>
-        <Button onClick={restart}>Try again</Button>
+        <p className="text-xs text-grey-400">{t("solution.assistedNote")}</p>
+        <Button onClick={restart}>{t("common.tryAgain")}</Button>
       </Dialog>
 
-      <Dialog open={panel === "hint"} title={hintTitle(session.hintsUsed, session.hintsTotal)} onClose={closePanel}>
+      <Dialog open={panel === "hint"} title={session.hintsTotal === 0 ? t("hint.none") : t("hint.title", { number: Math.max(1, session.hintsUsed), total: session.hintsTotal })} onClose={closePanel}>
         {session.hintsTotal === 0 ? (
-          <p className="text-sm text-grey-300">This puzzle has no hints. Compare the goal with the HEAD card.</p>
+          <p className="text-sm text-grey-300">{t("hint.noneBody")}</p>
         ) : (
           <ol className="flex flex-col gap-2 text-sm text-grey-50">
             <AnimatePresence initial={false}>
@@ -359,10 +360,10 @@ export function SolveScreen({
         )}
         {session.hintsUsed < session.hintsTotal ? (
           <Button variant="outline" onClick={() => session.takeHint()}>
-            Show another hint
+            {t("hint.another")}
           </Button>
         ) : (
-          <Button onClick={closePanel}>Back to puzzle</Button>
+          <Button onClick={closePanel}>{t("common.backToPuzzle")}</Button>
         )}
       </Dialog>
 
@@ -371,49 +372,47 @@ export function SolveScreen({
           {intro.body}
           <div className="flex flex-col gap-2">
             <Button onClick={closePanel}>
-              <span>{session.commandCount > 0 || solved ? "Back to puzzle" : "Let's go"}</span>
+              <span>{session.commandCount > 0 || solved ? t("common.backToPuzzle") : t("common.letsGo")}</span>
               <Icon name="arrow_forward_ios" size={20} className="ml-2" />
             </Button>
             <Button variant="tertiary" onClick={() => setPanel("help")}>
-              How to play
+              {t("howToPlay.title")}
             </Button>
           </div>
         </Dialog>
       )}
 
-      <Dialog size="wide" open={panel === "goals"} title="Goals" onClose={closePanel}>
+      <Dialog size="wide" open={panel === "goals"} title={t("goals.title")} onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
           <p className="text-grey-50">{puzzle.description}</p>
-          <ul className="flex flex-col gap-2" aria-label="Goal checklist">
+          <ul className="flex flex-col gap-2" aria-label={t("goals.checklist")}>
             {checks.map((check) => {
               const met = solved || check.met;
               return (
                 <li key={check.id} className={`flex gap-2 ${met ? "text-lime-400" : "text-grey-300"}`}>
                   <span aria-hidden className="w-4 shrink-0 text-center">{met ? "✓" : "○"}</span>
                   <span>
-                    {check.label}
-                    <span className="sr-only">{met ? " (done)" : " (not done yet)"}</span>
+                    {goalLabel(check, i18n)}
+                    <span className="sr-only"> {met ? t("goals.done") : t("goals.notDone")}</span>
                   </span>
                 </li>
               );
             })}
           </ul>
-          <p className="text-xs text-grey-400">
-            The puzzle is solved when every goal is ticked. A matching chicken isn't enough while history goals are open.
-          </p>
+          <p className="text-xs text-grey-400">{t("goals.note")}</p>
         </div>
         <div className="flex flex-col gap-2">
           <Button onClick={closePanel}>
-            <span>{session.commandCount > 0 || solved ? "Back to puzzle" : "Let's go"}</span>
+            <span>{session.commandCount > 0 || solved ? t("common.backToPuzzle") : t("common.letsGo")}</span>
             <Icon name="arrow_forward_ios" size={20} className="ml-2" />
           </Button>
           <Button variant="tertiary" onClick={() => setPanel("help")}>
-            How to play
+            {t("howToPlay.title")}
           </Button>
         </div>
       </Dialog>
 
-      <Dialog size="wide" open={panel === "help"} title="How to play" onClose={closePanel}>
+      <Dialog size="wide" open={panel === "help"} title={t("howToPlay.title")} onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
           <p className="text-grey-50">{puzzle.description}</p>
           {puzzle.objectives && puzzle.objectives.length > 0 && (
@@ -435,7 +434,7 @@ export function SolveScreen({
             ))}
           </div>
         </div>
-        <Button onClick={closePanel}>Got it</Button>
+        <Button onClick={closePanel}>{t("common.gotIt")}</Button>
       </Dialog>
 
       <InteractiveRebaseDialog
@@ -448,24 +447,11 @@ export function SolveScreen({
   );
 }
 
-function hintTitle(used: number, total: number) {
-  if (total === 0) return "No hints";
-  return `Hint ${Math.max(1, used)} of ${total}`;
-}
-
-function submissionMessage(state: SubmissionState, error?: string): string {
-  switch (state) {
-    case "guest":
-      return "Saved on this device. Log in and this solve joins the leaderboard.";
-    case "not-ranked":
-      return "Progress saved on this device.";
-    case "assisted":
-      return "Solution revealed, so this run isn't ranked.";
-    case "submitting":
-      return "Sending your result to the leaderboard…";
-    case "submitted":
-      return "You're on today's leaderboard!";
-    case "failed":
-      return error ?? "Saved here, but the leaderboard couldn't be reached.";
-  }
-}
+const SUBMISSION_MESSAGES: Record<SubmissionState, TranslationKey> = {
+  guest: "submission.guest",
+  "not-ranked": "submission.notRanked",
+  assisted: "submission.assisted",
+  submitting: "submission.submitting",
+  submitted: "submission.submitted",
+  failed: "submission.failed",
+};

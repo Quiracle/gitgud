@@ -4,10 +4,12 @@ import { LoginDialog } from "../components/Auth/LoginDialog";
 import { Button } from "../components/Button/Button";
 import { Icon } from "../components/Icon/Icon";
 import { PixelChicken, type ChickenLook } from "../components/Illustration/PixelChicken";
+import { LanguagePicker } from "../components/LanguagePicker/LanguagePicker";
 import { SiteFooter } from "../components/Layout/SiteFooter";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useAuth } from "../context/AuthContext";
 import { useProgressInsights } from "../hooks/useProgressInsights";
+import { useI18n } from "../i18n/I18nProvider";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
 import type { AchievementId } from "../lib/progressInsights";
@@ -34,6 +36,7 @@ const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitH
 
 /** Account: profile, streak, stats, achievements, and settings. */
 export function AccountScreen({ onNavigate }: AccountScreenProps) {
+  const { t, formatNumber } = useI18n();
   const { status, user, signOut } = useAuth();
   const signedIn = status === "authenticated" && Boolean(user);
   const insights = useProgressInsights();
@@ -74,24 +77,24 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
               )}
             </motion.div>
             <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="truncate text-3xl text-grey-50">{signedIn ? user!.displayName : "Guest player"}</h1>
+              <h1 className="truncate text-3xl text-grey-50">{signedIn ? user!.displayName : t("account.guest")}</h1>
               <p className="text-xs leading-[15px] text-grey-300">
                 {signedIn
-                  ? `Signed in with ${PROVIDER_NAMES[user!.provider ?? ""] ?? "your account"}`
-                  : "Progress is saved on this device"}
+                  ? t("account.signedInWith", { provider: PROVIDER_NAMES[user!.provider ?? ""] ?? t("account.yourAccount") })
+                  : t("account.savedOnDevice")}
               </p>
             </div>
           </motion.div>
 
           <StreakTrail
             days={insights.recent}
-            label={insights.streak > 0 ? `${insights.streak}-day${insights.streak === 1 ? "" : "s"} streak!` : "Start your streak!"}
+            label={insights.streak > 0 ? t("streak.days", { count: insights.streak }) : t("streak.start")}
           />
 
           {!signedIn && (
             <div className="flex flex-col gap-3">
-              <p className="text-sm text-grey-300">Log in to keep your progress on every device and join the daily leaderboard.</p>
-              <Button onClick={() => setLoginOpen(true)}>Log in</Button>
+              <p className="text-sm text-grey-300">{t("account.logInPitch")}</p>
+              <Button onClick={() => setLoginOpen(true)}>{t("nav.logIn")}</Button>
             </div>
           )}
         </div>
@@ -100,7 +103,7 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
       <section className="px-6 py-6">
         <div className="mx-auto flex max-w-md flex-col gap-8">
           <div className="flex flex-col gap-4">
-            <SectionTitle>Your stats</SectionTitle>
+            <SectionTitle>{t("account.stats")}</SectionTitle>
             <motion.div
               className="grid grid-cols-2 gap-2"
               variants={{ show: { transition: { staggerChildren: 0.06 } } }}
@@ -108,11 +111,16 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
               whileInView="show"
               viewport={{ once: true }}
             >
-              <StatTile label="Puzzles solved" value={local.completedPuzzles} />
-              <StatTile label="Daily solves" value={dailies} />
-              <StatTile label="Lessons done" value={local.completedLessons} suffix={` / ${insights.lessonsTotal}`} />
+              <StatTile label={t("account.puzzlesSolved")} value={local.completedPuzzles} format={(n) => formatNumber(Math.round(n))} />
+              <StatTile label={t("account.dailySolves")} value={dailies} format={(n) => formatNumber(Math.round(n))} />
               <StatTile
-                label="Best time"
+                label={t("account.lessonsDone")}
+                value={local.completedLessons}
+                suffix={` / ${formatNumber(insights.lessonsTotal)}`}
+                format={(n) => formatNumber(Math.round(n))}
+              />
+              <StatTile
+                label={t("account.bestTime")}
                 value={bestTimes.length ? Math.min(...bestTimes) : undefined}
                 format={(ms) => formatDuration(ms)}
               />
@@ -121,7 +129,7 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
 
           <div className="flex flex-col gap-4">
             <div className="flex items-baseline justify-between">
-              <SectionTitle>Achievements</SectionTitle>
+              <SectionTitle>{t("account.achievements")}</SectionTitle>
               <span className="text-xs text-grey-700">
                 {unlocked} / {insights.achievements.length}
               </span>
@@ -145,10 +153,10 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
                     <PixelChicken look={ACHIEVEMENT_LOOKS[item.id]} size={48} className="rounded" />
                   </div>
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <p className="text-paragraph leading-5 text-grey-950">{item.title}</p>
-                    <p className="text-xs leading-[15px] text-grey-700">{item.description}</p>
+                    <p className="text-paragraph leading-5 text-grey-950">{t(`achievement.${item.id}.title`)}</p>
+                    <p className="text-xs leading-[15px] text-grey-700">{t(`achievement.${item.id}.description`)}</p>
                   </div>
-                  <span className="sr-only">{item.unlocked ? "Unlocked" : "Locked"}</span>
+                  <span className="sr-only">{item.unlocked ? t("account.unlocked") : t("account.locked")}</span>
                   {item.unlocked && (
                     <motion.span
                       className="flex size-6 shrink-0 items-center justify-center rounded bg-lime-400 text-green-950"
@@ -166,12 +174,17 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
             </motion.ul>
           </div>
 
-          {signedIn && user && (
-            <div className="flex flex-col gap-4">
-              <SectionTitle>Settings</SectionTitle>
+          <div className="flex flex-col gap-4">
+            <SectionTitle>{t("account.settings")}</SectionTitle>
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-paragraph text-grey-950">{t("common.language")}</span>
+              <LanguagePicker />
+            </div>
+            {signedIn && user && (
+              <>
               <DisplayNameForm userId={user.id} fallback={user.displayName} />
               <Button variant="outline" onClick={() => void signOut().then(() => onNavigate("/"))}>
-                Log out
+                {t("account.logOut")}
               </Button>
               <div className="flex flex-col gap-1">
                 <button
@@ -179,14 +192,13 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
                   disabled
                   className="min-h-11 rounded text-paragraph text-red-700 underline decoration-from-font underline-offset-2 disabled:opacity-50"
                 >
-                  Delete account
+                  {t("account.delete")}
                 </button>
-                <p className="text-center text-xs text-grey-600">
-                  Account deletion isn't available yet. It will remove your progress and leaderboard entries.
-                </p>
+                <p className="text-center text-xs text-grey-600">{t("account.deleteSoon")}</p>
               </div>
-            </div>
-          )}
+              </>
+            )}
+          </div>
         </div>
       </section>
 
@@ -235,6 +247,7 @@ function StatTile({ label, value, suffix = "", format = (n) => Math.round(n).toS
 
 /** Public leaderboard name, so players needn't show their full OAuth name. */
 function DisplayNameForm({ userId, fallback }: { userId: string; fallback: string }) {
+  const { t } = useI18n();
   const [name, setName] = useState(fallback);
   const [saved, setSaved] = useState(fallback);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -260,7 +273,7 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
       setSaved(next);
       setState("saved");
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Couldn't save your name.");
+      setError(reason instanceof Error ? reason.message : t("profile.saveFailed"));
       setState("error");
     }
   }
@@ -270,7 +283,7 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
   return (
     <form onSubmit={submit} className="flex flex-col gap-2">
       <label htmlFor="display-name" className="text-xs text-grey-700">
-        Leaderboard name
+        {t("profile.nameLabel")}
       </label>
       <div className="flex gap-2">
         <input
@@ -285,7 +298,7 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
           className="min-h-11 min-w-0 flex-1 rounded border border-grey-300 bg-grey-50 px-3 text-paragraph text-grey-950 outline-none transition-colors focus:border-lime-500 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-500"
         />
         <Button type="submit" fullWidth={false} className="shrink-0" disabled={unchanged || state === "saving"}>
-          {state === "saving" ? "Saving…" : "Save"}
+          {state === "saving" ? t("profile.saving") : t("profile.save")}
         </Button>
       </div>
       <motion.p
@@ -295,7 +308,7 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
         animate={{ opacity: 1 }}
         aria-live="polite"
       >
-        {state === "saved" ? "Saved. Your new name shows on the leaderboard." : state === "error" ? error : "Shown on the leaderboard instead of your full name."}
+        {state === "saved" ? t("profile.saved") : state === "error" ? error : t("profile.help")}
       </motion.p>
     </form>
   );

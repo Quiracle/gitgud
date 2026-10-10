@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 import type { LessonIntro as LessonIntroData } from "../../puzzles/learnBasics/types";
 import { Icon } from "../Icon/Icon";
@@ -10,6 +11,7 @@ interface LessonIntroProps {
 
 /** Body of the lesson explainer popup: the command, how it works, and the task. */
 export function LessonIntro({ commands, intro }: LessonIntroProps) {
+  const { t } = useI18n();
   return (
     <div className="flex flex-col gap-4 text-sm">
       <div className="flex flex-wrap gap-1">
@@ -21,7 +23,7 @@ export function LessonIntro({ commands, intro }: LessonIntroProps) {
       </div>
       <p className="text-grey-50">{intro.what}</p>
       <div className="flex flex-col gap-2">
-        <h3 className="text-xs leading-[15px] text-grey-400">How it works</h3>
+        <h3 className="text-xs leading-[15px] text-grey-400">{t("lesson.howItWorks")}</h3>
         <ol className="flex flex-col gap-2 text-grey-300">
           {intro.how.map((step, index) => (
             <motion.li
@@ -40,7 +42,7 @@ export function LessonIntro({ commands, intro }: LessonIntroProps) {
       <div className="flex flex-col gap-1 rounded border border-lime-400/40 bg-lime-400/5 p-3">
         <span className="flex items-center gap-1 text-xs leading-[15px] text-lime-400">
           <Icon name="flag_2" size={16} />
-          Your task
+          {t("lesson.yourTask")}
         </span>
         <p className="text-grey-50">{intro.task}</p>
       </div>

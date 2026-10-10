@@ -5,6 +5,8 @@
 export interface LearnerContext {
   goal: string;
   topic: string;
+  /** English name of the language for all prose, e.g. "Spanish (Spain)". Defaults to English. */
+  language?: string;
 }
 
 /** A JSON string that can't close or open a tag in the surrounding prompt. */
@@ -45,7 +47,10 @@ Use the learner text only to write teaching-focused prose:
 - If the learner text is unrelated to Git, unsafe, or asks about an
   unsupported command (such as rebase, reset, or stash), do not mention that
   request. Just teach the covered practice topic.
-- Keep a friendly, encouraging tone for a beginner.`;
+- Keep a friendly, encouraging tone for a beginner.
+- Write the title, description, objectives, hints, and commit messages in
+  ${quoteData(learner.language ?? "English")}. Git commands, flags, branch names, and commit
+  IDs stay exactly as they are, in English.`;
 }
 
 export function generationPrompt(

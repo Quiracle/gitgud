@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import type { CommandOutcome } from "../../hooks/usePuzzleSession";
+import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 import { Icon } from "../Icon/Icon";
 
@@ -38,9 +39,10 @@ export function CommandPanel({
   onHelp,
   docked = false,
   disabled = false,
-  disabledPlaceholder = "Puzzle solved",
+  disabledPlaceholder,
   trailing,
 }: CommandPanelProps) {
+  const { t } = useI18n();
   const [command, setCommand] = useState("");
   const [flash, setFlash] = useState<Flash>("idle");
   const recall = useRef<number | null>(null);
@@ -89,7 +91,7 @@ export function CommandPanel({
           {!docked && (
             <div className="flex items-center justify-between">
               <button type="button" onClick={onHelp} className="flex min-h-11 items-center gap-2 text-sm text-grey-50">
-                <span className="underline decoration-from-font underline-offset-2">How to play</span>
+                <span className="underline decoration-from-font underline-offset-2">{t("howToPlay.link")}</span>
                 <Icon name="help" size={16} />
               </button>
               <ToggleButton expanded onToggle={onToggle} />
@@ -103,7 +105,7 @@ export function CommandPanel({
 
       <form onSubmit={submit} className="flex items-center gap-2">
         <label htmlFor="git-command" className="sr-only">
-          Git command
+          {t("terminal.inputLabel")}
         </label>
         <motion.div
           className={`flex min-w-0 flex-1 rounded border bg-green-900 transition-colors duration-200 focus-within:outline focus-within:outline-1 focus-within:-outline-offset-2 ${border}`}
@@ -121,7 +123,7 @@ export function CommandPanel({
             autoCorrect="off"
             spellCheck={false}
             enterKeyHint="go"
-            placeholder={disabled ? disabledPlaceholder : "Start coding"}
+            placeholder={disabled ? disabledPlaceholder ?? t("terminal.solvedPlaceholder") : t("terminal.placeholder")}
             className="min-w-0 flex-1 bg-transparent p-3 font-secondary text-code text-grey-50 outline-none placeholder:text-grey-400 disabled:cursor-not-allowed"
           />
         </motion.div>
@@ -133,11 +135,12 @@ export function CommandPanel({
 }
 
 function ToggleButton({ expanded, onToggle }: { expanded: boolean; onToggle?: () => void }) {
+  const { t } = useI18n();
   return (
     <button
       type="button"
       onClick={onToggle}
-      aria-label={expanded ? "Hide command history" : "Show command history"}
+      aria-label={expanded ? t("terminal.hideHistory") : t("terminal.showHistory")}
       aria-expanded={expanded}
       className="-mr-3 flex size-11 shrink-0 items-center justify-center text-lime-400 transition-colors hover:text-lime-300"
     >
@@ -156,12 +159,13 @@ function lineTone(tone: TerminalEntry["tone"]) {
 
 /** The newest line of output, sliding up as it changes. */
 function LatestLine({ entries }: { entries: TerminalEntry[] }) {
+  const { t } = useI18n();
   const last = entries.at(-1);
   const text = !last
-    ? "Type a git command below."
+    ? t("terminal.empty")
     : last.lines.length
       ? last.lines[last.lines.length - 1]
-      : `you: ${last.command}`;
+      : `${t("terminal.you")} ${last.command}`;
   const tone = !last ? "text-grey-400" : last.lines.length ? lineTone(last.tone) : "text-grey-50";
 
   return (
@@ -184,6 +188,7 @@ function LatestLine({ entries }: { entries: TerminalEntry[] }) {
 
 /** Full transcript, newest at the bottom. */
 function History({ entries }: { entries: TerminalEntry[] }) {
+  const { t } = useI18n();
   const scroller = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -197,7 +202,7 @@ function History({ entries }: { entries: TerminalEntry[] }) {
       aria-live="polite"
     >
       <div className="mt-auto flex flex-col gap-1">
-        {entries.length === 0 && <p className="text-grey-400">No commands yet. Try git log.</p>}
+        {entries.length === 0 && <p className="text-grey-400">{t("terminal.noCommands")}</p>}
         {entries.map((entry) => (
           <motion.div
             key={entry.id}
@@ -206,7 +211,7 @@ function History({ entries }: { entries: TerminalEntry[] }) {
             transition={spring.snappy}
             className="break-words"
           >
-            {entry.command && <p className="text-grey-50">you: {entry.command}</p>}
+            {entry.command && <p className="text-grey-50">{t("terminal.you")} {entry.command}</p>}
             {entry.lines.map((line, index) => (
               <p key={index} className={`whitespace-pre-wrap ${lineTone(entry.tone)}`}>
                 {line || " "}

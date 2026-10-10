@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState, type FormEvent } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 import {
   GUIDED_GOAL_MAX_LENGTH,
@@ -28,6 +29,7 @@ type Phase = { kind: "idle" } | { kind: "generating" } | { kind: "error"; messag
 /** Figma AI prompt (node 45:159981): "What do you want to learn?" plus a lime send button. */
 export function GuidedLessonPrompt({ onGenerated, returnPath, service = guidedLessonService }: GuidedLessonPromptProps) {
   const { status } = useAuth();
+  const { t, locale } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [goal, setGoal] = useState(readDraft);
   const [phase, setPhase] = useState<Phase>({ kind: "idle" });
@@ -49,13 +51,13 @@ export function GuidedLessonPrompt({ onGenerated, returnPath, service = guidedLe
 
     setPhase({ kind: "generating" });
     try {
-      const lesson = await service.generate({ goal: trimmed });
+      const lesson = await service.generate({ goal: trimmed, locale });
       writeDraft("");
       setPhase({ kind: "idle" });
       onGenerated(lesson);
     } catch (error) {
       const message =
-        error instanceof GuidedLessonError ? error.message : "We couldn't build your puzzle. Please try again.";
+        error instanceof GuidedLessonError ? error.message : t("guided.error.generic");
       setPhase({ kind: "error", message });
     }
   }
@@ -64,7 +66,7 @@ export function GuidedLessonPrompt({ onGenerated, returnPath, service = guidedLe
     <div>
       <form onSubmit={submit} className="flex gap-3">
         <label htmlFor="guided-goal" className="sr-only">
-          What do you want to learn?
+          {t("guided.placeholder")}
         </label>
         <input
           ref={inputRef}
@@ -78,14 +80,14 @@ export function GuidedLessonPrompt({ onGenerated, returnPath, service = guidedLe
           maxLength={GUIDED_GOAL_MAX_LENGTH}
           autoComplete="off"
           enterKeyHint="send"
-          placeholder="What do you want to learn?"
+          placeholder={t("guided.placeholder")}
           aria-describedby="guided-goal-status"
           className="min-h-11 min-w-0 flex-1 rounded border border-lime-400 bg-green-900 p-3 font-secondary text-code text-grey-50 outline-none transition-colors duration-200 placeholder:text-grey-400 focus:border-lime-300 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-300 disabled:cursor-wait disabled:text-grey-400"
         />
         <button
           type="submit"
           disabled={generating}
-          aria-label={generating ? "Building your puzzle" : "Build my puzzle"}
+          aria-label={generating ? t("guided.building") : t("guided.build")}
           className="grid min-h-11 w-11 shrink-0 place-items-center self-stretch rounded bg-lime-400 text-green-950 transition-colors duration-200 hover:bg-lime-300 active:bg-lime-500 disabled:cursor-wait"
         >
           <AnimatePresence mode="wait" initial={false}>
@@ -134,7 +136,7 @@ export function GuidedLessonPrompt({ onGenerated, returnPath, service = guidedLe
               transition={spring.snappy}
             >
               <span className="block pt-2">
-                {phase.kind === "error" ? phase.message : "Building your puzzle…"}
+                {phase.kind === "error" ? phase.message : t("guided.buildingStatus")}
               </span>
             </motion.p>
           )}

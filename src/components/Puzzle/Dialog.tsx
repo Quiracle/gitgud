@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 import { Icon } from "../Icon/Icon";
 
@@ -15,6 +16,7 @@ interface DialogProps {
 /** Figma "pop up" (node 28:113442): lime-outlined panel over a dark scrim. */
 export function Dialog({ open, title, onClose, size = "default", children }: DialogProps) {
   const titleId = useId();
+  const { t } = useI18n();
   const panel = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -63,7 +65,7 @@ export function Dialog({ open, title, onClose, size = "default", children }: Dia
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close"
+                aria-label={t("common.close")}
                 className="absolute right-1.5 top-1.5 flex size-11 items-center justify-center rounded text-lime-400 outline-none transition-colors hover:text-lime-300 focus-visible:bg-lime-400/10 focus-visible:text-lime-300"
               >
                 <Icon name="close" size={16} />

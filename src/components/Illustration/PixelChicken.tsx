@@ -1,6 +1,7 @@
 import { AnimatePresence, motion, useAnimationControls, type Variants } from "motion/react";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import type { SemanticState } from "../../engine";
+import { useI18n, type I18nValue } from "../../i18n/I18nProvider";
 import { CHICKEN_COLORS, type ChickenColor } from "../../puzzles/chickenTheme";
 import { spring } from "../../lib/motion";
 import { CHICKEN_PIXELS, type PixelLayer } from "./chickenPixels";
@@ -180,6 +181,7 @@ interface PixelChickenProps {
 
 /** Layered pixel-art chicken on the grey-50 tile. Changes animate; first paint is static. */
 export function PixelChicken({ look, size = 48, className = "", label }: PixelChickenProps) {
+  const i18n = useI18n();
   const signature = JSON.stringify(look);
   const controls = useAnimationControls();
   const firstRender = useRef(true);
@@ -202,7 +204,7 @@ export function PixelChicken({ look, size = 48, className = "", label }: PixelCh
   return (
     <svg
       role="img"
-      aria-label={label ?? describe(look)}
+      aria-label={label ?? describe(look, i18n)}
       viewBox="0 0 32 32"
       width={size}
       height={size}
@@ -298,20 +300,15 @@ function layerPaths(layer: PixelLayer): Record<string, string> {
   return paths;
 }
 
-const PART_NAMES: Record<ChickenPart, string> = {
-  crest: "crest",
-  longLegs: "long legs",
-  scarf: "scarf",
-  sunglasses: "sunglasses",
-  hat: "hat",
-};
-
-function describe(look: ChickenLook): string {
+/** The screen-reader description, e.g. "A chicken with blue hat and red crest". */
+function describe(look: ChickenLook, { t, formatList }: Pick<I18nValue, "t" | "formatList">): string {
   const parts = PART_ORDER.filter((part) => look.parts[part]).map((part) => {
-    const tint = look.parts[part];
-    return `${tint === "default" ? "" : `${tint} `}${PART_NAMES[part]}`;
+    const tint = look.parts[part]!;
+    const name = t(`chicken.part.${part}`);
+    return tint === "default" ? name : t("chicken.tinted", { part: name, color: t(`chicken.color.${tint}`) });
   });
-  if (!look.chicken) return parts.length ? `Just ${parts.join(", ")}` : "Empty";
-  const chicken = look.body === "default" ? "A chicken" : `A ${look.body} chicken`;
-  return parts.length ? `${chicken} with ${parts.join(", ")}` : chicken;
+  const list = formatList(parts);
+  if (!look.chicken) return parts.length ? t("chicken.just", { parts: list }) : t("chicken.empty");
+  const chicken = look.body === "default" ? t("chicken.plain") : t("chicken.colored", { color: t(`chicken.color.${look.body}`) });
+  return parts.length ? t("chicken.with", { chicken, parts: list }) : chicken;
 }

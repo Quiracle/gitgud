@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, type PointerEvent, type ReactNode, type Ref
 import { getSnapshot, type Repository } from "../../engine";
 import { branchesAtCommit } from "../../engine/graph";
 import { useElementSize } from "../../hooks/useElementSize";
+import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 import { Icon, type IconName } from "../Icon/Icon";
 import { chickenLookFromState, PixelChicken, type ChickenLook } from "../Illustration/PixelChicken";
@@ -172,6 +173,7 @@ interface PanCanvasProps {
  * non-passive wheel/gesture handlers keep the browser from zooming the page.
  */
 function PanCanvas({ containerRef, view, content, focus, introScale, className, children }: PanCanvasProps) {
+  const { t } = useI18n();
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const scale = useMotionValue(introScale ?? 1);
@@ -305,9 +307,9 @@ function PanCanvas({ containerRef, view, content, focus, introScale, className, 
         {children}
       </motion.div>
       <div className="absolute bottom-3 right-3 flex gap-1">
-        <CanvasButton icon="my_location" label="Centre on HEAD" onClick={() => glide(centerOn(focus, view, 1))} />
-        <CanvasButton icon="remove" label="Zoom out" onClick={() => zoomBy(1 / 1.3)} />
-        <CanvasButton icon="add_2" label="Zoom in" onClick={() => zoomBy(1.3)} />
+        <CanvasButton icon="my_location" label={t("graph.centre")} onClick={() => glide(centerOn(focus, view, 1))} />
+        <CanvasButton icon="remove" label={t("graph.zoomOut")} onClick={() => zoomBy(1 / 1.3)} />
+        <CanvasButton icon="add_2" label={t("graph.zoomIn")} onClick={() => zoomBy(1.3)} />
       </div>
     </div>
   );

@@ -28,6 +28,8 @@ const jsonHeaders = { ...corsHeaders, "content-type": "application/json; charset
 const HOURLY_LIMIT = 5;
 const DAILY_LIMIT = 20;
 const MAX_ATTEMPTS = 2;
+/** Prose languages the app ships. The value is what the model is told to write in. */
+const LANGUAGES: Record<string, string> = { en: "English", es: "Spanish (Spain)", ca: "Catalan" };
 
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -49,8 +51,9 @@ Deno.serve(async (request) => {
   const user = auth.user;
   if (!user) return response({ error: "Sign in to build a personalised puzzle." }, 401);
 
-  const body = await request.json().catch(() => ({})) as { goal?: unknown };
+  const body = await request.json().catch(() => ({})) as { goal?: unknown; locale?: unknown };
   const goal = normalizeGuidedGoal(body.goal);
+  const locale = typeof body.locale === "string" && Object.hasOwn(LANGUAGES, body.locale) ? body.locale : "en";
   if (!goal) return response({ error: "Tell us what you'd like to practise, in up to 200 characters." }, 400);
 
   let lessonId: string | undefined;
@@ -77,10 +80,12 @@ Deno.serve(async (request) => {
       const timeoutMs = Math.min(config.requestTimeoutMs, deadline - Date.now() - 5_000);
       if (timeoutMs < 15_000) break;
       try {
-        const draft = await requestOpenAI(config, brief, previousIssues, { goal, topic: focus.topic }, timeoutMs);
+        const draft = await requestOpenAI(config, brief, previousIssues, { goal, topic: focus.topic, language: LANGUAGES[locale] }, timeoutMs);
         const candidate = materializeCandidate(draft, date, brief);
         const validation = validateCandidateAgainstBrief(candidate, brief);
-        if (validation.ok) {
+        // The story-theme check looks for the theme's English keyword, which translated prose won't contain.
+        if (locale !== "en") validation.issues = validation.issues.filter((issue: { code: string }) => issue.code !== "brief.story-theme");
+        if (validation.issues.length === 0) {
           return await accept(supabase, lessonId, goal, focus.topic, candidate, "generated", attempt);
         }
         previousIssues = validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);

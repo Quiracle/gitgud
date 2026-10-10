@@ -1,13 +1,14 @@
 import { motion } from "motion/react";
 import type { PuzzleDifficulty } from "../../puzzles/types";
+import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 
 const LEVEL: Record<PuzzleDifficulty, number> = { easy: 1, medium: 2, hard: 3 };
-const LABEL: Record<PuzzleDifficulty, string> = { easy: "Easy", medium: "Medium", hard: "Hard" };
 const BAR_HEIGHTS = [6, 9, 13];
 
 /** Figma "difficulty" badge (node 24:37157) with the updated bars (node 24:9475): 4px bars, 1.2px stroke, 1px corners, filled up to the level. */
 export function DifficultyBadge({ difficulty, className = "" }: { difficulty: PuzzleDifficulty; className?: string }) {
+  const { t } = useI18n();
   const level = LEVEL[difficulty];
   return (
     <span className={`inline-flex items-center gap-2 rounded bg-grey-50 px-1 py-0.5 ${className}`}>
@@ -30,7 +31,7 @@ export function DifficultyBadge({ difficulty, className = "" }: { difficulty: Pu
           </span>
         ))}
       </span>
-      <span className="text-xs leading-[15px] text-green-950">{LABEL[difficulty]}</span>
+      <span className="text-xs leading-[15px] text-green-950">{t(`difficulty.${difficulty}`)}</span>
     </span>
   );
 }

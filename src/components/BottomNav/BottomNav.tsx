@@ -1,12 +1,14 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, type MouseEvent } from "react";
 import { useAuth } from "../../context/AuthContext";
+import { useI18n } from "../../i18n/I18nProvider";
+import type { TranslationKey } from "../../i18n/translate";
 import { spring } from "../../lib/motion";
 import { LoginDialog } from "../Auth/LoginDialog";
 import { Icon, type IconName } from "../Icon/Icon";
 
 export interface NavItem {
-  label: string;
+  label: TranslationKey;
   href: string;
   icon: IconName;
   /** Extra path prefixes that keep this tab highlighted. */
@@ -14,11 +16,11 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { label: "Home", href: "/", icon: "home" },
-  { label: "Learn", href: "/course", icon: "import_contacts" },
-  { label: "Solve", href: "/play", icon: "extension", matches: ["/archive"] },
-  { label: "Leaderboard", href: "/leaderboard", icon: "crown" },
-  { label: "You", href: "/account", icon: "account_circle" },
+  { label: "nav.home", href: "/", icon: "home" },
+  { label: "nav.learn", href: "/course", icon: "import_contacts" },
+  { label: "nav.solve", href: "/play", icon: "extension", matches: ["/archive"] },
+  { label: "nav.leaderboard", href: "/leaderboard", icon: "crown" },
+  { label: "nav.you", href: "/account", icon: "account_circle" },
 ];
 
 interface BottomNavProps {
@@ -30,13 +32,14 @@ interface BottomNavProps {
 export function BottomNav({ path, onNavigate }: BottomNavProps) {
   // Figma: guests see an outlined "Log in" tab, signed-in players a filled "You" tab.
   const signedIn = useAuth().status === "authenticated";
+  const { t } = useI18n();
   const [loginOpen, setLoginOpen] = useState(false);
   useEffect(() => {
     if (signedIn) setLoginOpen(false);
   }, [signedIn]);
   const items = NAV_ITEMS.map((item): NavItem => {
     if (item.href !== "/account") return item;
-    return signedIn ? { ...item, icon: "account_circle_fill" } : { ...item, label: "Log in" };
+    return signedIn ? { ...item, icon: "account_circle_fill" } : { ...item, label: "nav.logIn" };
   });
   const activeHref = items.find((item) =>
     [item.href, ...(item.matches ?? [])].some((prefix) => path === prefix || path.startsWith(`${prefix}/`)),
@@ -45,7 +48,7 @@ export function BottomNav({ path, onNavigate }: BottomNavProps) {
   return (
     <>
       <motion.nav
-        aria-label="Main"
+        aria-label={t("nav.main")}
         initial={{ y: 120, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ ...spring.soft, delay: 0.25 }}
@@ -101,7 +104,7 @@ export function BottomNav({ path, onNavigate }: BottomNavProps) {
                       </motion.span>
                     </AnimatePresence>
                   </motion.span>
-                  <span className="relative whitespace-nowrap text-2xs leading-none">{item.label}</span>
+                  <span className="relative whitespace-nowrap text-2xs leading-none">{t(item.label)}</span>
                 </motion.a>
               </li>
             );

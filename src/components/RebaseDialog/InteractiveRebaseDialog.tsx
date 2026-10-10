@@ -1,5 +1,7 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import type { InteractiveRebaseTodoEntry, RebaseTodoItem } from "../../engine";
+import { useI18n } from "../../i18n/I18nProvider";
+import { Rich } from "../../i18n/Rich";
 import { Button } from "../Button/Button";
 import { Dialog } from "../Puzzle/Dialog";
 
@@ -23,13 +25,14 @@ type Action = RebaseTodoItem["action"];
  * can be kept (pick) or folded into the commit above it (squash).
  */
 export function InteractiveRebaseDialog({ pending, branch, onConfirm, onCancel }: InteractiveRebaseDialogProps) {
+  const { t } = useI18n();
   // Keep the last rebase on screen while the dialog animates out.
   const shown = useRef(pending);
   if (pending) shown.current = pending;
   const rebase = shown.current;
 
   return (
-    <Dialog size="wide" open={pending !== null} title="Interactive rebase" onClose={onCancel}>
+    <Dialog size="wide" open={pending !== null} title={t("rebase.title")} onClose={onCancel}>
       {rebase && (
         <TodoEditor
           key={rebase.todo.map((item) => item.commit).join()}
@@ -54,6 +57,7 @@ function TodoEditor({
   onConfirm: (todo: RebaseTodoItem[]) => void;
   onCancel: () => void;
 }) {
+  const { t } = useI18n();
   const [actions, setActions] = useState<Action[]>(() => rebase.todo.map((item) => item.action));
 
   function choose(index: number, action: Action) {
@@ -72,9 +76,7 @@ function TodoEditor({
   return (
     <>
       <p className="-mt-2 text-sm text-grey-300">
-        Replaying <span className="font-secondary text-lime-400">{branch}</span> onto{" "}
-        <span className="font-secondary text-lime-400">{rebase.onto}</span>, oldest commit first. Squash folds a commit
-        into the one above it.
+        <Rich text={t("rebase.intro", { branch, onto: rebase.onto })} tags={{ ref: Ref }} />
       </p>
 
       <ol className="flex flex-col gap-2">
@@ -95,9 +97,9 @@ function TodoEditor({
       </ol>
 
       <div className="flex flex-col gap-2">
-        <Button onClick={confirm}>Start rebase</Button>
+        <Button onClick={confirm}>{t("rebase.start")}</Button>
         <Button variant="outline" onClick={onCancel}>
-          Cancel
+          {t("common.cancel")}
         </Button>
       </div>
     </>
@@ -105,6 +107,11 @@ function TodoEditor({
 }
 
 const ACTIONS: Action[] = ["pick", "squash"];
+
+/** A branch or commit name inside a sentence. */
+function Ref({ children }: { children: ReactNode }) {
+  return <span className="font-secondary text-lime-400">{children}</span>;
+}
 
 /** Two-option switch; the first commit has nothing above it to squash into, so it stays on pick. */
 function ActionToggle({
@@ -118,8 +125,9 @@ function ActionToggle({
   locked: boolean;
   onChange: (action: Action) => void;
 }) {
+  const { t } = useI18n();
   return (
-    <div role="radiogroup" aria-label={`Action for ${commit}`} className="flex shrink-0 rounded border border-lime-400">
+    <div role="radiogroup" aria-label={t("rebase.actionFor", { commit })} className="flex shrink-0 rounded border border-lime-400">
       {ACTIONS.map((action) => {
         const selected = value === action;
         const disabled = locked && action !== value;
@@ -130,7 +138,7 @@ function ActionToggle({
             role="radio"
             aria-checked={selected}
             disabled={disabled}
-            title={disabled ? "The first commit has nothing above it to squash into" : undefined}
+            title={disabled ? t("rebase.firstLocked") : undefined}
             onClick={() => onChange(action)}
             className={`flex min-h-11 w-[68px] items-center justify-center font-secondary text-xs transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
               selected

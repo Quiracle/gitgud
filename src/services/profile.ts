@@ -1,3 +1,4 @@
+import { t } from "../i18n/runtime";
 import { requireSupabaseClient } from "./supabase";
 
 export const DISPLAY_NAME_MAX = 40;
@@ -15,11 +16,11 @@ export async function getDisplayName(userId: string): Promise<string | undefined
 
 export async function updateDisplayName(userId: string, name: string): Promise<string> {
   const displayName = name.trim().slice(0, DISPLAY_NAME_MAX);
-  if (!displayName) throw new Error("Pick a name with at least one character.");
+  if (!displayName) throw new Error(t("profile.empty"));
   const { error } = await requireSupabaseClient()
     .from("profiles")
     .update({ display_name: displayName, updated_at: new Date().toISOString() })
     .eq("user_id", userId);
-  if (error) throw new Error(`Couldn't save your name: ${error.message}`);
+  if (error) throw new Error(t("profile.saveFailed"), { cause: error });
   return displayName;
 }
