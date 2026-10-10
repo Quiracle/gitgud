@@ -6,3 +6,7 @@ verify_jwt = false
 [functions.generate-guided-lesson]
 # Learners call this from the browser; the gateway rejects requests without a valid user JWT.
 verify_jwt = true
+
+[functions.linkedin-share]
+# Players call this from the browser; every action needs a signed-in user JWT.
+verify_jwt = true

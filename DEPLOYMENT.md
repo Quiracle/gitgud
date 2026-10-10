@@ -82,6 +82,24 @@ pnpm supabase:deploy
 
 For GPT-5 models with reasoning enabled, the generator sends `reasoning.effort` and omits incompatible sampling controls such as `temperature` and `top_p`. Legacy non-reasoning models receive the configured temperature instead. If the provider rejects the selected controls or strict structured output, generation fails safely instead of publishing an unvalidated puzzle.
 
+### Enable LinkedIn posting (optional)
+
+Without these secrets, Share falls back to the share sheet, copy, and download.
+
+1. In the [LinkedIn Developer Portal](https://www.linkedin.com/developers/apps), create an app linked to a LinkedIn company page.
+2. Under **Products**, add **Sign In with LinkedIn using OpenID Connect** and **Share on LinkedIn**. Together they grant `openid`, `profile`, and `w_member_social`.
+3. Under **Auth → Authorized redirect URLs**, add `https://YOUR_PRODUCTION_DOMAIN/linkedin/callback`, plus `http://localhost:5173/linkedin/callback` for local development.
+4. Generate a 32-byte token encryption key, for example with `openssl rand -base64 32`. Changing it later disconnects every player.
+5. Set the secrets, listing the same redirect URLs comma-separated:
+
+```powershell
+pnpm exec supabase secrets set LINKEDIN_CLIENT_ID=YOUR_CLIENT_ID LINKEDIN_CLIENT_SECRET=YOUR_CLIENT_SECRET LINKEDIN_REDIRECT_URIS=https://YOUR_PRODUCTION_DOMAIN/linkedin/callback,http://localhost:5173/linkedin/callback LINKEDIN_TOKEN_KEY=YOUR_BASE64_KEY
+```
+
+6. Run `pnpm supabase:deploy`. It applies the migration and deploys `linkedin-share`.
+
+LinkedIn access tokens last 60 days. When one expires, the share dialog asks the player to connect again.
+
 ## 4. Create the AI fallback pool
 
 Do this before enabling the schedule. Each Edge Function request generates at most one candidate so it stays below the hosted gateway timeout. The resumable helper repeats those short requests until it has stored at least two validated AI puzzles for each difficulty.
@@ -130,7 +148,7 @@ VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=YOUR_SUPABASE_PUBLISHABLE_KEY
 ```
 
-Find the publishable key under **Supabase → Project Settings → API Keys**. The legacy anonymous key also works if the dashboard has not migrated to publishable keys. Never put the service-role key or OpenAI key in Vercel.
+Find the publishable key under **Supabase → Project Settings → API Keys**. The legacy anonymous key also works if the dashboard has not migrated to publishable keys. Never put the service-role key, OpenAI key, or LinkedIn client secret in Vercel.
 
 4. Deploy. The existing `vercel.json` sends application routes such as `/play` and `/course/...` to Vite's `index.html`.
 

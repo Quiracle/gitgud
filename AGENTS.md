@@ -40,7 +40,7 @@ Learn Basics puzzles may require the lesson's featured command, but should still
 
 ## Product scope and priority
 
-Implement in this order for the hackathon:
+The hackathon MVP shipped in this order. GitGud is now a production app; keep these priorities when trade-offs arise:
 
 1. Purpose-built Git simulation engine and final-state validation.
 2. Playable puzzle screen, command input, restart, and win state.
@@ -53,7 +53,7 @@ Implement in this order for the hackathon:
 9. Friends leaderboard and friend invitations.
 10. Topic-based AI-guided lessons as a lower-priority feature.
 
-The official AI-generated daily puzzle is a required hackathon feature. Topic-based AI-guided lessons are not a launch blocker. Do not let social features or a temporary generation-service outage make already-published daily, archive, or Learn Basics puzzles unavailable.
+The official AI-generated daily puzzle is a required core feature. Topic-based AI-guided lessons are not a launch blocker. Do not let social features or a temporary generation-service outage make already-published daily, archive, or Learn Basics puzzles unavailable.
 
 ---
 
@@ -87,6 +87,8 @@ Home (guest play is immediately available)
                       -> Global ranking
                       -> Friends ranking
                  -> Share result
+                      -> Post to LinkedIn (connect once, then confirm each post)
+                      -> Share sheet, copy, or download
                  -> Return Home
   -> Challenge archive
        -> Select a previous date
@@ -150,6 +152,7 @@ Supabase Row Level Security
 Supabase Edge Function or database RPC for leaderboard submission
 Supabase scheduled function and Edge Function for AI puzzle generation
 AI generation API with structured JSON output
+LinkedIn "Share on LinkedIn" API through a Supabase Edge Function
 Vercel
 ```
 
@@ -172,6 +175,7 @@ Supabase is used only for:
 - Optional public display names and avatars from OAuth profile metadata.
 - Secure server-side generation and publication of the official daily puzzle.
 - Lower-priority AI-guided lesson generation.
+- LinkedIn connections and posting result cards on a player's behalf.
 
 Do not add:
 
@@ -242,7 +246,7 @@ Rules:
 
 ## Official AI-generated daily puzzle
 
-AI generation of the official daily puzzle is a **required hackathon feature and part of the MVP**.
+AI generation of the official daily puzzle is a **required core feature**.
 
 Exactly one official puzzle is published for each canonical UTC date. Every player receives the same stored puzzle, difficulty, validation target, and leaderboard for that date.
 
@@ -254,7 +258,7 @@ Before generation, the scheduled server process randomly selects exactly one cat
 type PuzzleDifficulty = "easy" | "medium" | "hard";
 ```
 
-For the hackathon, choose uniformly from the three categories. Repeated difficulties on consecutive days are valid. Store the selected difficulty with the date before calling the model and never reroll it because a user refreshes, generation is retried, or the puzzle is replayed.
+Choose uniformly from the three categories unless a weighted policy is approved. Repeated difficulties on consecutive days are valid. Store the selected difficulty with the date before calling the model and never reroll it because a user refreshes, generation is retried, or the puzzle is replayed.
 
 Suggested difficulty constraints:
 
@@ -339,7 +343,7 @@ Never execute arbitrary model output as code.
 
 Topic-based creation belongs inside **Guided Learning** and is lower priority than the official daily game, Learn Basics, authentication, and leaderboard.
 
-If implemented during the hackathon, a signed-in learner may enter a topic or learning goal and optionally choose a Git command to practise. Reuse the daily generator's strict schema and mandatory validation, then open the normal puzzle screen with additional teaching text and hints.
+A signed-in learner may enter a topic or learning goal and optionally choose a Git command to practise. Reuse the daily generator's strict schema and mandatory validation, then open the normal puzzle screen with additional teaching text and hints.
 
 AI-guided lessons:
 
@@ -349,7 +353,7 @@ AI-guided lessons:
 - Must use the same allowlisted semantic properties, supported commands, and solvability checks as daily puzzles.
 - Must be rate-limited per authenticated user.
 
-It is acceptable for the hackathon MVP to show this branch as coming soon after the rest of the required flow works.
+If the generation service is unavailable, show a friendly unavailable state; never block daily, archive, or Learn Basics play.
 
 ---
 
@@ -401,7 +405,7 @@ Giving up marks the run as surrendered and pauses it. Show a result popup that l
 
 Record every submitted command in the run transcript, including failed and unsupported commands, its relative timestamp, and its user-facing result. This is the source for the command-history view and optional debugging; it is not a prescribed solution sequence.
 
-Persist an active attempt so refresh, navigation, or restart cannot silently create a faster fresh attempt. The timer may pause when the page is hidden, but its behavior must be consistent and documented. Prefer cumulative active elapsed time from the initial start for the hackathon.
+Persist an active attempt so refresh, navigation, or restart cannot silently create a faster fresh attempt. The timer may pause when the page is hidden, but its behavior must be consistent and documented. Use cumulative active elapsed time from the initial start.
 
 ```ts
 interface PuzzleAttempt {
@@ -478,7 +482,7 @@ Display rank, public display name, solve time, restarts/retries, and the current
 
 Keep the user's best submitted result for each puzzle version. Replays may improve it but must not make it worse.
 
-Client-side simulation means scores cannot be perfectly cheat-proof. For the hackathon, reduce trivial manipulation by recording a server timestamp when an authenticated attempt starts and validating/submitting completion through a Supabase Edge Function or tightly scoped database RPC. Never claim the leaderboard is fully authoritative while validation runs in the client.
+Client-side simulation means scores cannot be perfectly cheat-proof. Reduce trivial manipulation by recording a server timestamp when an authenticated attempt starts and validating/submitting completion through a Supabase Edge Function or tightly scoped database RPC. Never claim the leaderboard is fully authoritative while validation runs in the client.
 
 Friends rankings use the same daily score but filter to accepted friends. Support invite links or codes plus explicit acceptance. Never infer or import friendships from Google/GitHub contacts.
 
@@ -500,7 +504,7 @@ Achievements use stable IDs and deterministic rules derived from saved progress,
 
 ### Account management
 
-The account area shows profile, achievements, connected OAuth provider, settings, and sign-out. Account deletion requires explicit confirmation and a trusted server-side operation that removes authentication and user-owned progress, attempts, friendships, invitations, and private guided lessons. Remove or anonymize leaderboard entries according to the displayed deletion policy. Never place service-role credentials in the client to perform deletion.
+The account area shows profile, achievements, connected OAuth provider, settings, and sign-out. Account deletion requires explicit confirmation and a trusted server-side operation that removes authentication and user-owned progress, attempts, friendships, invitations, and private guided lessons. Remove or anonymize leaderboard entries according to the displayed deletion policy. Deletion also removes LinkedIn connections, pending LinkedIn OAuth states, and the record of LinkedIn posts (posts already published on LinkedIn stay on the member's LinkedIn account). Never place service-role credentials in the client to perform deletion.
 
 ---
 
@@ -510,7 +514,18 @@ Sharing is optional and must not block completion.
 
 Generate text containing the puzzle date or lesson, solve time, retries, and a spoiler-free visual summary. Use the Web Share API when available and a copy-to-clipboard fallback.
 
-LinkedIn may be offered through a normal share URL. Do not request LinkedIn account permissions for the hackathon.
+### Posting to LinkedIn
+
+Players can post their result card image to LinkedIn directly from GitGud through LinkedIn's **Share on LinkedIn** API product.
+
+- A signed-in player connects LinkedIn once with OAuth 2.0 (authorization code flow), requesting only `openid profile w_member_social`. LinkedIn is a sharing connection, not a GitGud sign-in method. Guests are asked to log in first.
+- All LinkedIn calls go through the `linkedin-share` Edge Function. The LinkedIn client secret lives only in Edge Function secrets, and member access tokens are encrypted at rest in service-role-only tables. Never return a LinkedIn token to the browser or put LinkedIn credentials in a `VITE_` variable.
+- OAuth `state` is random, single use, short lived, bound to the GitGud user who started the flow, and stored only as a hash. Redirect URIs come from an allowlist.
+- Never post automatically or in the background. Every post requires an explicit **Post to LinkedIn** tap after the player has seen the image and caption.
+- The caption is editable and defaults to the spoiler-free share text. Never include solution commands.
+- The server accepts only PNG images within a size limit and rate-limits posts per user.
+- Players can disconnect LinkedIn from the share dialog; disconnecting revokes and deletes the stored token. An expired or revoked token returns the player to **Connect LinkedIn**.
+- If LinkedIn or Supabase is unavailable, sharing falls back to the share sheet, copy, download, and LinkedIn's composer link. LinkedIn problems never block completion.
 
 ---
 
@@ -557,7 +572,7 @@ git rebase -i <branch>
 
 Interactive rebase may use a React dialog instead of reproducing a terminal editor. The only required operations are `pick` and `squash`. Do not implement full Git rebase functionality.
 
-If advanced engine work is not ready during the hackathon, ship the first seven lessons and mark the rebase lessons as coming soon rather than faking their behavior.
+Never fake engine behavior: if a lesson's command isn't fully supported, mark that lesson as coming soon.
 
 ---
 
@@ -667,6 +682,7 @@ src/
 supabase/
 ├── functions/
 │   ├── generate-daily-puzzle/
+│   ├── linkedin-share/
 │   └── delete-account/
 └── migrations/
 ```
@@ -886,6 +902,30 @@ user_achievements
   achievement_id
   awarded_at
   primary key (user_id, achievement_id)
+
+linkedin_connections        -- service role only
+  user_id primary key
+  member_urn
+  display_name
+  token_ciphertext
+  scope
+  expires_at
+
+linkedin_oauth_states       -- service role only
+  state_hash primary key
+  user_id
+  return_path
+  redirect_uri
+  expires_at
+
+linkedin_posts              -- service role only
+  id primary key
+  user_id
+  puzzle_id
+  puzzle_version
+  post_urn
+  status
+  created_at
 ```
 
 Enforce at most one `is_current` daily-puzzle row per date with a partial unique constraint while retaining older corrected versions for historical result integrity. Prefer a database view or RPC for ranked reads. Enforce best-score replacement in the trusted submission boundary, not only in React.
@@ -918,6 +958,7 @@ At minimum, test:
 - UTC streak calculation, archive replays not changing streaks, and idempotent achievement awards.
 - Friend invite acceptance and friends-only leaderboard filtering.
 - Account deletion authorization and cleanup/anonymization behavior.
+- LinkedIn posting never happens without an explicit request, tokens never reach the browser, OAuth states are single use and user bound, and failures fall back to copy and download.
 - Supabase Row Level Security policies before public deployment.
 
 Do not make network access a requirement for engine tests.
@@ -928,9 +969,9 @@ The human user performs all UI verification. AI models and coding agents must no
 
 ---
 
-## Definition of done for the hackathon MVP
+## Baseline release requirements
 
-The MVP is complete when:
+The hackathon MVP met these, and every release must keep meeting them:
 
 - The app runs as a static Vite frontend on Vercel.
 - A guest can play, restart, and complete puzzles without signing in.
@@ -943,7 +984,7 @@ The MVP is complete when:
 - A scheduled server process selects one of `easy`, `medium`, or `hard` and publishes one AI-generated official puzzle for each UTC date.
 - Every published daily puzzle is schema-valid and demonstrably solvable with the normal engine before it becomes playable.
 - Every player receives the same immutable daily puzzle and difficulty, and previous generated daily puzzles remain in the archive.
-- No AI provider secret is present in the browser bundle or client environment.
+- No AI provider or LinkedIn secret is present in the browser bundle or client environment.
 - An authenticated completion can appear on the correct daily leaderboard with time and restart count.
 - The home screen shows today's difficulty, completion status, and current streak.
 - Previously published challenge definitions and results remain available.

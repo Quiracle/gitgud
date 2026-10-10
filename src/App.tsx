@@ -14,6 +14,7 @@ import { GuidedLessonScreen } from "./screens/GuidedLessonScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
 import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
+import { LinkedInCallbackScreen } from "./screens/LinkedInCallbackScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { AccountScreen } from "./screens/AccountScreen";
 
@@ -106,6 +107,10 @@ function renderScreen(
 
   if (path === "/auth/callback") {
     return <AuthCallbackScreen onNavigate={navigate} onReplace={replace} />;
+  }
+
+  if (path === "/linkedin/callback") {
+    return <LinkedInCallbackScreen onNavigate={navigate} onReplace={replace} />;
   }
 
   if (path === "/account") return <AccountScreen onNavigate={navigate} />;
