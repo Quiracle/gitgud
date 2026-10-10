@@ -7,11 +7,13 @@ interface DialogProps {
   open: boolean;
   title: string;
   onClose?: () => void;
+  /** "wide" gives long, text-heavy dialogs room on tablets and desktops; phones keep the Figma width. */
+  size?: "default" | "wide";
   children: ReactNode;
 }
 
 /** Figma "pop up" (node 28:113442): lime-outlined panel over a dark scrim. */
-export function Dialog({ open, title, onClose, children }: DialogProps) {
+export function Dialog({ open, title, onClose, size = "default", children }: DialogProps) {
   const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
 
@@ -48,7 +50,7 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
-            className="relative flex max-h-[calc(100dvh-48px)] w-full max-w-[327px] flex-col gap-6 overflow-y-auto overscroll-contain rounded border border-lime-400 bg-green-950 p-6 outline-none"
+            className={`relative flex max-h-[calc(100dvh-48px)] w-full max-w-[327px] ${size === "wide" ? "sm:max-w-[560px]" : ""} flex-col gap-6 overflow-y-auto overscroll-contain rounded border border-lime-400 bg-green-950 p-6 outline-none`}
             initial={{ opacity: 0, scale: 0.88, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 12, transition: { duration: 0.16 } }}

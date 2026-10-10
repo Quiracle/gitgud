@@ -296,7 +296,7 @@ export function SolveScreen({
         </div>
       </Dialog>
 
-      <Dialog open={panel === "solution"} title="How to solve it" onClose={() => { session.resume(); closePanel(); }}>
+      <Dialog size="wide" open={panel === "solution"} title="How to solve it" onClose={() => { session.resume(); closePanel(); }}>
         <ol className="flex flex-col gap-2 text-sm text-grey-50">
           {puzzle.hints.map((hint, index) => (
             <motion.li
@@ -346,7 +346,7 @@ export function SolveScreen({
       </Dialog>
 
       {intro && (
-        <Dialog open={panel === "intro"} title={intro.title} onClose={closePanel}>
+        <Dialog size="wide" open={panel === "intro"} title={intro.title} onClose={closePanel}>
           {intro.body}
           <div className="flex flex-col gap-2">
             <Button onClick={closePanel}>
@@ -360,7 +360,7 @@ export function SolveScreen({
         </Dialog>
       )}
 
-      <Dialog open={panel === "goals"} title="Goals" onClose={closePanel}>
+      <Dialog size="wide" open={panel === "goals"} title="Goals" onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
           <p className="text-grey-50">{puzzle.description}</p>
           <ul className="flex flex-col gap-2" aria-label="Goal checklist">
@@ -392,7 +392,7 @@ export function SolveScreen({
         </div>
       </Dialog>
 
-      <Dialog open={panel === "help"} title="How to play" onClose={closePanel}>
+      <Dialog size="wide" open={panel === "help"} title="How to play" onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
           <p className="text-grey-50">{puzzle.description}</p>
           {puzzle.objectives && puzzle.objectives.length > 0 && (

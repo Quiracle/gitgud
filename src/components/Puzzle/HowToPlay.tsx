@@ -59,7 +59,7 @@ export function HowToPlayLink({ onNavigate, learnHref, onTutorial }: HowToPlayLi
         </motion.span>
       </button>
 
-      <Dialog open={open} title="How to play" onClose={close}>
+      <Dialog size="wide" open={open} title="How to play" onClose={close}>
         <div className="flex flex-col gap-4 text-sm">
           <p className="text-grey-50">
             Every day there's a new Git puzzle. Turn the starting repository into the goal by typing Git commands.
