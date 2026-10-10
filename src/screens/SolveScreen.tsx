@@ -23,7 +23,7 @@ interface SolveScreenProps {
   onNavigate: (path: string) => void;
 }
 
-type Panel = "none" | "help" | "hint" | "give-up" | "solution" | "result";
+type Panel = "none" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
@@ -98,6 +98,12 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
     setPanel("give-up");
   }
 
+  // Confirm only when the run has progress worth keeping.
+  function askRestart() {
+    if (session.commandCount === 0) restart();
+    else setPanel("restart");
+  }
+
   function restart() {
     session.restart();
     setExpanded(false);
@@ -120,7 +126,6 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
           <CommitTree
             repository={session.repository}
             mode="pan"
-            padding={40}
             introScale={origin?.treeScale}
             animateIn={!origin}
             className="size-full"
@@ -168,6 +173,7 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
             >
               <ActionBar
                 onExit={() => onNavigate(exitHref)}
+                onRestart={askRestart}
                 onHelp={() => setPanel("help")}
                 onHint={openHint}
                 onGiveUp={openGiveUp}
@@ -202,6 +208,21 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
           <span>See leaderboard</span>
           <Icon name="crown" size={20} className="ml-2" />
         </Button>
+      </Dialog>
+
+      <Dialog open={panel === "restart"} title="Restart puzzle?" onClose={closePanel}>
+        <p className="text-sm text-grey-300">
+          The repository goes back to the start. Your timer keeps running and this counts as a retry.
+        </p>
+        <div className="flex flex-col gap-2">
+          <Button onClick={restart}>
+            <Icon name="restart_alt" size={20} className="mr-2" />
+            Restart
+          </Button>
+          <Button variant="outline" onClick={closePanel}>
+            Keep playing
+          </Button>
+        </div>
       </Dialog>
 
       <Dialog open={panel === "give-up"} title="Give up?" onClose={() => { session.resume(); closePanel(); }}>
