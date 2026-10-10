@@ -353,7 +353,7 @@ function GoalScene() {
           <Icon name="flag_2" size={16} />
           <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
         </div>
-        <PixelChicken look={HAT} size={48} />
+        <PixelChicken look={HAT} size={48} className="self-center" />
       </motion.div>
     </Row>
   );
