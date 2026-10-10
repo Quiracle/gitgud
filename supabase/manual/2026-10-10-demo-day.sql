@@ -1,0 +1,48 @@
+-- Publishes the hand-authored showcase daily "Demo day: ship the chicken" for 2026-10-10 (UTC).
+-- Generated from src/puzzles/daily/2026-10-10-demo-day.json, which is proven solvable
+-- by src/puzzles/daily/demoDay.test.ts. Paste into Supabase -> SQL Editor and run once.
+--
+-- If a puzzle is already current for this date (e.g. the scheduled AI job ran), it is kept
+-- for historical results but stops being current, and this puzzle is published as the
+-- next version with its own ID. Running the script again is a no-op.
+do $publish$
+declare
+  target_date constant date := date '2026-10-10';
+  puzzle_definition jsonb := $definition${"schemaVersion":2,"themeId":"chicken-v1","id":"daily-2026-10-10","version":1,"kind":"daily","slug":"daily-2026-10-10","publishedOn":"2026-10-10","difficulty":"hard","title":"Demo day: ship the chicken","description":"It's hackathon demo day and the chicken is on stage in ten minutes. Four teams worked on four branches and none of it has landed on main. Build the presenter look on main: shades and a mohawk from glam, the blue cap from the lab (nothing else from there), golden stilts so the back row can see, and the turquoise lanyard. The purple rehearsal dye has to go, but main is already published, so don't rewrite it.","objectives":["Finish on main with the target chicken: black shades, red crest, blue cap, turquoise lanyard, gold stilts, cream feathers.","Undo the purple dye commit (m12) without rewriting main.","Merge the glam branch with a real merge commit. The glam team still uses their branch, so leave it where it is.","Copy only the blue cap commit from lab and leave lab untouched.","Squash all three stilts commits into one tidy commit before they reach main.","Rebase the lanyard commit onto newer work instead of merging it."],"initialRepository":{"initialState":{"body":"cream","sunglasses":"none","hat":"none","scarf":"none","crest":"none","longLegs":"none"},"currentBranch":"main","head":"m13","nextGeneratedId":1,"branches":{"main":"m13","glam":"c52","lab":"x43","stilts":"t63","lanyard":"l71"},"commits":{"a10":{"id":"a10","parents":[],"message":"Hatch the demo-day chicken","changes":[],"provenance":{"type":"original"}},"m11":{"id":"m11","parents":["a10"],"message":"Write the three-minute pitch","changes":[],"provenance":{"type":"original"}},"m12":{"id":"m12","parents":["m11"],"message":"Dye the feathers purple for dress rehearsal","changes":[{"type":"set","property":"body","from":"cream","to":"purple"}],"provenance":{"type":"original"}},"m13":{"id":"m13","parents":["m12"],"message":"Rehearse the live demo twice","changes":[],"provenance":{"type":"original"}},"c51":{"id":"c51","parents":["m11"],"message":"Add black stage shades","changes":[{"type":"set","property":"sunglasses","from":"none","to":"black"}],"provenance":{"type":"original"}},"c52":{"id":"c52","parents":["c51"],"message":"Spike the crest into a red mohawk","changes":[{"type":"set","property":"crest","from":"none","to":"red"}],"provenance":{"type":"original"}},"x41":{"id":"x41","parents":["a10"],"message":"Experiment: purple rocket legs","changes":[{"type":"set","property":"longLegs","from":"none","to":"purple"}],"provenance":{"type":"original"}},"x42":{"id":"x42","parents":["x41"],"message":"Stitch a blue presenter cap","changes":[{"type":"set","property":"hat","from":"none","to":"blue"}],"provenance":{"type":"original"}},"x43":{"id":"x43","parents":["x42"],"message":"Experiment: dye the whole chicken gold","changes":[{"type":"set","property":"body","from":"cream","to":"gold"}],"provenance":{"type":"original"}},"t61":{"id":"t61","parents":["m11"],"message":"WIP: red stilts","changes":[{"type":"set","property":"longLegs","from":"none","to":"red"}],"provenance":{"type":"original"}},"t62":{"id":"t62","parents":["t61"],"message":"WIP: blue stilts?","changes":[{"type":"set","property":"longLegs","from":"red","to":"blue"}],"provenance":{"type":"original"}},"t63":{"id":"t63","parents":["t62"],"message":"Final: golden stilts","changes":[{"type":"set","property":"longLegs","from":"blue","to":"gold"}],"provenance":{"type":"original"}},"l71":{"id":"l71","parents":["a10"],"message":"Clip on the turquoise hackathon lanyard","changes":[{"type":"set","property":"scarf","from":"none","to":"turquoise"}],"provenance":{"type":"original"}}}},"target":{"branch":"main","snapshot":{"body":"cream","sunglasses":"black","hat":"blue","scarf":"turquoise","crest":"red","longLegs":"gold"},"branchHeads":{"glam":"c52","lab":"x43"},"requiredProvenance":[{"type":"revert","sourceCommit":"m12"},{"type":"merge","sourceCommit":"c52"},{"type":"cherry-pick","sourceCommit":"x42"},{"type":"rebase","sourceCommit":"l71"},{"type":"squash","sourceCommit":"t61"},{"type":"squash","sourceCommit":"t63"}]},"allowedCommands":["log","switch","merge","cherry-pick","revert","rebase","interactive-rebase"],"hints":["git log --all shows every branch. Merging lab would drag in experiments you don't want, so copy a single commit instead.","The stilts went red, then blue, then gold. In an interactive rebase, pick the first commit and squash the other two into it.","After rebasing a branch on top of main, git merge --ff-only moves main forward without a merge commit."]}$definition$::jsonb;
+  solution jsonb := $solution$["git switch stilts","git rebase -i main\npick t61\nsquash t62\nsquash t63","git switch lanyard","git rebase stilts","git switch main","git merge --ff-only lanyard","git merge glam","git cherry-pick x42","git revert m12"]$solution$::jsonb;
+  next_version integer;
+  target_id text;
+begin
+  if exists (
+    select 1 from public.daily_puzzles
+    where published_on = target_date and is_current
+      and daily_puzzles.definition->>'title' = puzzle_definition->>'title'
+  ) then
+    raise notice 'This puzzle is already the current daily for %.', target_date;
+    return;
+  end if;
+
+  select coalesce(max(version), 0) + 1 into next_version
+    from public.daily_puzzles where published_on = target_date;
+  target_id := case when next_version = 1 then 'daily-' || target_date
+                    else 'daily-' || target_date || '-v' || next_version end;
+  puzzle_definition := puzzle_definition
+    || jsonb_build_object('id', target_id, 'slug', target_id, 'version', next_version);
+
+  update public.daily_puzzles set is_current = false
+    where published_on = target_date and is_current;
+
+  insert into public.daily_puzzles (
+    id, published_on, version, is_current, difficulty, schema_version, prompt_version,
+    definition, generation_run_id, validation_status
+  ) values (
+    target_id, target_date, next_version, true, puzzle_definition->>'difficulty',
+    (puzzle_definition->>'schemaVersion')::integer, 0, puzzle_definition, null, 'validated'
+  );
+
+  insert into public.daily_puzzle_private (puzzle_id, solution_commands)
+    values (target_id, solution);
+
+  raise notice 'Published % (version %) for %.', target_id, next_version, target_date;
+end
+$publish$;
