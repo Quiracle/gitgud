@@ -13,6 +13,8 @@ interface ButtonProps {
   disabled?: boolean;
   /** "submit" lets a button submit its form. */
   type?: "button" | "submit";
+  /** Stretch to the container width (default). Compact buttons size to their label. */
+  fullWidth?: boolean;
 }
 
 /* Buttons never move: hover lightens, press deepens, both as colour only. */
@@ -31,8 +33,9 @@ export function Button({
   onClick,
   disabled,
   type = "button",
+  fullWidth = true,
 }: ButtonProps) {
-  const classes = `relative flex min-h-11 w-full select-none items-center justify-center overflow-hidden rounded p-3 text-paragraph transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${className}`;
+  const classes = `relative flex min-h-11 ${fullWidth ? "w-full" : "w-auto px-5"} select-none items-center justify-center overflow-hidden rounded p-3 text-paragraph transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${className}`;
 
   if (href) {
     const follow = (event: MouseEvent<HTMLAnchorElement>) => {

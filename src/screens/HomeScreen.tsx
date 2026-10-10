@@ -68,7 +68,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                   daily.status === "error" ? (
                     <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
                       <p className="text-sm text-grey-200">{daily.message}</p>
-                      <Button variant="outline" className="w-auto px-5" onClick={() => void daily.reload()}>
+                      <Button variant="outline" fullWidth={false} onClick={() => void daily.reload()}>
                         Try again
                       </Button>
                     </div>

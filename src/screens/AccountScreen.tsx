@@ -284,7 +284,7 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
           autoComplete="nickname"
           className="min-h-11 min-w-0 flex-1 rounded border border-grey-300 bg-grey-50 px-3 text-paragraph text-grey-950 outline-none transition-colors focus:border-lime-500"
         />
-        <Button type="submit" className="w-auto shrink-0 px-5" disabled={unchanged || state === "saving"}>
+        <Button type="submit" fullWidth={false} className="shrink-0" disabled={unchanged || state === "saving"}>
           {state === "saving" ? "Saving…" : "Save"}
         </Button>
       </div>
