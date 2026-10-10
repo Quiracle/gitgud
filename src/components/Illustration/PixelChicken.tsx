@@ -1,5 +1,5 @@
 import { AnimatePresence, motion, useAnimationControls, type Variants } from "motion/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import type { SemanticState } from "../../engine";
 import { CHICKEN_COLORS, type ChickenColor } from "../../puzzles/chickenTheme";
 import { spring } from "../../lib/motion";
@@ -189,7 +189,10 @@ export function PixelChicken({ look, size = 48, className = "", label }: PixelCh
       <motion.g animate={controls} style={{ originX: 0.5, originY: 0.82 }}>
         <AnimatePresence initial={false}>
           {look.chicken && (
-            <AnimatedLayer key="chicken" entrance="chicken" layer={CHICKEN_PIXELS.chicken} colors={body} />
+            <AnimatedLayer key="chicken" entrance="chicken" layer={CHICKEN_PIXELS.chicken} colors={body}>
+              {/* Long legs bring their own feet; drawing both leaves the short feet poking out. */}
+              {!look.parts.longLegs && <Layer layer={CHICKEN_PIXELS.feet} colors={body} />}
+            </AnimatedLayer>
           )}
           {PART_ORDER.map((part) => {
             const tint = look.parts[part];
@@ -215,15 +218,18 @@ function AnimatedLayer({
   entrance,
   layer,
   colors,
+  children,
 }: {
   entrance: keyof typeof ENTRANCES;
   layer: PixelLayer;
   colors: Record<string, string>;
+  children?: ReactNode;
 }) {
   const { variants, origin } = ENTRANCES[entrance];
   return (
     <motion.g variants={variants} initial="hidden" animate="show" exit="gone" style={{ originX: origin[0], originY: origin[1] }}>
       <Layer layer={layer} colors={colors} />
+      {children}
     </motion.g>
   );
 }

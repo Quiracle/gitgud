@@ -43,4 +43,10 @@ describe("chicken pixel layers", () => {
       }
     }
   });
+
+  it("keep the short feet out of the body so long legs can replace them", () => {
+    const { chicken, feet, longLegs } = CHICKEN_PIXELS;
+    expect(chicken.top + chicken.rows.length).toBeLessThanOrEqual(longLegs.top);
+    expect(feet.top).toBe(longLegs.top);
+  });
 });

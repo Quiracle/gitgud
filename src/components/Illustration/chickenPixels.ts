@@ -1,5 +1,6 @@
 // Generated from the Figma "chicken assets" component set (node 28:96273).
-// The comb is split out of the base chicken so `crest` can add, remove, or recolour it.
+// The comb is split out of the base chicken so `crest` can add, remove, or recolour it,
+// and the short feet are split out so `longLegs` replaces them instead of drawing on top.
 // Each layer is a 32x32 grid; rows start at `top`. Roles:
 // o outline, b body, k cheek, f feet/beak, g background mask,
 // p primary, s shade, l light. Spaces are transparent.
@@ -35,6 +36,11 @@ export const CHICKEN_PIXELS = {
       "       obbboooobbbbbbbbbo",
       "        obbbbbbbbbbbbbbo",
       "         ooobobbbbbbooo",
+    ],
+  },
+  feet: {
+    top: 23,
+    rows: [
       "            ofoooooo",
       "            offffoffo",
       "             oooo oo",
@@ -48,7 +54,7 @@ export const CHICKEN_PIXELS = {
       "            opogopog",
       "            opogopog",
       "            opoooooo",
-      "            oppppopp",
+      "            oppppoppo",
       "             oooo oo",
     ],
   },
