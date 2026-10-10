@@ -10,9 +10,8 @@ import { LessonScreen } from "./screens/LessonScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
 import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
-import { AuthPanel } from "./components/AuthPanel";
-import { StatsPanel } from "./components/StatsPanel";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
+import { AccountScreen } from "./screens/AccountScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -96,19 +95,7 @@ function renderScreen(
     return <AuthCallbackScreen onNavigate={navigate} onReplace={replace} />;
   }
 
-  // Sign-in lives under "You" until the account screen is designed.
-  if (path === "/account") {
-    return (
-      <main className="min-h-dvh bg-green-50 px-6 pb-[var(--nav-clearance)] pt-[calc(40px+env(safe-area-inset-top))]">
-        <div className="mx-auto max-w-md">
-          <AuthPanel />
-          <div className="mt-4">
-            <StatsPanel />
-          </div>
-        </div>
-      </main>
-    );
-  }
+  if (path === "/account") return <AccountScreen onNavigate={navigate} />;
 
   if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
 

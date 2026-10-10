@@ -11,6 +11,8 @@ interface ButtonProps {
   onNavigate?: (path: string) => void;
   onClick?: () => void;
   disabled?: boolean;
+  /** "submit" lets a button submit its form. */
+  type?: "button" | "submit";
 }
 
 /* Buttons never move: hover lightens, press deepens, both as colour only. */
@@ -28,6 +30,7 @@ export function Button({
   onNavigate,
   onClick,
   disabled,
+  type = "button",
 }: ButtonProps) {
   const classes = `relative flex min-h-11 w-full select-none items-center justify-center overflow-hidden rounded p-3 text-paragraph transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${className}`;
 
@@ -45,7 +48,7 @@ export function Button({
   }
 
   return (
-    <button type="button" onClick={onClick} disabled={disabled} className={classes}>
+    <button type={type} onClick={onClick} disabled={disabled} className={classes}>
       {children}
     </button>
   );

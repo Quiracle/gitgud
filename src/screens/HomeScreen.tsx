@@ -10,6 +10,7 @@ import { HowToPlayLink, PuzzlePreview, useCanvasHandOff } from "../components/Pu
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
 import { useDragScroll } from "../hooks/useDragScroll";
+import { useProgressInsights } from "../hooks/useProgressInsights";
 import { openProgressStore } from "../storage/browserProgress";
 import { rise, spring, stagger } from "../lib/motion";
 import { learnBasicsCatalog, type PublicPuzzleDefinition } from "../puzzles";
@@ -22,14 +23,12 @@ interface HomeScreenProps {
 /** Lessons that introduce the headline concepts, shown under "Recommended for you". */
 const RECOMMENDED_LESSONS = ["basics-05-three-way-merge", "basics-06-cherry-pick", "basics-08-rebase"];
 
-/* Streak data arrives with the progress service. Until then guests see an empty trail. */
-const STREAK_DAYS = [false, false, false, false, false, false];
-const STREAK_COUNT = 0;
 
 /** Figma home frame (node 24:33046). */
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const daily = useDailyPuzzle();
   const handOff = useCanvasHandOff(onNavigate);
+  const { streak, recent } = useProgressInsights();
   const solvedToday = useMemo(
     () => daily.status === "ready" && Boolean(openProgressStore().latestCompletion(daily.puzzle.id, daily.puzzle.version)),
     [daily],
@@ -53,8 +52,8 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                   Today’s challenge:
                 </motion.h1>
                 <StreakTrail
-                  days={STREAK_DAYS}
-                  label={STREAK_COUNT > 0 ? `${STREAK_COUNT}-days streak!` : "Start your streak!"}
+                  days={recent}
+                  label={streak > 0 ? `${streak}-day${streak === 1 ? "" : "s"} streak!` : "Start your streak!"}
                 />
               </div>
               <PuzzlePreview
