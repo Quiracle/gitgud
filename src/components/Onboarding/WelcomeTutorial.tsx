@@ -37,8 +37,8 @@ const STEPS: Step[] = [
     scene: () => <BranchesScene />,
     text: (
       <>
-        Tags like <Code>main</Code> are <Em>branches</Em>: names that point at a commit. The lime outline is{" "}
-        <Em>HEAD</Em>, the commit you’re on.
+        Tags like <Code>main</Code> are <Em>branches</Em>: names that point at a commit. The{" "}
+        <Em>HEAD</Em> arrow marks the commit you’re on.
       </>
     ),
   },
@@ -231,7 +231,7 @@ function Card({ id, look, branch, delay }: { id: string; look: ChickenLook; bran
       look={look}
       branches={branch ? [branch] : []}
       currentBranch="main"
-      focused={branch === "main"}
+      head={branch === "main"}
       colour={branch ? `rgb(var(--colors-branch-${branch === "main" ? 1 : 2}))` : undefined}
     />
   );

@@ -18,6 +18,11 @@ const ARROW_W = 4;
 const ARROW_L = 6;
 /** Commits no branch reaches keep the neutral card colour. */
 const UNOWNED = "rgb(var(--colors-grey-500))";
+/* Figma "HEAD" (node 89:161752) plus the pointed end the auto layout can't draw. */
+const HEAD_TIP = 10;
+const HEAD_GAP = 4;
+/** Room the HEAD pointer takes beside a card: gap, tip and the "HEAD" label. */
+const HEAD_EXTENT = 50;
 
 interface CommitTreeProps {
   repository: Repository;
@@ -67,7 +72,9 @@ export function CommitTree({
   const colStep = layout.columns <= 2 ? 130 : CARD_W + 16;
   const rowStep = (layout.rows <= 2 ? 150 : CARD_H + 32) + (showRefs ? TAG_H : 0);
   const minCol = Math.min(...layout.nodes.map((node) => node.col));
-  const width = (Math.max(...layout.nodes.map((node) => node.col)) - minCol) * colStep + CARD_W;
+  // Both sides keep room for the HEAD pointer so the tree stays centred wherever HEAD is.
+  const margin = showRefs ? HEAD_EXTENT : 0;
+  const width = (Math.max(...layout.nodes.map((node) => node.col)) - minCol) * colStep + CARD_W + margin * 2;
   const height = (layout.rows - 1) * rowStep + CARD_H + (showRefs ? TAG_H : 0);
   const fitScale = box.width
     ? Math.min(1, (box.width - padding * 2) / width, (box.height - padding * 2) / height)
@@ -79,12 +86,24 @@ export function CommitTree({
 
   const position = new Map(
     layout.nodes.map((node) => {
-      const x = (node.col - minCol) * colStep;
+      const x = margin + (node.col - minCol) * colStep;
       const y = node.row * rowStep;
       return [node.id, { x, y, row: node.row, h: CARD_H + (tagsOf(node.id).length ? TAG_H : 0) }];
     }),
   );
   const delayFor = (row: number, x: number) => (animateIn ? row * 0.14 + x / 2000 : 0);
+
+  // HEAD points from the right unless a close neighbour sits there and the left is free.
+  const headNode = showRefs ? layout.nodes.find((node) => node.id === repository.head) : undefined;
+  const headAt = headNode && position.get(headNode.id);
+  const occupied = (row: number, col: number) => layout.nodes.some((node) => node.row === row && node.col === col);
+  const headSide: "left" | "right" =
+    headNode &&
+    colStep - CARD_W < HEAD_EXTENT &&
+    occupied(headNode.row, headNode.col + 1) &&
+    !occupied(headNode.row, headNode.col - 1)
+      ? "left"
+      : "right";
 
   const drawing = (
     <>
@@ -133,7 +152,6 @@ export function CommitTree({
                 look={looks[node.id]}
                 branches={tagsOf(node.id)}
                 currentBranch={repository.currentBranch}
-                focused={showRefs && node.id === repository.head}
                 colour={colourOfCommit(node.id)}
                 colourOf={colourOfBranch}
               />
@@ -141,6 +159,17 @@ export function CommitTree({
           );
         })}
       </AnimatePresence>
+      {headAt && (
+        // One pointer for the whole tree, so it glides from card to card as HEAD moves.
+        <motion.div
+          className="absolute"
+          initial={{ opacity: 0, left: headLeft(headAt.x, headSide), top: headAt.y }}
+          animate={{ opacity: 1, left: headLeft(headAt.x, headSide), top: headAt.y }}
+          transition={{ ...spring.snappy, opacity: { duration: 0.2, delay: delayFor(headAt.row, headAt.x) + 0.3 } }}
+        >
+          <HeadPointer side={headSide} />
+        </motion.div>
+      )}
     </>
   );
 
@@ -354,84 +383,107 @@ export interface CommitCardProps {
   look: ChickenLook;
   branches: string[];
   currentBranch: string;
-  focused: boolean;
+  /** Attach a HEAD pointer on the right, for cards drawn outside a graph. */
+  head?: boolean;
   /** Outline colour: the branch that owns this commit. */
   colour?: string;
   /** Tag colour for each branch name. */
   colourOf?: (branch: string) => string;
 }
 
-/** Trunk orange, anything else the second branch colour: for cards drawn outside a graph. */
+/** Trunk lime, anything else the second branch colour: for cards drawn outside a graph. */
 const defaultColourOf = (branch: string) =>
   `rgb(var(--colors-branch-${branch === "main" || branch === "master" ? 1 : 2}))`;
 
-/**
- * One Figma "card branch" variant: outline and tag in the branch colour, with a glow
- * and pulsing lime dot on the commit HEAD points at.
- */
+/** One Figma "card branch" variant: outline and full-width tag in the branch colour. */
 export function CommitCard({
   id,
   look,
   branches,
   currentBranch,
-  focused,
+  head = false,
   colour = UNOWNED,
   colourOf = defaultColourOf,
 }: CommitCardProps) {
   const ordered = [...branches].sort((a, b) => Number(b === currentBranch) - Number(a === currentBranch));
 
   return (
-    <div
-      className="flex flex-col overflow-hidden rounded border bg-green-900"
-      style={{
-        width: CARD_W,
-        borderColor: colour,
-        // A ring outside the border marks HEAD without changing the card's size.
-        boxShadow: focused ? `0 0 0 1px ${colour}, 0 0 14px -2px ${colour}` : `0 0 0 0 ${colour}`,
-        transition: "border-color 300ms, box-shadow 300ms",
-      }}
-    >
+    <div className="relative" style={{ width: CARD_W }}>
+      <div
+        className="flex flex-col overflow-hidden rounded border bg-green-900"
+        style={{ borderColor: colour, transition: "border-color 300ms" }}
+      >
+        <AnimatePresence initial={false}>
+          {ordered.length > 0 && (
+            <motion.div
+              key="tag"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: TAG_H, opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={spring.snappy}
+              className="flex shrink-0 overflow-hidden"
+              title={ordered.join(", ")}
+            >
+              {/* Segments share the card's full width; names that don't fit stay in the tooltip. */}
+              {ordered.map((name, index) => (
+                <span
+                  key={name}
+                  className={`flex-auto truncate px-1 text-2xs leading-[17px] text-green-950 ${index === 0 ? "shrink-0 max-w-full" : "min-w-0"}`}
+                  style={{ backgroundColor: colourOf(name), transition: "background-color 300ms" }}
+                >
+                  {name}
+                </span>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className="flex flex-col gap-1 p-2">
+          <PixelChicken look={look} size={48} className="rounded" />
+          <span className="truncate text-xs leading-[15px] text-grey-50">{id}</span>
+        </div>
+      </div>
       <AnimatePresence initial={false}>
-        {ordered.length > 0 && (
+        {head && (
           <motion.div
-            key="tag"
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: TAG_H, opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
+            key="head"
+            className="absolute top-0"
+            style={{ left: CARD_W + HEAD_GAP }}
+            initial={{ opacity: 0, x: 6 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 6 }}
             transition={spring.snappy}
-            className="flex shrink-0 overflow-hidden"
-            title={ordered.join(", ")}
           >
-            {/* One coloured segment per branch; names that don't fit stay in the tooltip. */}
-            {ordered.map((name, index) => (
-              <span
-                key={name}
-                className={`truncate px-1 text-2xs leading-[17px] text-green-950 ${index === 0 ? "shrink-0 max-w-full" : "min-w-0"}`}
-                style={{ backgroundColor: colourOf(name), transition: "background-color 300ms" }}
-              >
-                {name}
-              </span>
-            ))}
+            <HeadPointer side="right" />
           </motion.div>
         )}
       </AnimatePresence>
-      <div className="relative flex flex-col gap-1 p-2">
-        <AnimatePresence>
-          {focused && (
-            <motion.span
-              key="head"
-              className="absolute right-0.5 top-0.5 size-1 rounded bg-lime-400"
-              initial={{ scale: 0 }}
-              animate={{ scale: [1, 1.8, 1] }}
-              // The pulse repeats forever, so the exit needs its own finite transition or it never unmounts.
-              exit={{ scale: 0, transition: { duration: 0.15 } }}
-              transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-            />
-          )}
-        </AnimatePresence>
-        <PixelChicken look={look} size={48} className="rounded" />
-        <span className="truncate text-xs leading-[15px] text-grey-50">{id}</span>
-      </div>
+    </div>
+  );
+}
+
+/** Where the HEAD pointer starts so its tip sits HEAD_GAP from the card's side. */
+function headLeft(cardX: number, side: "left" | "right"): number {
+  return side === "right" ? cardX + CARD_W + HEAD_GAP : cardX - HEAD_EXTENT;
+}
+
+/** Lime "HEAD" label level with the branch tag; `side` is where it sits, tip facing the card. */
+export function HeadPointer({ side }: { side: "left" | "right" }) {
+  const tip = `${HEAD_TIP}px`;
+  return (
+    <div
+      aria-label="HEAD"
+      className="flex items-center justify-center bg-lime-400 text-2xs text-green-950"
+      style={{
+        width: HEAD_EXTENT - HEAD_GAP,
+        height: TAG_H,
+        clipPath:
+          side === "right"
+            ? `polygon(0 50%, ${tip} 0, 100% 0, 100% 100%, ${tip} 100%)`
+            : `polygon(0 0, calc(100% - ${tip}) 0, 100% 50%, calc(100% - ${tip}) 100%, 0 100%)`,
+        [side === "right" ? "paddingLeft" : "paddingRight"]: HEAD_TIP,
+      }}
+    >
+      HEAD
     </div>
   );
 }
