@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
-import { canShareFile, copyImage, downloadImage, linkedInShareUrl, shareFileName, shareText, type ShareSummary } from "../../lib/share";
+import { canShareFile, copyImage, downloadImage, linkedInComposeUrl, shareFileName, shareText, type ShareSummary } from "../../lib/share";
 import { renderShareCard } from "../../lib/shareCard";
 import type { PublicPuzzleDefinition } from "../../puzzles";
 import { Button } from "../Button/Button";
@@ -10,6 +10,9 @@ import { Dialog } from "../Puzzle/Dialog";
 
 /** Shown in the share card footer, like the site footer. */
 const SITE = "gitgudgame.lol";
+
+const PASTE_NOTE = "Image copied. Paste it into your LinkedIn post (Ctrl+V or ⌘V).";
+const COPY_FAILED_NOTE = "This browser can't copy images. Download it, then add it to your LinkedIn post.";
 
 /** What a finished daily run contributes to the card. */
 export interface ShareableResult {
@@ -29,7 +32,9 @@ interface ShareCard {
 /**
  * Sharing for a solved daily. The card is drawn as soon as there is a result, so the
  * share sheet can open straight from the tap (iOS needs the user's gesture). Phones use
- * the share sheet; elsewhere `dialog` offers copy, download, and LinkedIn.
+ * the share sheet, where LinkedIn receives the image itself. Elsewhere the tap copies the
+ * image and opens LinkedIn's composer with the post text, so pasting is the only step left;
+ * `dialog` stays behind with copy, download, and LinkedIn in case either step failed.
  * Only dailies are shareable: `available` stays false for lessons and unsolved runs.
  */
 export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, result: ShareableResult | null) {
@@ -41,6 +46,10 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState<string | null>(null);
 
+  function openLinkedIn(summary: ShareSummary) {
+    window.open(linkedInComposeUrl(shareText(summary, window.location.origin)), "_blank", "noopener,noreferrer");
+  }
+
   async function share() {
     if (!card) return;
     if (canShareFile(card.file)) {
@@ -51,14 +60,18 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
       }
       return;
     }
-    setNote(null);
     setOpen(true);
+    // Copy before opening the tab: the clipboard refuses writes once this page loses focus.
+    // The write is quick, so the tap still counts as the gesture that allows the new tab.
+    const copied = await copyImage(card.blob);
+    setNote(copied ? PASTE_NOTE : COPY_FAILED_NOTE);
+    openLinkedIn(card.summary);
   }
 
   async function copy() {
     if (!card) return;
     const copied = await copyImage(card.blob);
-    setNote(copied ? "Image copied. Paste it into your LinkedIn post." : "This browser can't copy images. Download it instead.");
+    setNote(copied ? PASTE_NOTE : COPY_FAILED_NOTE);
   }
 
   const dialog: ReactNode = (
@@ -81,7 +94,7 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
         </Button>
         <Button
           variant="outline"
-          onClick={() => window.open(linkedInShareUrl(window.location.origin), "_blank", "noopener,noreferrer")}
+          onClick={() => card && openLinkedIn(card.summary)}
         >
           <Icon name="open_in_new" size={20} className="mr-2" />
           Open LinkedIn

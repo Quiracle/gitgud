@@ -32,9 +32,13 @@ export function shareText(summary: ShareSummary, url: string): string {
   return `GitGud daily · ${formatPuzzleDate(summary.publishedOn)}\n${DIFFICULTY[summary.difficulty]} puzzle, ${result}.\nPlay today's puzzle: ${url}`;
 }
 
-/** LinkedIn only takes a URL here; the image has to be attached in the composer. */
-export function linkedInShareUrl(url: string): string {
-  return `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+/**
+ * Opens LinkedIn's post composer with the text filled in. The parameters are undocumented;
+ * if LinkedIn drops them this still lands on the feed. No link can attach an image (that needs
+ * LinkedIn API permissions), so the image is copied first and pasted by the player.
+ */
+export function linkedInComposeUrl(text: string): string {
+  return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
 }
 
 export function shareFileName(publishedOn: string): string {
