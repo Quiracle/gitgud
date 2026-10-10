@@ -25,6 +25,7 @@ export const ca: Messages = {
   "login.opening": "Obrint…",
   "login.unavailable": "Ara mateix no es pot iniciar la sessió. Pots continuar jugant com a convidat.",
   "login.dismissError": "Tanca l'error",
+  "login.legal": "En continuar, acceptes les <terms>Condicions d'ús</terms> i confirmes que has llegit la <privacy>Política de privacitat</privacy>.",
 
   "auth.account": "Compte",
   "auth.validating": "Validant la sessió…",
@@ -49,6 +50,8 @@ export const ca: Messages = {
   "nav.logIn": "Entra",
 
   "footer.privacy": "Política de privadesa",
+
+  "legal.back": "Torna",
 
   "streak.days_one": "Ratxa d'{count} dia!",
   "streak.days_other": "Ratxa de {count} dies!",

@@ -18,6 +18,7 @@ import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
 import { LinkedInCallbackScreen } from "./screens/LinkedInCallbackScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { AccountScreen } from "./screens/AccountScreen";
+import { LegalScreen } from "./screens/LegalScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -117,6 +118,8 @@ function renderScreen(
   if (path === "/account") return <AccountScreen onNavigate={navigate} />;
 
   if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
+
+  if (path === "/legal") return <LegalScreen onNavigate={navigate} />;
 
   if (path.startsWith("/course/practice/")) {
     const lessonId = decodeURIComponent(path.slice("/course/practice/".length));

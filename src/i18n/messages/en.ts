@@ -28,6 +28,7 @@ export const en = {
   "login.opening": "Opening…",
   "login.unavailable": "Log in isn't available right now. Guest play still works.",
   "login.dismissError": "Dismiss error",
+  "login.legal": "By continuing, you agree to the <terms>Terms of use</terms> and confirm you've read the <privacy>Privacy policy</privacy>.",
 
   "auth.account": "Account",
   "auth.validating": "Validating your session…",
@@ -52,6 +53,8 @@ export const en = {
   "nav.logIn": "Log in",
 
   "footer.privacy": "Privacy policy",
+
+  "legal.back": "Go back",
 
   "streak.days_one": "{count}-day streak!",
   "streak.days_other": "{count}-day streak!",

@@ -25,6 +25,7 @@ export const es: Messages = {
   "login.opening": "Abriendo…",
   "login.unavailable": "Ahora mismo no se puede iniciar sesión. Puedes seguir jugando como invitado.",
   "login.dismissError": "Cerrar el error",
+  "login.legal": "Al continuar, aceptas las <terms>Condiciones de uso</terms> y confirmas que has leído la <privacy>Política de privacidad</privacy>.",
 
   "auth.account": "Cuenta",
   "auth.validating": "Validando tu sesión…",
@@ -49,6 +50,8 @@ export const es: Messages = {
   "nav.logIn": "Entrar",
 
   "footer.privacy": "Política de privacidad",
+
+  "legal.back": "Volver",
 
   "streak.days_one": "¡Racha de {count} día!",
   "streak.days_other": "¡Racha de {count} días!",

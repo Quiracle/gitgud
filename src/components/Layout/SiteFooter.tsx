@@ -1,8 +1,9 @@
 import { useI18n } from "../../i18n/I18nProvider";
+import { AppLink } from "../AppLink";
 import { LanguagePicker } from "../LanguagePicker/LanguagePicker";
 
 /** Figma footer (node 24:44218), plus the language picker so guests can switch too. */
-export function SiteFooter() {
+export function SiteFooter({ onNavigate }: { onNavigate: (path: string) => void }) {
   const { t } = useI18n();
   return (
     <footer className="border-t border-grey-500 px-6 pb-[var(--nav-clearance)] pt-4">
@@ -10,7 +11,13 @@ export function SiteFooter() {
         <p className="text-paragraph text-grey-950">Gitgudgame.lol</p>
         <div className="flex items-center gap-4">
           <LanguagePicker />
-          <p className="text-xs text-grey-600">{t("footer.privacy")}</p>
+          <AppLink
+            href="/legal"
+            onNavigate={onNavigate}
+            className="flex min-h-11 items-center text-xs text-grey-600 underline decoration-from-font underline-offset-2 transition-colors hover:text-grey-950"
+          >
+            {t("footer.privacy")}
+          </AppLink>
         </div>
       </div>
     </footer>
