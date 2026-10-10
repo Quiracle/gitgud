@@ -9,6 +9,8 @@ import { CourseScreen } from "./screens/CourseScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { PuzzleScreen } from "./screens/PuzzleScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
+import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
+import { AuthPanel } from "./components/AuthPanel";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -37,6 +39,14 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 
+  function replace(nextPath: string) {
+    const normalized = normalizePath(nextPath);
+    window.history.replaceState({}, "", normalized);
+    setHandOff(false);
+    setPath(normalized);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
   return (
     <MotionConfig reducedMotion="user">
       <AnimatePresence mode="wait" initial={false} custom={handOff}>
@@ -49,7 +59,7 @@ export default function App() {
           exit="leave"
           transition={spring.soft}
         >
-          {renderScreen(path, navigate)}
+          {renderScreen(path, navigate, replace)}
         </motion.div>
       </AnimatePresence>
       {showsBottomNav(path) && <BottomNav path={path} onNavigate={navigate} />}
@@ -69,15 +79,34 @@ function showsBottomNav(path: string): boolean {
   return path === "/" || path === "/course" || path === "/leaderboard" || path === "/account";
 }
 
-function renderScreen(path: string, navigate: (path: string) => void): ReactNode {
+function renderScreen(
+  path: string,
+  navigate: (path: string) => void,
+  replace: (path: string) => void,
+): ReactNode {
   if (path === "/") return <HomeScreen onNavigate={navigate} />;
 
   if (path === "/play") return <DailyPuzzleScreen onNavigate={navigate} />;
 
   if (path === "/course") return <CourseScreen onNavigate={navigate} />;
 
-  if (path === "/leaderboard" || path === "/account") {
-    return <ComingSoon title={path === "/leaderboard" ? "Leaderboard" : "Your account"} onNavigate={navigate} />;
+  if (path === "/auth/callback") {
+    return <AuthCallbackScreen onNavigate={navigate} onReplace={replace} />;
+  }
+
+  // Sign-in lives under "You" until the account screen is designed.
+  if (path === "/account") {
+    return (
+      <main className="min-h-dvh bg-green-50 px-6 pb-[var(--nav-clearance)] pt-[calc(40px+env(safe-area-inset-top))]">
+        <div className="mx-auto max-w-md">
+          <AuthPanel />
+        </div>
+      </main>
+    );
+  }
+
+  if (path === "/leaderboard") {
+    return <ComingSoon title="Leaderboard" onNavigate={navigate} />;
   }
 
   if (path.startsWith("/course/")) {
