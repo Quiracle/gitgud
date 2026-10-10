@@ -3,6 +3,8 @@ import {
   createPreflightRequestBody,
   createPuzzleRequestBody,
 } from "../../../supabase/functions/_shared/openaiRequest";
+import { openAIDraftLimits } from "../../../supabase/functions/_shared/openaiSchema";
+import { DEFAULT_PUZZLE_LIMITS } from "../policy";
 
 describe("OpenAI generation request contract", () => {
   const config = { model: "gpt-4.1-mini", temperature: 1.8 };
@@ -19,5 +21,23 @@ describe("OpenAI generation request contract", () => {
     const body = createPreflightRequestBody(config);
     expect(body).toMatchObject({ model: "gpt-4.1-mini", temperature: 1.8 });
     expect(body).not.toHaveProperty("top_p");
+  });
+
+  it("keeps generated string bounds aligned with candidate validation", () => {
+    expect(openAIDraftLimits).toMatchObject({
+      title: DEFAULT_PUZZLE_LIMITS.maxTitleLength,
+      description: DEFAULT_PUZZLE_LIMITS.maxDescriptionLength,
+      commitId: DEFAULT_PUZZLE_LIMITS.maxCommitIdLength,
+      branchName: DEFAULT_PUZZLE_LIMITS.maxBranchNameLength,
+      commitMessage: DEFAULT_PUZZLE_LIMITS.maxCommitMessageLength,
+      hint: DEFAULT_PUZZLE_LIMITS.maxHintLength,
+      objective: DEFAULT_PUZZLE_LIMITS.maxObjectiveLength,
+      solutionCommand: DEFAULT_PUZZLE_LIMITS.maxSolutionCommandLength,
+    });
+
+    const schema = createPuzzleRequestBody(config, "prompt").text.format.schema;
+    expect(schema.properties.hints.items.maxLength).toBe(DEFAULT_PUZZLE_LIMITS.maxHintLength);
+    expect(schema.properties.initialRepository.properties.commits.items.properties.message.maxLength)
+      .toBe(DEFAULT_PUZZLE_LIMITS.maxCommitMessageLength);
   });
 });

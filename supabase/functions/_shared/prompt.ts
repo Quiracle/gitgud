@@ -7,6 +7,8 @@ export function generationPrompt(brief: Record<string, unknown>, previousIssues:
     "The player must finish on main. The private solution must run in the simulator without conflicts and reach the exact target state.",
     "Use only git log, git log --all, git switch, git merge, git merge --ff-only, git cherry-pick, and git revert.",
     "Alternative solutions are welcome; the proof solution is only evidence of solvability.",
+    "Keep the title under 120 characters, description under 600, and every objective, hint, and commit message under 240 characters. Keep every solution command under 160 characters.",
+    "Return exactly the hintCount requested by the persisted brief.",
     "Graph archetypes: fast-forward means a side branch descends from main; divergent-merge means main and a side branch diverge from a shared ancestor; single-transfer uses one distinct side branch; curate-and-undo requires both importing useful work and reverting unwanted work; multi-branch-curation uses at least three branches.",
     `Persisted generation brief: ${JSON.stringify(brief)}`,
     previousIssues.length ? `Previous attempt failed for these reasons; correct them: ${previousIssues.join(" | ")}` : "",

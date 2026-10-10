@@ -1,4 +1,18 @@
 const accessoryValue = { type: "string", enum: ["none", "black", "red", "blue", "turquoise", "purple", "gold"] } as const;
+export const openAIDraftLimits = {
+  title: 120,
+  description: 600,
+  commitId: 48,
+  branchName: 48,
+  commitMessage: 240,
+  hint: 240,
+  objective: 240,
+  solutionCommand: 160,
+} as const;
+
+const boundedString = (maxLength: number) => ({ type: "string", minLength: 1, maxLength } as const);
+const commitId = boundedString(openAIDraftLimits.commitId);
+const branchName = boundedString(openAIDraftLimits.branchName);
 const state = {
   type: "object",
   additionalProperties: false,
@@ -13,9 +27,9 @@ export const dailyPuzzleDraftSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    title: { type: "string" },
-    description: { type: "string" },
-    objectives: { type: "array", items: { type: "string" } },
+    title: boundedString(openAIDraftLimits.title),
+    description: boundedString(openAIDraftLimits.description),
+    objectives: { type: "array", items: boundedString(openAIDraftLimits.objective) },
     difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
     initialRepository: {
       type: "object",
@@ -27,8 +41,8 @@ export const dailyPuzzleDraftSchema = {
             type: "object",
             additionalProperties: false,
             properties: {
-              id: { type: "string" }, parents: { type: "array", items: { type: "string" } },
-              message: { type: "string" },
+              id: commitId, parents: { type: "array", items: commitId },
+              message: boundedString(openAIDraftLimits.commitMessage),
               changes: {
                 type: "array",
                 items: {
@@ -39,7 +53,7 @@ export const dailyPuzzleDraftSchema = {
               },
               provenance: {
                 type: "object", additionalProperties: false,
-                properties: { type: { type: "string", enum: ["original"] }, sourceCommits: { type: "array", items: { type: "string" } } },
+                properties: { type: { type: "string", enum: ["original"] }, sourceCommits: { type: "array", items: commitId } },
                 required: ["type", "sourceCommits"],
               },
             },
@@ -48,9 +62,9 @@ export const dailyPuzzleDraftSchema = {
         },
         branches: {
           type: "array",
-          items: { type: "object", additionalProperties: false, properties: { name: { type: "string" }, head: { type: "string" } }, required: ["name", "head"] },
+          items: { type: "object", additionalProperties: false, properties: { name: branchName, head: commitId }, required: ["name", "head"] },
         },
-        currentBranch: { type: "string" }, head: { type: "string" }, initialState: state,
+        currentBranch: branchName, head: commitId, initialState: state,
         nextGeneratedId: { type: "integer" },
       },
       required: ["commits", "branches", "currentBranch", "head", "initialState", "nextGeneratedId"],
@@ -58,15 +72,15 @@ export const dailyPuzzleDraftSchema = {
     target: {
       type: "object", additionalProperties: false,
       properties: {
-        branch: { type: "string" }, snapshot: state,
-        branchHeads: { type: "array", items: { type: "object", additionalProperties: false, properties: { branch: { type: "string" }, commit: { type: "string" } }, required: ["branch", "commit"] } },
-        requiredProvenance: { type: "array", items: { type: "object", additionalProperties: false, properties: { type: { type: "string", enum: ["cherry-pick", "revert", "merge"] }, sourceCommit: { type: "string" } }, required: ["type", "sourceCommit"] } },
+        branch: branchName, snapshot: state,
+        branchHeads: { type: "array", items: { type: "object", additionalProperties: false, properties: { branch: branchName, commit: commitId }, required: ["branch", "commit"] } },
+        requiredProvenance: { type: "array", items: { type: "object", additionalProperties: false, properties: { type: { type: "string", enum: ["cherry-pick", "revert", "merge"] }, sourceCommit: commitId }, required: ["type", "sourceCommit"] } },
       },
       required: ["branch", "snapshot", "branchHeads", "requiredProvenance"],
     },
     allowedCommands: { type: "array", items: { type: "string", enum: ["log", "switch", "merge", "cherry-pick", "revert"] } },
-    hints: { type: "array", items: { type: "string" } },
-    solutionCommands: { type: "array", items: { type: "string" } },
+    hints: { type: "array", items: boundedString(openAIDraftLimits.hint) },
+    solutionCommands: { type: "array", items: boundedString(openAIDraftLimits.solutionCommand) },
   },
   required: ["title", "description", "objectives", "difficulty", "initialRepository", "target", "allowedCommands", "hints", "solutionCommands"],
 } as const;
