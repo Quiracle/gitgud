@@ -322,3 +322,40 @@ describe("validatePuzzleCandidate", () => {
     expect(issueCodes(tooManyBranchHeads, { semantic: chickenSemantics, limits: { maxTargetBranchHeads: 1 } })).toContain("limits.target-branch-heads");
   });
 });
+
+describe("chicken body property", () => {
+  it("accepts a daily puzzle that starts empty and draws the chicken in a commit", async () => {
+    const { createDailyFixture } = await import("./dailyFixture");
+    const { CHICKEN_V2_SEMANTIC_POLICY } = await import("./chickenTheme");
+    const daily = createDailyFixture("2026-10-10") as unknown as Record<string, unknown> & {
+      initialRepository: { initialState: Record<string, unknown>; commits: Record<string, { changes: unknown[] }> };
+      target: { snapshot: Record<string, unknown> };
+    };
+    daily.initialRepository.initialState.body = "none";
+    daily.initialRepository.commits.a10.changes = [{ type: "set", property: "body", from: "none", to: "cream" }];
+    daily.target.snapshot.body = "cream";
+
+    const result = validatePuzzleCandidate(
+      { ...daily, kind: "generated", solutionCommands: ["git cherry-pick s20"] },
+      { semantic: CHICKEN_V2_SEMANTIC_POLICY },
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  it("rejects body values outside the theme", async () => {
+    const { createDailyFixture } = await import("./dailyFixture");
+    const { CHICKEN_V2_SEMANTIC_POLICY } = await import("./chickenTheme");
+    const daily = createDailyFixture("2026-10-10") as unknown as Record<string, unknown> & {
+      initialRepository: { initialState: Record<string, unknown> };
+      target: { snapshot: Record<string, unknown> };
+    };
+    daily.initialRepository.initialState.body = "green";
+    daily.target.snapshot.body = "green";
+
+    const result = validatePuzzleCandidate(
+      { ...daily, kind: "generated", solutionCommands: ["git cherry-pick s20"] },
+      { semantic: CHICKEN_V2_SEMANTIC_POLICY },
+    );
+    expect(result.ok).toBe(false);
+  });
+});

@@ -15,6 +15,8 @@ export type ChickenPart = "crest" | "longLegs" | "scarf" | "sunglasses" | "hat";
  */
 export interface ChickenLook {
   chicken: boolean;
+  /** Body colour; "default" is the Figma cream. */
+  body: ChickenTint;
   parts: Partial<Record<ChickenPart, ChickenTint>>;
 }
 
@@ -46,7 +48,15 @@ const DESIGN_TONES: Record<ChickenPart, Tone> = {
 
 const OUTLINE = "#0b0b0b";
 const BACKGROUND = "#fafafa";
-const BODY_COLORS = { o: OUTLINE, b: "#fefce8", k: "#ff4733", f: "#fdb874", g: BACKGROUND };
+const BODY_CREAM = "#fefce8";
+const bodyColors = (tint: ChickenTint) => ({
+  o: OUTLINE,
+  // Bodies use the light tone so a coloured chicken stays readable against its outline.
+  b: tint === "default" ? BODY_CREAM : TINTS[tint].light,
+  k: "#ff4733",
+  f: "#fdb874",
+  g: BACKGROUND,
+});
 
 /** Bottom-to-top paint order of the optional parts. */
 const PART_ORDER: ChickenPart[] = ["crest", "longLegs", "scarf", "sunglasses", "hat"];
@@ -105,7 +115,7 @@ const ENTRANCES: Record<ChickenPart | "chicken", { variants: Variants; origin: [
   },
 };
 
-export const EMPTY_LOOK: ChickenLook = { chicken: false, parts: {} };
+export const EMPTY_LOOK: ChickenLook = { chicken: false, body: "default", parts: {} };
 
 function tone(part: ChickenPart, tint: ChickenTint): Tone {
   return tint === "default" ? DESIGN_TONES[part] : TINTS[tint];
@@ -121,9 +131,9 @@ function tintOf(value: unknown): ChickenTint | undefined {
 }
 
 /**
- * Maps a repository snapshot onto the artwork. The chicken body is shown unless the
- * state has an explicit `chicken` property that is absent. Legacy truthy values
- * (`sunglasses: true`) fall back to the Figma colours. Body colour is not themed yet.
+ * Maps a repository snapshot onto the artwork. `body: "none"` is an empty canvas and a
+ * missing `body` is the cream chicken. Legacy truthy values (`sunglasses: true`) fall
+ * back to the Figma colours.
  */
 export function chickenLookFromState(state: SemanticState): ChickenLook {
   const parts: ChickenLook["parts"] = {};
@@ -131,7 +141,9 @@ export function chickenLookFromState(state: SemanticState): ChickenLook {
     const tint = tintOf(state[part]);
     if (tint) parts[part] = tint;
   }
-  return { chicken: !("chicken" in state) || !isAbsent(state.chicken), parts };
+  const bodyAbsent = "body" in state && isAbsent(state.body);
+  const body = state.body === "cream" || bodyAbsent ? "default" : (tintOf(state.body) ?? "default");
+  return { chicken: !bodyAbsent, body, parts };
 }
 
 interface PixelChickenProps {
@@ -161,6 +173,8 @@ export function PixelChicken({ look, size = 48, className = "", label }: PixelCh
     });
   }, [signature, controls]);
 
+  const body = useMemo(() => bodyColors(look.body), [look.body]);
+
   return (
     <svg
       role="img"
@@ -175,7 +189,7 @@ export function PixelChicken({ look, size = 48, className = "", label }: PixelCh
       <motion.g animate={controls} style={{ originX: 0.5, originY: 0.82 }}>
         <AnimatePresence initial={false}>
           {look.chicken && (
-            <AnimatedLayer key="chicken" entrance="chicken" layer={CHICKEN_PIXELS.chicken} colors={BODY_COLORS} />
+            <AnimatedLayer key="chicken" entrance="chicken" layer={CHICKEN_PIXELS.chicken} colors={body} />
           )}
           {PART_ORDER.map((part) => {
             const tint = look.parts[part];
@@ -267,5 +281,6 @@ function describe(look: ChickenLook): string {
     return `${tint === "default" ? "" : `${tint} `}${PART_NAMES[part]}`;
   });
   if (!look.chicken) return parts.length ? `Just ${parts.join(", ")}` : "Empty";
-  return parts.length ? `A chicken with ${parts.join(", ")}` : "A chicken";
+  const chicken = look.body === "default" ? "A chicken" : `A ${look.body} chicken`;
+  return parts.length ? `${chicken} with ${parts.join(", ")}` : chicken;
 }

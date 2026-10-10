@@ -20,10 +20,18 @@ export const CHICKEN_COLORS = [
   "gold",
 ] as const;
 
+/**
+ * The chicken itself. "none" is an empty canvas (e.g. a root commit before the chicken
+ * is drawn), "cream" is the Figma default, and colours recolour the body. Optional:
+ * a state without `body` shows the cream chicken, so published puzzles stay valid.
+ */
+export const CHICKEN_BODY_VALUES = ["none", "cream", ...CHICKEN_COLORS] as const;
+
 export type ChickenAccessorySlot = (typeof CHICKEN_ACCESSORY_SLOTS)[number];
 export type ChickenColor = (typeof CHICKEN_COLORS)[number];
 export type ChickenAccessoryValue = ChickenColor | "none";
-export type ChickenState = Record<ChickenAccessorySlot, ChickenAccessoryValue>;
+export type ChickenBodyValue = (typeof CHICKEN_BODY_VALUES)[number];
+export type ChickenState = Record<ChickenAccessorySlot, ChickenAccessoryValue> & { body?: ChickenBodyValue };
 
 export const EMPTY_CHICKEN_STATE: ChickenState = {
   sunglasses: "none",
@@ -36,9 +44,11 @@ export const EMPTY_CHICKEN_STATE: ChickenState = {
 const allowedValues = ["none", ...CHICKEN_COLORS] as const;
 
 export const CHICKEN_V2_SEMANTIC_POLICY: SemanticPolicy = {
-  properties: Object.fromEntries(
-    CHICKEN_ACCESSORY_SLOTS.map((slot) => [slot, allowedValues]),
-  ),
+  properties: {
+    ...Object.fromEntries(CHICKEN_ACCESSORY_SLOTS.map((slot) => [slot, allowedValues])),
+    body: CHICKEN_BODY_VALUES,
+  },
+  // `body` is optional: absent means the default cream chicken.
   requiredProperties: CHICKEN_ACCESSORY_SLOTS,
 };
 
@@ -68,7 +78,8 @@ export const CHICKEN_COLOR_HEX: Record<ChickenColor, string> = {
 };
 
 export function isChickenState(state: SemanticState): state is ChickenState {
-  return CHICKEN_ACCESSORY_SLOTS.every((slot) =>
-    allowedValues.includes(state[slot] as ChickenAccessoryValue),
+  return (
+    CHICKEN_ACCESSORY_SLOTS.every((slot) => allowedValues.includes(state[slot] as ChickenAccessoryValue)) &&
+    (state.body === undefined || CHICKEN_BODY_VALUES.includes(state.body as ChickenBodyValue))
   );
 }
