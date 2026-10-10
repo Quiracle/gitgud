@@ -64,3 +64,22 @@ describe("LocalProgressStore", () => {
     });
   });
 });
+
+describe("solved puzzle replay data", () => {
+  it("keeps the final run on the completion so the solved board can be rebuilt", () => {
+    const data = new Map<string, string>();
+    const store = new LocalProgressStore({ getItem: (k) => data.get(k) ?? null, setItem: (k, v) => void data.set(k, v) }, () => 1_000, () => "run-1");
+    const puzzle = { id: "daily-2026-10-10", version: 1, kind: "daily" } as Parameters<LocalProgressStore["start"]>[0];
+    let attempt = store.start(puzzle);
+    attempt = store.recordCommand(attempt, { command: "git switch style", elapsedMs: 1, ok: true, output: "" });
+    attempt = store.restart(attempt);
+    attempt = store.recordCommand(attempt, { command: "git cherry-pick s20", elapsedMs: 2, ok: true, output: "" });
+    store.complete(attempt, false);
+
+    expect(store.latestCompletion("daily-2026-10-10", 1)).toMatchObject({
+      runCommands: ["git cherry-pick s20"],
+      runTranscriptStart: 1,
+    });
+    expect(store.latestCompletion("daily-2026-10-10", 2)).toBeUndefined();
+  });
+});

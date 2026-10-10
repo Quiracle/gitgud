@@ -35,6 +35,9 @@ export interface CompletionRecord {
   commandCount: number;
   commands: AttemptCommand[];
   ranked: boolean;
+  /** The final run after any restarts, so a solved puzzle can be shown again. */
+  runCommands?: string[];
+  runTranscriptStart?: number;
 }
 
 export interface PlayerStats {
@@ -144,6 +147,8 @@ export class LocalProgressStore {
       commandCount: attempt.commandCount,
       commands: attempt.commands,
       ranked,
+      runCommands: attempt.runCommands,
+      runTranscriptStart: attempt.runTranscriptStart,
     };
 
     const document = this.read();
@@ -164,6 +169,13 @@ export class LocalProgressStore {
 
   stats(): PlayerStats {
     return calculateStats(this.read().completions);
+  }
+
+  /** The latest saved completion of one puzzle version, if any. */
+  latestCompletion(puzzleId: string, puzzleVersion: number): CompletionRecord | undefined {
+    return this.read()
+      .completions.filter((item) => item.puzzleId === puzzleId && item.puzzleVersion === puzzleVersion)
+      .at(-1);
   }
 
   /** Every saved completion, oldest first; replays add records and never remove them. */

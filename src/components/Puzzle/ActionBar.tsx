@@ -8,6 +8,8 @@ interface ActionBarProps {
   onHint: () => void;
   onGiveUp: () => void;
   giveUpDisabled?: boolean;
+  restartDisabled?: boolean;
+  hintDisabled?: boolean;
   className?: string;
 }
 
@@ -15,13 +17,23 @@ interface ActionBarProps {
  * Figma puzzle action bar (node 36:120556). Items share the width evenly; on phones
  * only Exit and Give up keep their labels so everything fits.
  */
-export function ActionBar({ onExit, onRestart, onHelp, onHint, onGiveUp, giveUpDisabled, className = "" }: ActionBarProps) {
+export function ActionBar({
+  onExit,
+  onRestart,
+  onHelp,
+  onHint,
+  onGiveUp,
+  giveUpDisabled,
+  restartDisabled,
+  hintDisabled,
+  className = "",
+}: ActionBarProps) {
   return (
     <nav aria-label="Puzzle actions" className={`flex items-center justify-between bg-green-950 px-6 py-1 ${className}`}>
       <Action icon="arrow_back_ios_new" label="Exit" onClick={onExit} />
-      <Action icon="forward_media" label="Restart" compact onClick={onRestart} />
+      <Action icon="forward_media" label="Restart" compact onClick={onRestart} disabled={restartDisabled} />
       <Action icon="help" label="Help" compact onClick={onHelp} />
-      <Action icon="lightbulb_2" label="Hint" compact onClick={onHint} />
+      <Action icon="lightbulb_2" label="Hint" compact onClick={onHint} disabled={hintDisabled} />
       <Action icon="close" label="Give up" onClick={onGiveUp} disabled={giveUpDisabled} />
     </nav>
   );

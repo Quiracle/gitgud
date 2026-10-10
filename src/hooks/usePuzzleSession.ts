@@ -42,8 +42,16 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const { status: authStatus, user } = useAuth();
   const [boot] = useState(() => {
     const store = openProgressStore();
+    // A daily can be solved once: reopening it shows the solved run, read-only.
+    const solved = puzzle.kind === "daily" ? store.latestCompletion(puzzle.id, puzzle.version) : undefined;
+    if (solved) {
+      const attempt = attemptFromCompletion(solved);
+      const restored = restoreRun(puzzle, attempt);
+      restored.entries.push({ id: restored.entries.length, lines: ["Puzzle solved!"], tone: "success" });
+      return { store, attempt, restored, solved };
+    }
     const attempt = store.start(puzzle);
-    return { store, attempt, restored: restoreRun(puzzle, attempt) };
+    return { store, attempt, restored: restoreRun(puzzle, attempt), solved: undefined };
   });
   const store: LocalProgressStore = boot.store;
 
@@ -52,13 +60,15 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const [entries, setEntries] = useState<TerminalEntry[]>(boot.restored.entries);
   const [actions, setActions] = useState<GitAction[]>(boot.restored.actions);
   const [hintsUsed, setHintsUsed] = useState(0);
-  const [status, setStatus] = useState<SessionStatus>("active");
+  const [status, setStatus] = useState<SessionStatus>(boot.solved ? "completed" : "active");
   const [assisted, setAssisted] = useState(false);
   const [pendingRebase, setPendingRebase] = useState<PendingRebase | null>(null);
-  const [completion, setCompletion] = useState<CompletionRecord>();
+  const [completion, setCompletion] = useState<CompletionRecord | undefined>(boot.solved);
   const [submission, setSubmission] = useState<{ state: SubmissionState; error?: string }>({
-    state: puzzle.kind === "daily" ? "guest" : "not-ranked",
+    state: boot.solved?.ranked ? "submitted" : puzzle.kind === "daily" ? "guest" : "not-ranked",
   });
+  /** Today's daily is already solved: show the result, but no more commands or restarts. */
+  const locked = puzzle.kind === "daily" && status === "completed";
   const serverAttempt = useRef<Promise<string>>();
 
   const elapsedMs = useCallback(
@@ -113,6 +123,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
 
   const runCommand = useCallback(
     (command: string): CommandOutcome => {
+      if (locked) return { ok: false, mutated: false, solved: true };
       const parsed = parseGitCommand(command);
       const allowed = !parsed.ok || puzzle.allowedCommands.includes(parsed.action.type);
 
@@ -156,11 +167,12 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
       }
       return { ok: result.ok, mutated: result.ok && result.mutated, solved };
     },
-    [actions, assisted, attempt, puzzle, record, repository, store, submit, validation.solved],
+    [actions, assisted, attempt, locked, puzzle, record, repository, store, submit, validation.solved],
   );
 
   const restart = useCallback(() => {
-    // After a solve, a restart is a fresh replay attempt; earlier completions stay saved.
+    if (locked) return;
+    // After a solved lesson, a restart is a fresh replay attempt; earlier completions stay saved.
     const next = completion ? store.start(puzzle) : store.restart(attempt);
     if (completion) {
       serverAttempt.current = undefined;
@@ -173,7 +185,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
     setEntries([]);
     setActions([]);
     setStatus("active");
-  }, [attempt, completion, puzzle, store]);
+  }, [attempt, completion, locked, puzzle, store]);
 
   /** Reveals the next hint, counting it once. Returns undefined when none are left. */
   const takeHint = useCallback((): string | undefined => {
@@ -213,6 +225,9 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
     entries,
     validation,
     status,
+    locked,
+    /** Opened an already-solved daily (no celebration, just the result). */
+    solvedOnArrival: Boolean(boot.solved),
     assisted,
     restartCount: attempt.restartCount,
     commandCount: attempt.commands.length - attempt.runTranscriptStart,
@@ -234,6 +249,23 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
 }
 
 export type PuzzleSession = ReturnType<typeof usePuzzleSession>;
+
+/** A read-only attempt view of a finished run. Older records lack the final run, so replay its successful commands. */
+function attemptFromCompletion(done: CompletionRecord): StoredAttempt {
+  return {
+    id: done.id,
+    puzzleId: done.puzzleId,
+    puzzleVersion: done.puzzleVersion,
+    kind: done.kind,
+    status: "active",
+    startedAt: done.startedAt,
+    restartCount: done.restartCount,
+    commandCount: done.commandCount,
+    commands: done.commands,
+    runCommands: done.runCommands ?? done.commands.filter((entry) => entry.ok).map((entry) => entry.command),
+    runTranscriptStart: done.runTranscriptStart ?? 0,
+  };
+}
 
 /** Rebuilds a saved run by replaying its commands through the engine. */
 function restoreRun(puzzle: PublicPuzzleDefinition, attempt: StoredAttempt) {

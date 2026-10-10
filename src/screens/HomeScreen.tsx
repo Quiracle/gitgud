@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import type { MouseEvent, ReactNode } from "react";
+import { useMemo, type MouseEvent, type ReactNode } from "react";
 import { Button } from "../components/Button/Button";
 import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { CommitTree } from "../components/GitGraph/CommitTree";
@@ -10,6 +10,7 @@ import { HowToPlayLink, PuzzlePreview, useCanvasHandOff } from "../components/Pu
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
 import { useDragScroll } from "../hooks/useDragScroll";
+import { openProgressStore } from "../storage/browserProgress";
 import { rise, spring, stagger } from "../lib/motion";
 import { learnBasicsCatalog, type PublicPuzzleDefinition } from "../puzzles";
 import type { LearnBasicsLesson } from "../puzzles/learnBasics/types";
@@ -29,6 +30,10 @@ const STREAK_COUNT = 0;
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const daily = useDailyPuzzle();
   const handOff = useCanvasHandOff(onNavigate);
+  const solvedToday = useMemo(
+    () => daily.status === "ready" && Boolean(openProgressStore().latestCompletion(daily.puzzle.id, daily.puzzle.version)),
+    [daily],
+  );
   const courses = useDragScroll<HTMLUListElement>();
 
 
@@ -75,7 +80,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           </div>
           <Button href="/play" onNavigate={handOff.open}>
             <Shimmer />
-            <span className="relative">Solve the puzzle!</span>
+            <span className="relative">{solvedToday ? "See your result" : "Solve the puzzle!"}</span>
           </Button>
         </div>
       </section>

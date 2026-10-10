@@ -58,7 +58,7 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
   const puzzle = daily.status === "ready" ? daily.puzzle : undefined;
   const dailyError = daily.status === "error" ? daily.message : undefined;
   const solvedToday = useMemo(
-    () => Boolean(puzzle && openProgressStore().completions().some((item) => item.puzzleId === puzzle.id)),
+    () => Boolean(puzzle && openProgressStore().latestCompletion(puzzle.id, puzzle.version)),
     [puzzle],
   );
 

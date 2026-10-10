@@ -79,9 +79,9 @@ export function SolveScreen({
     return () => controls.forEach((control) => control.stop());
   }, [origin]);
 
-  // Celebrate, then show the result.
+  // Celebrate, then show the result. Reopening a solved daily skips straight to the board.
   useEffect(() => {
-    if (!solved) return;
+    if (!solved || session.solvedOnArrival) return;
     const g = goal.current?.getBoundingClientRect();
     setConfetti({ x: g ? g.left + g.width / 2 : window.innerWidth / 2, y: g ? g.top + g.height / 2 : 120, key: Date.now() });
     // Let the final command's result land on the graph before the popup covers it.
@@ -186,6 +186,8 @@ export function SolveScreen({
                 onHint={openHint}
                 onGiveUp={openGiveUp}
                 giveUpDisabled={solved}
+                restartDisabled={session.locked}
+                hintDisabled={session.locked}
               />
             </motion.div>
           )}
@@ -199,7 +201,11 @@ export function SolveScreen({
             onToggle={() => setExpanded((value) => !value)}
             onHelp={() => setPanel("help")}
             disabled={solved}
-            disabledPlaceholder="Solved! Exit to play more."
+            disabledPlaceholder={
+              session.locked
+                ? `Solved in ${formatDuration(session.finalElapsedMs ?? 0)}. Come back tomorrow!`
+                : "Solved! Exit to play more."
+            }
           />
         </div>
       </motion.div>
