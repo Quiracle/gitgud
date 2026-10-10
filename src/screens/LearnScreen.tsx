@@ -105,7 +105,7 @@ export function LearnScreen({ onNavigate }: LearnScreenProps) {
         </div>
       </section>
 
-      <SiteFooter />
+      <SiteFooter onNavigate={onNavigate} />
     </div>
   );
 }

@@ -171,7 +171,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
         </div>
       </section>
 
-      <SiteFooter />
+      <SiteFooter onNavigate={onNavigate} />
       <WelcomeTutorial open={tutorial} onClose={closeTutorial} onNavigate={onNavigate} />
       {sharing.dialog}
     </div>

@@ -6,6 +6,7 @@ import { useI18n } from "./i18n/I18nProvider";
 import { claimGuestDailies } from "./services/leaderboard";
 import { openProgressStore } from "./storage/browserProgress";
 import { BottomNav } from "./components/BottomNav/BottomNav";
+import { CookieBanner } from "./components/Consent/CookieBanner";
 import { peekCanvasOrigin } from "./lib/canvasTransition";
 import { spring } from "./lib/motion";
 import { learnBasicsCatalog } from "./puzzles";
@@ -18,6 +19,7 @@ import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
 import { LinkedInCallbackScreen } from "./screens/LinkedInCallbackScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { AccountScreen } from "./screens/AccountScreen";
+import { LegalScreen } from "./screens/LegalScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -79,6 +81,7 @@ export default function App() {
         </motion.div>
       </AnimatePresence>
       {showsBottomNav(path) && <BottomNav path={path} onNavigate={navigate} />}
+      <CookieBanner visible={showsBottomNav(path) || path === "/legal"} aboveNav={showsBottomNav(path)} onNavigate={navigate} />
     </MotionConfig>
   );
 }
@@ -117,6 +120,8 @@ function renderScreen(
   if (path === "/account") return <AccountScreen onNavigate={navigate} />;
 
   if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
+
+  if (path === "/legal") return <LegalScreen onNavigate={navigate} />;
 
   if (path.startsWith("/course/practice/")) {
     const lessonId = decodeURIComponent(path.slice("/course/practice/".length));

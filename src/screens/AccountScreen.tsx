@@ -204,7 +204,7 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
         </div>
       </section>
 
-      <SiteFooter />
+      <SiteFooter onNavigate={onNavigate} />
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} returnPath="/account" />
     </div>
   );
