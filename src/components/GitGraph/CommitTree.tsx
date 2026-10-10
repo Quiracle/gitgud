@@ -20,11 +20,10 @@ const ARROW_L = 6;
 /** Commits no branch reaches keep the neutral card colour. */
 const UNOWNED = "rgb(var(--colors-grey-500))";
 /* Figma "HEAD" (node 89:161752) plus the pointed end the auto layout can't draw. */
-const HEAD_TIP = 10;
+const HEAD_TIP = 8;
 const HEAD_GAP = 4;
-/** Label padding: Figma's 4px, tightened by 2px on the side next to the tip. */
+/** Label padding on the square end (Figma's 4px); the tip side has none. */
 const HEAD_PAD = 4;
-const HEAD_TIP_PAD = HEAD_PAD - 2;
 /** Room the HEAD pointer takes beside a card: gap, tip and the "HEAD" label. */
 const HEAD_EXTENT = 50;
 
@@ -484,8 +483,8 @@ export function HeadPointer({ side }: { side: "left" | "right" }) {
           side === "right"
             ? `polygon(0 50%, ${tip} 0, 100% 0, 100% 100%, ${tip} 100%)`
             : `polygon(0 0, calc(100% - ${tip}) 0, 100% 50%, calc(100% - ${tip}) 100%, 0 100%)`,
-        paddingLeft: side === "right" ? HEAD_TIP + HEAD_TIP_PAD : HEAD_PAD,
-        paddingRight: side === "right" ? HEAD_PAD : HEAD_TIP + HEAD_TIP_PAD,
+        paddingLeft: side === "right" ? HEAD_TIP : HEAD_PAD,
+        paddingRight: side === "right" ? HEAD_PAD : HEAD_TIP,
       }}
     >
       HEAD
