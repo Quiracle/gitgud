@@ -19,6 +19,11 @@ describe("Learn Basics catalog", () => {
     expect(new Set(learnBasicsCatalog.map((lesson) => lesson.id)).size).toBe(10);
   });
 
+  it("gives every lesson a different goal chicken, since it is the course cover", () => {
+    const goals = learnBasicsCatalog.filter(isAvailableLesson).map((lesson) => JSON.stringify(lesson.puzzle.target.snapshot));
+    expect(new Set(goals).size).toBe(goals.length);
+  });
+
   it("ships every lesson as playable", () => {
     expect(learnBasicsCatalog.every(isAvailableLesson)).toBe(true);
   });

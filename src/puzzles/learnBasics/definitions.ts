@@ -9,7 +9,13 @@ const emptyChicken: SemanticState = {
   hat: "none",
   scarf: "none",
   crest: "none",
+  longLegs: false,
 };
+
+/** A goal snapshot. Every lesson's goal differs, since it doubles as the course cover. */
+function chicken(parts: SemanticState): SemanticState {
+  return { ...emptyChicken, ...parts };
+}
 
 function originalCommit(
   id: string,
@@ -69,12 +75,7 @@ export const inspectHistoryPuzzle: PublicPuzzleDefinition = {
   ),
   target: {
     branch: "main",
-    snapshot: {
-      sunglasses: true,
-      hat: "none",
-      scarf: "none",
-      crest: "none",
-    },
+    snapshot: chicken({ sunglasses: true }),
   },
   allowedCommands: ["log"],
   actionRequirements: [
@@ -109,36 +110,22 @@ export const switchBranchesPuzzle: PublicPuzzleDefinition = {
   ),
   target: {
     branch: "style",
-    snapshot: {
-      sunglasses: false,
-      hat: "none",
-      scarf: "turquoise",
-      crest: "none",
-    },
+    snapshot: chicken({ scarf: "turquoise" }),
   },
   allowedCommands: ["log", "switch"],
   actionRequirements: [{ type: "switch", branch: "style" }],
   hints: ["Use git switch followed by the branch name."],
 };
 
-function fastForwardRepository(): Repository {
+function fastForwardRepository(change: Commit["changes"][number], message: string): Repository {
   return repository(
     {
       a10: originalCommit("a10", [], "Start the chicken portrait"),
-      f20: originalCommit("f20", ["a10"], "Add a blue hat", [
-        { type: "set", property: "hat", from: "none", to: "blue" },
-      ]),
+      f20: originalCommit("f20", ["a10"], message, [change]),
     },
     { main: "a10", feature: "f20" },
   );
 }
-
-const blueHatTarget = {
-  sunglasses: false,
-  hat: "blue",
-  scarf: "none",
-  crest: "none",
-};
 
 export const fastForwardMergePuzzle: PublicPuzzleDefinition = {
   schemaVersion: PUZZLE_SCHEMA_VERSION,
@@ -151,10 +138,13 @@ export const fastForwardMergePuzzle: PublicPuzzleDefinition = {
     "Main has not diverged, so merge the feature branch by moving main directly to its commit.",
   difficulty: "easy",
   objectives: ["Merge feature into main.", "Keep history linear with a fast-forward."],
-  initialRepository: fastForwardRepository(),
+  initialRepository: fastForwardRepository(
+    { type: "set", property: "hat", from: "none", to: "blue" },
+    "Add a blue hat",
+  ),
   target: {
     branch: "main",
-    snapshot: blueHatTarget,
+    snapshot: chicken({ hat: "blue" }),
     branchHeads: { main: "f20" },
   },
   allowedCommands: ["log", "merge"],
@@ -173,10 +163,13 @@ export const ffOnlyMergePuzzle: PublicPuzzleDefinition = {
     "Update main only if Git can keep the history linear without creating a merge commit.",
   difficulty: "easy",
   objectives: ["Fast-forward main to feature.", "Use the --ff-only safety option."],
-  initialRepository: fastForwardRepository(),
+  initialRepository: fastForwardRepository(
+    { type: "set", property: "longLegs", from: false, to: true },
+    "Give the chicken long legs",
+  ),
   target: {
     branch: "main",
-    snapshot: blueHatTarget,
+    snapshot: chicken({ longLegs: true }),
     branchHeads: { main: "f20" },
   },
   allowedCommands: ["log", "merge"],
@@ -192,29 +185,24 @@ export const threeWayMergePuzzle: PublicPuzzleDefinition = {
   slug: "three-way-merge",
   title: "Merge divergent work",
   description:
-    "Main added a hat while feature added a scarf. Combine both independent changes in a merge commit.",
+    "Main added a gold hat while feature added a purple scarf. Combine both independent changes in a merge commit.",
   difficulty: "medium",
   objectives: ["Inspect both branches.", "Merge feature into main without losing either change."],
   initialRepository: repository(
     {
       a10: originalCommit("a10", [], "Start the chicken portrait"),
-      m20: originalCommit("m20", ["a10"], "Add a blue hat", [
-        { type: "set", property: "hat", from: "none", to: "blue" },
+      m20: originalCommit("m20", ["a10"], "Add a gold hat", [
+        { type: "set", property: "hat", from: "none", to: "gold" },
       ]),
-      f20: originalCommit("f20", ["a10"], "Add a turquoise scarf", [
-        { type: "set", property: "scarf", from: "none", to: "turquoise" },
+      f20: originalCommit("f20", ["a10"], "Add a purple scarf", [
+        { type: "set", property: "scarf", from: "none", to: "purple" },
       ]),
     },
     { main: "m20", feature: "f20" },
   ),
   target: {
     branch: "main",
-    snapshot: {
-      sunglasses: false,
-      hat: "blue",
-      scarf: "turquoise",
-      crest: "none",
-    },
+    snapshot: chicken({ hat: "gold", scarf: "purple" }),
     requiredProvenance: [{ type: "merge", sourceCommit: "f20" }],
   },
   allowedCommands: ["log", "merge"],
@@ -233,26 +221,24 @@ export const cherryPickPuzzle: PublicPuzzleDefinition = {
   slug: "cherry-pick",
   title: "Copy one commit",
   description:
-    "Bring only the scarf commit from the experiment branch onto main.",
+    "Main already has sunglasses. Bring only the red scarf commit from the experiment branch onto main.",
   difficulty: "easy",
   objectives: ["Copy commit c20 onto main.", "Leave the experiment branch unchanged."],
   initialRepository: repository(
     {
       a10: originalCommit("a10", [], "Start the chicken portrait"),
-      c20: originalCommit("c20", ["a10"], "Add a turquoise scarf", [
-        { type: "set", property: "scarf", from: "none", to: "turquoise" },
+      m20: originalCommit("m20", ["a10"], "Add sunglasses", [
+        { type: "set", property: "sunglasses", from: false, to: true },
+      ]),
+      c20: originalCommit("c20", ["a10"], "Add a red scarf", [
+        { type: "set", property: "scarf", from: "none", to: "red" },
       ]),
     },
-    { main: "a10", experiment: "c20" },
+    { main: "m20", experiment: "c20" },
   ),
   target: {
     branch: "main",
-    snapshot: {
-      sunglasses: false,
-      hat: "none",
-      scarf: "turquoise",
-      crest: "none",
-    },
+    snapshot: chicken({ sunglasses: true, scarf: "red" }),
     branchHeads: { experiment: "c20" },
     requiredProvenance: [{ type: "cherry-pick", sourceCommit: "c20" }],
   },
@@ -299,21 +285,21 @@ export const rebasePuzzle: PublicPuzzleDefinition = {
   slug: "rebase",
   title: "Replay work onto a new base",
   description:
-    "Main gained a blue hat after feature started. Replay the feature's scarf commit on top of main so feature has both, without a merge commit.",
+    "Main gained a purple hat after feature started. Replay the feature's long-legs commit on top of main so feature has both, without a merge commit.",
   difficulty: "easy",
   objectives: [
     "Rebase feature onto main.",
     "Keep main unchanged.",
-    "Finish on feature with the hat and the scarf.",
+    "Finish on feature with the hat and the long legs.",
   ],
   initialRepository: repository(
     {
       a10: originalCommit("a10", [], "Start the chicken portrait"),
-      m20: originalCommit("m20", ["a10"], "Add a blue hat", [
-        { type: "set", property: "hat", from: "none", to: "blue" },
+      m20: originalCommit("m20", ["a10"], "Add a purple hat", [
+        { type: "set", property: "hat", from: "none", to: "purple" },
       ]),
-      f20: originalCommit("f20", ["a10"], "Add a turquoise scarf", [
-        { type: "set", property: "scarf", from: "none", to: "turquoise" },
+      f20: originalCommit("f20", ["a10"], "Give the chicken long legs", [
+        { type: "set", property: "longLegs", from: false, to: true },
       ]),
     },
     { main: "m20", feature: "f20" },
@@ -321,12 +307,7 @@ export const rebasePuzzle: PublicPuzzleDefinition = {
   ),
   target: {
     branch: "feature",
-    snapshot: {
-      sunglasses: false,
-      hat: "blue",
-      scarf: "turquoise",
-      crest: "none",
-    },
+    snapshot: chicken({ hat: "purple", longLegs: true }),
     branchHeads: { main: "m20" },
     requiredProvenance: [{ type: "rebase", sourceCommit: "f20" }],
   },
@@ -368,12 +349,7 @@ export const interactiveRebasePuzzle: PublicPuzzleDefinition = {
   ),
   target: {
     branch: "feature",
-    snapshot: {
-      sunglasses: false,
-      hat: "none",
-      scarf: "none",
-      crest: "red",
-    },
+    snapshot: chicken({ crest: "red" }),
     branchHeads: { main: "a10" },
     requiredProvenance: [
       { type: "squash", sourceCommit: "c31" },
@@ -424,12 +400,7 @@ export const capstonePuzzle: PublicPuzzleDefinition = {
   ),
   target: {
     branch: "main",
-    snapshot: {
-      sunglasses: false,
-      hat: "blue",
-      scarf: "turquoise",
-      crest: "none",
-    },
+    snapshot: chicken({ hat: "blue", scarf: "turquoise" }),
     requiredProvenance: [
       { type: "revert", sourceCommit: "b20" },
       { type: "cherry-pick", sourceCommit: "x21" },
