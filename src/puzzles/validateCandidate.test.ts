@@ -134,6 +134,60 @@ describe("validatePuzzleCandidate", () => {
     expect(issueCodes(disallowed)).toContain("solution.disallowed-command");
   });
 
+  it("rejects unsupported or malformed proof syntax, including relative refs", () => {
+    for (const command of [
+      "git reset b22",
+      "git cherry-pick HEAD^",
+      "git cherry-pick HEAD~2",
+      "git cherry-pick",
+      "git revert",
+      "git revert b22 extra",
+    ]) {
+      const invalid = candidate();
+      invalid.solutionCommands = [command];
+      // HEAD^ and HEAD~ parse as a token in the generic terminal, but cannot
+      // resolve to a simulated commit; malformed arity fails parsing directly.
+      const codes = issueCodes(invalid);
+      expect(codes.some((code) => code === "solution.parse-failed" || code === "solution.execution-failed")).toBe(true);
+    }
+  });
+
+  it("rejects merge reverts and semantic conflicts in reverts and merges", () => {
+    const mergeRevert = candidate();
+    const repository = mergeRevert.initialRepository as Record<string, unknown>;
+    const commits = repository.commits as Record<string, Record<string, unknown>>;
+    commits.b22.parents = ["a10", "s14"];
+    mergeRevert.solutionCommands = ["git revert b22"];
+    expect(issueCodes(mergeRevert)).toContain("solution.execution-failed");
+
+    const conflictingRevert = candidate();
+    const conflictRepo = conflictingRevert.initialRepository as Record<string, unknown>;
+    const conflictCommits = conflictRepo.commits as Record<string, Record<string, unknown>>;
+    conflictCommits.c99 = {
+      id: "c99", parents: ["b22"], message: "Change the sunglasses again",
+      changes: [{ type: "set", property: "sunglasses", from: true, to: false }], provenance: { type: "original" },
+    };
+    (conflictRepo.branches as Record<string, unknown>).main = "c99";
+    conflictRepo.head = "c99";
+    conflictingRevert.solutionCommands = ["git revert b22"];
+    expect(issueCodes(conflictingRevert)).toContain("solution.conflict");
+
+    const mergeConflict = candidate();
+    const mergeRepo = mergeConflict.initialRepository as Record<string, unknown>;
+    const mergeCommits = mergeRepo.commits as Record<string, Record<string, unknown>>;
+    (mergeCommits.b22.changes as Array<Record<string, unknown>>)[0] = { type: "set", property: "crest", from: "red", to: "outline" };
+    (mergeCommits.s14.changes as Array<Record<string, unknown>>)[0] = { type: "set", property: "crest", from: "red", to: "none" };
+    mergeConflict.solutionCommands = ["git merge style"];
+    expect(issueCodes(mergeConflict)).toContain("solution.conflict");
+  });
+
+  it("rejects historical changes whose from value is not their first-parent state", () => {
+    const invalid = candidate();
+    const changes = commit(invalid, "b22").changes as Array<Record<string, unknown>>;
+    changes[0].from = true;
+    expect(issueCodes(invalid)).toContain("repository.incorrect-change-from");
+  });
+
   it("accepts a different valid command order for the same final target", () => {
     const alternate = candidate();
     alternate.solutionCommands = ["git cherry-pick s14", "git revert b22"];

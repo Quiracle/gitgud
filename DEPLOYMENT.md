@@ -48,7 +48,7 @@ Create one long random value for `DAILY_GENERATION_SECRET`. It is not a Supabase
 Set Edge Function secrets:
 
 ```powershell
-pnpm exec supabase secrets set OPENAI_API_KEY=YOUR_OPENAI_KEY OPENAI_PUZZLE_MODEL=gpt-4.1-mini OPENAI_PUZZLE_TEMPERATURE=1.8 DAILY_GENERATION_SECRET=YOUR_LONG_RANDOM_SECRET
+pnpm exec supabase secrets set OPENAI_API_KEY=YOUR_OPENAI_KEY OPENAI_PUZZLE_MODEL=gpt-5.4-mini OPENAI_PUZZLE_REASONING_EFFORT=medium OPENAI_PUZZLE_MAX_OUTPUT_TOKENS=16000 OPENAI_REQUEST_TIMEOUT_MS=90000 DAILY_GENERATION_SECRET=YOUR_LONG_RANDOM_SECRET
 ```
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are supplied automatically inside hosted Supabase Edge Functions.
@@ -59,7 +59,7 @@ Deploy:
 pnpm supabase:deploy
 ```
 
-The generator sends `temperature: 1.8` and deliberately omits `top_p`. If the configured model rejects temperature or strict structured output, generation fails safely instead of publishing an unvalidated puzzle.
+For GPT-5 models with reasoning enabled, the generator sends `reasoning.effort` and omits incompatible sampling controls such as `temperature` and `top_p`. Legacy non-reasoning models receive the configured temperature instead. If the provider rejects the selected controls or strict structured output, generation fails safely instead of publishing an unvalidated puzzle.
 
 ## 4. Create the AI fallback pool
 

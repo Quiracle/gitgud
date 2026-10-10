@@ -3,6 +3,19 @@ import { createDailyPuzzleDraftSchema, dailyPuzzleDraftSchema } from "./openaiSc
 export interface OpenAIRequestConfig {
   model: string;
   temperature: number;
+  maxOutputTokens?: number;
+  /** GPT-5 Responses models support this; legacy configured models do not. */
+  reasoningEffort?: "none" | "low" | "medium" | "high";
+}
+
+export function usesReasoning(config: OpenAIRequestConfig) {
+  return Boolean(config.model.startsWith("gpt-5") && config.reasoningEffort && config.reasoningEffort !== "none");
+}
+
+function modelControls(config: OpenAIRequestConfig) {
+  return usesReasoning(config)
+    ? { reasoning: { effort: config.reasoningEffort } }
+    : { temperature: config.temperature };
 }
 
 export function createPuzzleRequestBody(
@@ -12,10 +25,10 @@ export function createPuzzleRequestBody(
 ) {
   return {
     model: config.model,
-    temperature: config.temperature,
-    max_output_tokens: 8_000,
+    ...modelControls(config),
+    max_output_tokens: config.maxOutputTokens ?? 16_000,
     input: [
-      { role: "system", content: "You design safe, compact, solvable educational Git puzzles as structured data." },
+      { role: "system", content: "You compile safe, compact, solvable educational Git puzzles into structured data." },
       { role: "user", content: prompt },
     ],
     text: {
@@ -55,8 +68,8 @@ export function parsePuzzleResponsePayload(payload: any) {
 export function createPreflightRequestBody(config: OpenAIRequestConfig) {
   return {
     model: config.model,
-    temperature: config.temperature,
-    max_output_tokens: 32,
+    ...modelControls(config),
+    max_output_tokens: Math.min(config.maxOutputTokens ?? 16_000, 4_096),
     input: "Return an object confirming structured output is available.",
     text: {
       format: {

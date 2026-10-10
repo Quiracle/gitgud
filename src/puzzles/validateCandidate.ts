@@ -1,6 +1,8 @@
 import {
   cloneRepository,
   executeCommand,
+  applyChanges,
+  getSnapshot,
   parseGitCommand,
   type Commit,
   type GitAction,
@@ -55,6 +57,12 @@ export function validatePuzzleCandidate(
 
   if (issues.length > 0) return { ok: false, issues };
 
+  // getSnapshot intentionally replays stored history permissively so the UI can
+  // render old puzzles. Publication is stricter: every historical change must
+  // be applicable to its first-parent snapshot, including merge commits.
+  validateHistoricalChangePreconditions(candidate.initialRepository, issues);
+  if (issues.length > 0) return { ok: false, issues };
+
   // Structural validation above makes the established engine safe to use as the sole source
   // of Git behavior and victory rules.
   const initialValidation = validatePuzzleCompletion(
@@ -79,6 +87,20 @@ export function validatePuzzleCandidate(
       privateMetadata: { solutionCommands: [...solutionCommands] },
     },
   };
+}
+
+function validateHistoricalChangePreconditions(repository: Repository, issues: ValidationIssue[]) {
+  for (const [id, commit] of Object.entries(repository.commits)) {
+    try {
+      const baseline = commit.parents[0]
+        ? getSnapshot(repository, commit.parents[0])
+        : repository.initialState;
+      applyChanges(baseline, commit.changes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Commit changes do not apply to its first parent.";
+      add(issues, "repository.incorrect-change-from", message, `$.initialRepository.commits.${id}.changes`);
+    }
+  }
 }
 
 function validateIdentity(candidate: PuzzleCandidate, limits: PuzzleLimits, issues: ValidationIssue[]) {

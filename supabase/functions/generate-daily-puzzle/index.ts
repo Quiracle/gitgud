@@ -6,7 +6,7 @@ import {
   validatePuzzleCandidate,
 } from "../_shared/domain.bundle.js";
 import { materializeCandidate } from "../_shared/openaiSchema.ts";
-import { createPreflightRequestBody, createPuzzleRequestBody, parsePuzzleResponsePayload } from "../_shared/openaiRequest.ts";
+import { createPreflightRequestBody, createPuzzleRequestBody, parsePuzzleResponsePayload, usesReasoning } from "../_shared/openaiRequest.ts";
 import { generationPrompt } from "../_shared/prompt.ts";
 
 type Difficulty = "easy" | "medium" | "hard";
@@ -73,13 +73,16 @@ Deno.serve(async (request) => {
       status: "running",
       attempt_number: 0,
       model: config.model,
-      temperature: config.temperature,
+      temperature: usesReasoning(config) ? null : config.temperature,
+      reasoning_effort: usesReasoning(config) ? config.reasoningEffort : null,
+      graph_archetype: brief.graphArchetype,
       brief_version: brief.briefVersion,
       prompt_version: brief.promptVersion,
     }).select("id").single();
     if (run.error) throw run.error;
 
     let previousIssues: string[] = [];
+    const failureCategories: Record<string, number> = {};
     // Keep the whole generation phase below Supabase's hosted wall-clock limit,
     // while giving a structured puzzle substantially longer than the tiny preflight.
     const generationDeadline = Date.now() + 120_000;
@@ -90,13 +93,16 @@ Deno.serve(async (request) => {
       await supabase.from("daily_generation_runs").update({ attempt_number: attempt }).eq("id", run.data.id);
       try {
         const draft = await requestOpenAI(config, brief, previousIssues, attemptTimeoutMs);
-        const candidate = materializeCandidate(draft, date);
+        const candidate = materializeCandidate(draft, date, brief);
         const validation = validateCandidateAgainstBrief(candidate, brief);
         if (validation.ok) {
+          await recordFailureCategories(supabase, run.data.id, failureCategories);
           return await publish(supabase, run.data.id, candidate, "validated");
         }
+        countValidationIssues(failureCategories, validation.issues);
         previousIssues = validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);
       } catch (error) {
+        countFailureCategory(failureCategories, "provider-or-materialization");
         previousIssues = [safeError(error)];
       }
     }
@@ -134,6 +140,7 @@ Deno.serve(async (request) => {
     await supabase.from("daily_generation_runs").update({
       status: "failed",
       error_summary: previousIssues.join(" | ").slice(0, 2000),
+      failure_categories: failureCategories,
       completed_at: new Date().toISOString(),
     }).eq("id", run.data.id);
     return response({ error: "No valid puzzle could be published.", difficulty, runId: run.data.id }, 503);
@@ -153,6 +160,19 @@ async function publish(supabase: any, runId: string, candidate: any, status: "va
   });
   if (published.error) throw published.error;
   return response({ status: "published", id: published.data, difficulty: definition.difficulty, source: status });
+}
+
+function countValidationIssues(categories: Record<string, number>, issues: Array<{ code?: string }>) {
+  issues.forEach((issue) => countFailureCategory(categories, issue.code ?? "unknown-validator-issue"));
+}
+
+function countFailureCategory(categories: Record<string, number>, category: string) {
+  categories[category] = (categories[category] ?? 0) + 1;
+}
+
+async function recordFailureCategories(supabase: any, runId: string, categories: Record<string, number>) {
+  const result = await supabase.from("daily_generation_runs").update({ failure_categories: categories }).eq("id", runId);
+  if (result.error) throw result.error;
 }
 
 async function seedFallbacks(
@@ -189,7 +209,7 @@ async function seedFallbacks(
   const brief = createGenerationBrief("2099-01-01", difficulty, seed);
   try {
     const draft = await requestOpenAI(config, brief, isRetry ? previousIssues : [], config.requestTimeoutMs);
-    const candidate = materializeCandidate(draft, "2099-01-01");
+    const candidate = materializeCandidate(draft, "2099-01-01", brief);
     const validation = validateCandidateAgainstBrief(candidate, brief);
     if (!validation.ok) {
       return response({
@@ -252,7 +272,9 @@ async function preflight(supabase: any, config: ReturnType<typeof readConfig>) {
     providerCompatible,
     ...(providerError ? { providerError } : {}),
     model: config.model,
-    temperature: config.temperature,
+    temperature: usesReasoning(config) ? "omitted" : config.temperature,
+    reasoningEffort: usesReasoning(config) ? config.reasoningEffort : "not-used",
+    maxOutputTokens: config.maxOutputTokens,
     topP: "omitted",
     fallbackCounts: counts,
   });
@@ -262,7 +284,7 @@ async function verifyProviderConfiguration(config: ReturnType<typeof readConfig>
   const request = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { authorization: `Bearer ${config.openAiKey}`, "content-type": "application/json" },
-    signal: AbortSignal.timeout(20_000),
+    signal: AbortSignal.timeout(Math.min(config.requestTimeoutMs, 60_000)),
     body: JSON.stringify(createPreflightRequestBody(config)),
   });
   const payload = await request.json();
@@ -300,19 +322,31 @@ function readConfig() {
     if (!result) throw new Error(`Missing required secret ${name}.`);
     return result;
   };
-  const temperature = Number(Deno.env.get("OPENAI_PUZZLE_TEMPERATURE") ?? "1.8");
+  const temperature = Number(Deno.env.get("OPENAI_PUZZLE_TEMPERATURE") ?? "0.4");
   if (!Number.isFinite(temperature) || temperature < 0 || temperature > 2) throw new Error("OPENAI_PUZZLE_TEMPERATURE must be between 0 and 2.");
-  const requestTimeoutMs = Number(Deno.env.get("OPENAI_REQUEST_TIMEOUT_MS") ?? "60000");
+  const requestTimeoutMs = Number(Deno.env.get("OPENAI_REQUEST_TIMEOUT_MS") ?? "90000");
   if (!Number.isInteger(requestTimeoutMs) || requestTimeoutMs < 10_000 || requestTimeoutMs > 90_000) {
     throw new Error("OPENAI_REQUEST_TIMEOUT_MS must be an integer between 10000 and 90000.");
+  }
+  const reasoningEffort = Deno.env.get("OPENAI_PUZZLE_REASONING_EFFORT") ?? "medium";
+  if (reasoningEffort !== "none" && reasoningEffort !== "low" && reasoningEffort !== "medium" && reasoningEffort !== "high") {
+    throw new Error("OPENAI_PUZZLE_REASONING_EFFORT must be none, low, medium, or high.");
+  }
+  const maxOutputTokens = Number(Deno.env.get("OPENAI_PUZZLE_MAX_OUTPUT_TOKENS") ?? "16000");
+  if (!Number.isInteger(maxOutputTokens) || maxOutputTokens < 4_000 || maxOutputTokens > 32_000) {
+    throw new Error("OPENAI_PUZZLE_MAX_OUTPUT_TOKENS must be an integer between 4000 and 32000.");
   }
   return {
     supabaseUrl: value("SUPABASE_URL"),
     serviceRoleKey: value("SUPABASE_SERVICE_ROLE_KEY"),
     openAiKey: value("OPENAI_API_KEY"),
     generationSecret: value("DAILY_GENERATION_SECRET"),
-    model: Deno.env.get("OPENAI_PUZZLE_MODEL") ?? "gpt-4.1-mini",
+    // Keep the deployed model configurable. gpt-5 models receive high reasoning
+    // through the Responses API; older configured models keep their compatible body.
+    model: Deno.env.get("OPENAI_PUZZLE_MODEL") ?? "gpt-5.4-mini",
+    reasoningEffort,
     temperature,
+    maxOutputTokens,
     requestTimeoutMs,
   };
 }

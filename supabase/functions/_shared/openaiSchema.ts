@@ -1,187 +1,135 @@
+/**
+ * This is deliberately a draft schema, not the public puzzle schema. The model
+ * supplies only editorial text and the variable commit graph. Everything that
+ * is reserved in a GenerationBrief is attached by materializeCandidate.
+ */
 const accessoryValue = { type: "string", enum: ["none", "black", "red", "blue", "turquoise", "purple", "gold"] } as const;
 export const openAIDraftLimits = {
-  title: 120,
-  description: 600,
-  commitId: 48,
-  branchName: 48,
-  commitMessage: 240,
-  hint: 240,
-  objective: 240,
-  solutionCommand: 160,
+  title: 120, description: 600, commitId: 48, branchName: 48,
+  commitMessage: 240, hint: 240, objective: 240, solutionCommand: 160,
 } as const;
 
 const boundedString = (maxLength: number) => ({ type: "string", minLength: 1, maxLength } as const);
-const commitId = {
-  ...boundedString(openAIDraftLimits.commitId),
-  pattern: "^[A-Za-z][A-Za-z0-9_-]*$",
-  description: "A short Git commit ID. Use only an ID allowed by this schema.",
-} as const;
-const branchName = {
-  ...boundedString(openAIDraftLimits.branchName),
-  pattern: "^[A-Za-z][A-Za-z0-9._/-]*$",
-  description: "A Git branch name. Use only a branch name allowed by this schema.",
-} as const;
-const state = {
-  type: "object",
-  additionalProperties: false,
+const change = {
+  type: "object", additionalProperties: false,
   properties: {
-    sunglasses: accessoryValue, hat: accessoryValue, scarf: accessoryValue,
-    crest: accessoryValue, longLegs: accessoryValue,
+    type: { type: "string", enum: ["set"] },
+    property: { type: "string", enum: ["sunglasses", "hat", "scarf", "crest", "longLegs"] },
+    from: accessoryValue, to: accessoryValue,
   },
-  required: ["sunglasses", "hat", "scarf", "crest", "longLegs"],
+  required: ["type", "property", "from", "to"],
 } as const;
 
+const commitDraft = (parentIds: string[]) => ({
+  type: "object", additionalProperties: false,
+  properties: {
+    parents: parentIds.length === 0
+      ? { type: "array", minItems: 0, maxItems: 0, items: { type: "string" } }
+      : { type: "array", maxItems: 2, items: { type: "string", enum: parentIds } },
+    message: boundedString(openAIDraftLimits.commitMessage),
+    changes: { type: "array", maxItems: 5, items: change },
+  },
+  required: ["parents", "message", "changes"],
+});
+
+const operationSchema = (commitIds: string[], branchNames: readonly string[]) => ({
+  type: "object", additionalProperties: false,
+  properties: {
+    operation: { type: "string", enum: ["log", "switch", "merge", "cherryPick", "revert"] },
+    logAll: { type: "boolean" },
+    branch: { type: "string", enum: branchNames },
+    ffOnly: { type: "boolean" },
+    commit: { type: "string", enum: commitIds },
+  },
+  // Keeping all fields required avoids a broad free-form operation union in
+  // Structured Outputs. Only the fields for the selected operation are used.
+  required: ["operation", "logAll", "branch", "ffOnly", "commit"],
+});
+
+/** A loose schema used only by the provider preflight/unit tests. */
 export const dailyPuzzleDraftSchema = {
-  type: "object",
-  additionalProperties: false,
+  type: "object", additionalProperties: false,
   properties: {
     title: boundedString(openAIDraftLimits.title),
     description: boundedString(openAIDraftLimits.description),
     objectives: { type: "array", minItems: 1, maxItems: 10, items: boundedString(openAIDraftLimits.objective) },
-    difficulty: { type: "string", enum: ["easy", "medium", "hard"] },
-    initialRepository: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        commits: {
-          type: "array",
-          minItems: 1,
-          maxItems: 25,
-          items: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              id: commitId, parents: { type: "array", maxItems: 2, items: commitId },
-              message: boundedString(openAIDraftLimits.commitMessage),
-              changes: {
-                type: "array",
-                maxItems: 5,
-                items: {
-                  type: "object", additionalProperties: false,
-                  properties: { type: { type: "string", enum: ["set"] }, property: { type: "string", enum: ["sunglasses", "hat", "scarf", "crest", "longLegs"] }, from: accessoryValue, to: accessoryValue },
-                  required: ["type", "property", "from", "to"],
-                },
-              },
-              provenance: {
-                type: "object", additionalProperties: false,
-                properties: { type: { type: "string", enum: ["original"] }, sourceCommits: { type: "array", maxItems: 4, items: commitId } },
-                required: ["type", "sourceCommits"],
-              },
-            },
-            required: ["id", "parents", "message", "changes", "provenance"],
-          },
-        },
-        branches: {
-          type: "array",
-          minItems: 1,
-          maxItems: 8,
-          items: { type: "object", additionalProperties: false, properties: { name: branchName, head: commitId }, required: ["name", "head"] },
-        },
-        currentBranch: branchName, head: commitId, initialState: state,
-        nextGeneratedId: { type: "integer" },
-      },
-      required: ["commits", "branches", "currentBranch", "head", "initialState", "nextGeneratedId"],
-    },
-    target: {
-      type: "object", additionalProperties: false,
-      properties: {
-        branch: branchName, snapshot: state,
-        branchHeads: { type: "array", maxItems: 8, items: { type: "object", additionalProperties: false, properties: { branch: branchName, commit: commitId }, required: ["branch", "commit"] } },
-        requiredProvenance: { type: "array", maxItems: 8, items: { type: "object", additionalProperties: false, properties: { type: { type: "string", enum: ["cherry-pick", "revert", "merge"] }, sourceCommit: commitId }, required: ["type", "sourceCommit"] } },
-      },
-      required: ["branch", "snapshot", "branchHeads", "requiredProvenance"],
-    },
-    allowedCommands: { type: "array", minItems: 1, maxItems: 5, items: { type: "string", enum: ["log", "switch", "merge", "cherry-pick", "revert"] } },
+    initialRepository: { type: "object", additionalProperties: false, properties: { commits: { type: "object" }, branches: { type: "object" } }, required: ["commits", "branches"] },
     hints: { type: "array", maxItems: 6, items: boundedString(openAIDraftLimits.hint) },
-    solutionCommands: { type: "array", minItems: 1, maxItems: 20, items: boundedString(openAIDraftLimits.solutionCommand) },
+    solutionOperations: { type: "array", minItems: 1, maxItems: 20, items: { type: "object" } },
   },
-  required: ["title", "description", "objectives", "difficulty", "initialRepository", "target", "allowedCommands", "hints", "solutionCommands"],
+  required: ["title", "description", "objectives", "initialRepository", "hints", "solutionOperations"],
 } as const;
 
-/** Tighten the general safety schema to the exact persisted generation brief. */
+const BRANCH_NAMES = ["main", "feature", "style", "polish"] as const;
+
+/** Tighten the provider contract to the immutable brief before every request. */
 export function createDailyPuzzleDraftSchema(brief: Record<string, any>) {
-  const schema = structuredClone(dailyPuzzleDraftSchema) as any;
-  const exact = (target: Record<string, unknown>, count: unknown) => {
-    if (!Number.isInteger(count) || (count as number) < 0) throw new Error("Generation brief contains an invalid item count.");
-    target.minItems = count;
-    target.maxItems = count;
-  };
-
-  exact(schema.properties.initialRepository.properties.commits, brief.commitCount);
-  exact(schema.properties.initialRepository.properties.branches, brief.branchCount);
-  exact(schema.properties.hints, brief.hintCount);
-
-  const commitIds = Array.from({ length: brief.commitCount }, (_, index) => `c${index + 1}`);
-  const branchNames = ["main", "feature", "style", "polish"].slice(0, brief.branchCount);
-  const commit = schema.properties.initialRepository.properties.commits.items.properties;
-  const repository = schema.properties.initialRepository.properties;
-  const target = schema.properties.target.properties;
-
-  commit.id.enum = commitIds;
-  commit.id.description = `Use every ID exactly once: ${commitIds.join(", ")}.`;
-  commit.parents.items.enum = commitIds;
-  commit.parents.items.description = "Reference an existing earlier-numbered commit, or use an empty parent array for the root.";
-  commit.provenance.properties.sourceCommits.items.enum = commitIds;
-  repository.branches.items.properties.name.enum = branchNames;
-  repository.branches.items.properties.name.description = `Use every branch exactly once: ${branchNames.join(", ")}.`;
-  repository.branches.items.properties.head.enum = commitIds;
-  repository.currentBranch = {
-    ...repository.currentBranch,
-    enum: ["main"],
-    description: "The simulation always starts on main.",
-  };
-  repository.head.enum = commitIds;
-  target.branch = {
-    ...target.branch,
-    enum: ["main"],
-    description: "The solved puzzle must finish on main.",
-  };
-  target.branchHeads.items.properties.branch.enum = branchNames;
-  target.branchHeads.items.properties.commit.enum = commitIds;
-  target.requiredProvenance.items.properties.sourceCommit.enum = commitIds;
-  exact(target.branchHeads, 0);
-  exact(target.requiredProvenance, 0);
-
+  const { commitCount, branchCount, hintCount } = brief;
+  if (!Number.isInteger(commitCount) || commitCount < 1 || !Number.isInteger(branchCount) || branchCount < 1 || branchCount > BRANCH_NAMES.length || !Number.isInteger(hintCount) || hintCount < 0) {
+    throw new Error("Generation brief contains invalid graph counts.");
+  }
   const solutionLength = brief.solutionLength;
-  if (
-    !solutionLength ||
-    !Number.isInteger(solutionLength.min) ||
-    !Number.isInteger(solutionLength.max) ||
-    solutionLength.min < 1 ||
-    solutionLength.max < solutionLength.min
-  ) {
+  if (!solutionLength || !Number.isInteger(solutionLength.min) || !Number.isInteger(solutionLength.max) || solutionLength.min < 1 || solutionLength.max < solutionLength.min) {
     throw new Error("Generation brief contains an invalid solution length.");
   }
-  schema.properties.solutionCommands.minItems = solutionLength.min;
-  schema.properties.solutionCommands.maxItems = solutionLength.max;
-  return schema;
+
+  const commitIds = Array.from({ length: commitCount }, (_, index) => `c${index + 1}`);
+  const branchNames = BRANCH_NAMES.slice(0, branchCount);
+  const commitProperties = Object.fromEntries(commitIds.map((id, index) => [id, commitDraft(commitIds.slice(0, index))]));
+  const branchProperties = Object.fromEntries(branchNames.map((name) => [name, { type: "string", enum: commitIds }]));
+
+  return {
+    type: "object", additionalProperties: false,
+    properties: {
+      title: boundedString(openAIDraftLimits.title),
+      description: boundedString(openAIDraftLimits.description),
+      objectives: { type: "array", minItems: 1, maxItems: 10, items: boundedString(openAIDraftLimits.objective) },
+      initialRepository: {
+        type: "object", additionalProperties: false,
+        properties: {
+          commits: { type: "object", additionalProperties: false, properties: commitProperties, required: commitIds },
+          branches: { type: "object", additionalProperties: false, properties: branchProperties, required: branchNames },
+        },
+        required: ["commits", "branches"],
+      },
+      hints: { type: "array", minItems: hintCount, maxItems: hintCount, items: boundedString(openAIDraftLimits.hint) },
+      solutionOperations: { type: "array", minItems: solutionLength.min, maxItems: solutionLength.max, items: operationSchema(commitIds, branchNames) },
+    },
+    required: ["title", "description", "objectives", "initialRepository", "hints", "solutionOperations"],
+  } as const;
 }
 
-export function materializeCandidate(draft: Record<string, any>, date: string) {
+function serializeOperation(operation: Record<string, any>) {
+  switch (operation.operation) {
+    case "log": return operation.logAll ? "git log --all" : "git log";
+    case "switch": return `git switch ${operation.branch}`;
+    case "merge": return operation.ffOnly ? `git merge --ff-only ${operation.branch}` : `git merge ${operation.branch}`;
+    case "cherryPick": return `git cherry-pick ${operation.commit}`;
+    case "revert": return `git revert ${operation.commit}`;
+    default: throw new Error("Structured solution operation is not supported.");
+  }
+}
+
+/** Attach every persisted invariant in trusted code, after the provider response. */
+export function materializeCandidate(draft: Record<string, any>, date: string, brief: Record<string, any>) {
   const repository = draft.initialRepository;
+  const commits = Object.fromEntries(Object.entries(repository.commits).map(([id, commit]: [string, any]) => [id, {
+    ...commit, id, provenance: { type: "original", sourceCommits: [] },
+  }]));
+  const branches = repository.branches;
   return {
-    schemaVersion: 2,
-    themeId: "chicken-v1",
-    id: `daily-${date}`,
-    version: 1,
-    kind: "daily",
-    slug: `daily-${date}`,
-    publishedOn: date,
-    title: draft.title,
-    description: draft.description,
-    objectives: draft.objectives,
-    difficulty: draft.difficulty,
+    schemaVersion: 2, themeId: "chicken-v1", id: `daily-${date}`, version: 1,
+    kind: "daily", slug: `daily-${date}`, publishedOn: date,
+    title: draft.title, description: draft.description, objectives: draft.objectives,
+    difficulty: brief.difficulty,
     initialRepository: {
-      ...repository,
-      commits: Object.fromEntries(repository.commits.map((commit: any) => [commit.id, commit])),
-      branches: Object.fromEntries(repository.branches.map((branch: any) => [branch.name, branch.head])),
+      commits, branches, currentBranch: "main", head: branches.main,
+      initialState: { sunglasses: "none", hat: "none", scarf: "none", crest: "none", longLegs: "none" },
+      nextGeneratedId: 1,
     },
-    target: {
-      ...draft.target,
-      branchHeads: Object.fromEntries(draft.target.branchHeads.map((item: any) => [item.branch, item.commit])),
-    },
-    allowedCommands: draft.allowedCommands,
+    target: { branch: "main", snapshot: brief.targetState, branchHeads: {}, requiredProvenance: [] },
+    allowedCommands: brief.allowedCommands,
     hints: draft.hints,
-    solutionCommands: draft.solutionCommands,
+    solutionCommands: draft.solutionOperations.map(serializeOperation),
   };
 }

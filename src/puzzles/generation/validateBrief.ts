@@ -1,6 +1,6 @@
-import { parseGitCommand } from "../../engine";
+import { applyChanges, getSnapshot, parseGitCommand, type GitAction } from "../../engine";
 import { semanticEqual } from "../../engine/values";
-import { CHICKEN_V2_SEMANTIC_POLICY } from "../chickenTheme";
+import { CHICKEN_V2_SEMANTIC_POLICY, EMPTY_CHICKEN_STATE } from "../chickenTheme";
 import { validatePuzzleCandidate } from "../validateCandidate";
 import type { PuzzleCandidate, ValidationIssue } from "../types";
 import type { BriefValidationResult, GenerationBrief, GitConcept } from "./types";
@@ -30,6 +30,8 @@ export function validateCandidateAgainstBrief(
   if (!semanticEqual(candidate.target.snapshot, brief.targetState)) {
     add(issues, "brief.target-state", "Candidate target accessories or colors differ from the persisted brief.", "$.target.snapshot");
   }
+  validateImmutableGenerationShape(candidate, brief, issues);
+  validateCommitChangePreconditions(candidate, issues);
   validateGraphArchetype(candidate, brief, issues);
   if (candidate.target.branch !== "main") {
     add(issues, "brief.target-branch", "Daily puzzles must finish on main.", "$.target.branch");
@@ -50,6 +52,57 @@ export function validateCandidateAgainstBrief(
   return { ok: issues.length === 0, issues };
 }
 
+/**
+ * Generic candidate validation accepts reusable lessons. Daily generation is
+ * stricter: its names and baseline are derivable from the persisted brief and
+ * must never be model-selected.
+ */
+function validateImmutableGenerationShape(candidate: PuzzleCandidate, brief: GenerationBrief, issues: ValidationIssue[]) {
+  const expectedCommitIds = Array.from({ length: brief.commitCount }, (_, index) => `c${index + 1}`);
+  const expectedBranches = ["main", "feature", "style", "polish"].slice(0, brief.branchCount);
+  const commitIds = Object.keys(candidate.initialRepository.commits).sort();
+  const branches = Object.keys(candidate.initialRepository.branches).sort();
+  if (!sameSet(commitIds, expectedCommitIds)) add(issues, "brief.commit-ids", "Daily generation must use exactly c1 through cN, each exactly once.", "$.initialRepository.commits");
+  if (!sameSet(branches, expectedBranches)) add(issues, "brief.branch-set", "Daily generation must use the canonical branch names for its branch count.", "$.initialRepository.branches");
+  if (candidate.initialRepository.currentBranch !== "main") add(issues, "brief.initial-branch", "Daily generation must start on main.", "$.initialRepository.currentBranch");
+  if (candidate.initialRepository.head !== candidate.initialRepository.branches.main) add(issues, "brief.initial-head", "Daily generation HEAD must equal the main branch head.", "$.initialRepository.head");
+  if (!semanticEqual(candidate.initialRepository.initialState, EMPTY_CHICKEN_STATE)) add(issues, "brief.initial-state", "Daily generation must use the canonical empty chicken baseline.", "$.initialRepository.initialState");
+  if (candidate.initialRepository.nextGeneratedId !== 1) add(issues, "brief.generated-id-baseline", "Daily generation must begin generated IDs at g1.", "$.initialRepository.nextGeneratedId");
+  if (Object.keys(candidate.target.branchHeads ?? {}).length !== 0) add(issues, "brief.target-branch-heads", "Daily generation does not permit model-defined branch-head requirements.", "$.target.branchHeads");
+  if ((candidate.target.requiredProvenance ?? []).length !== 0) add(issues, "brief.target-provenance", "Daily generation does not permit model-defined provenance requirements.", "$.target.requiredProvenance");
+
+  for (const [id, commit] of Object.entries(candidate.initialRepository.commits)) {
+    const index = Number(id.slice(1));
+    if (!Number.isInteger(index) || id !== `c${index}`) continue;
+    for (const parent of commit.parents) {
+      const parentIndex = Number(parent.slice(1));
+      if (!Number.isInteger(parentIndex) || parent !== `c${parentIndex}` || parentIndex >= index) {
+        add(issues, "brief.forward-parent", "A generated commit may reference only an earlier cN parent.", `$.initialRepository.commits.${id}.parents`);
+      }
+    }
+    if (id === "c1" && commit.parents.length !== 0) add(issues, "brief.root-parent", "c1 must be the root commit with no parents.", `$.initialRepository.commits.${id}.parents`);
+    if (commit.provenance?.type !== "original" || (commit.provenance.sourceCommits ?? []).length !== 0) add(issues, "brief.initial-provenance", "Initial generated commits must have empty original provenance.", `$.initialRepository.commits.${id}.provenance`);
+  }
+}
+
+/** The snapshot reader deliberately tolerates historical bad data; publication may not. */
+function validateCommitChangePreconditions(candidate: PuzzleCandidate, issues: ValidationIssue[]) {
+  const commits = candidate.initialRepository.commits;
+  for (const id of Object.keys(commits).sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)))) {
+    const commit = commits[id];
+    if (commit.parents.some((parent) => !Object.hasOwn(commits, parent))) continue;
+    try {
+      const parentSnapshot = commit.parents[0]
+        ? getSnapshot(candidate.initialRepository, commit.parents[0])
+        : candidate.initialRepository.initialState;
+      applyChanges(parentSnapshot, commit.changes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Commit semantic precondition failed.";
+      add(issues, "repository.incorrect-change-from", message, `$.initialRepository.commits.${id}.changes`);
+    }
+  }
+}
+
 function validateGraphArchetype(candidate: PuzzleCandidate, brief: GenerationBrief, issues: ValidationIssue[]) {
   const repository = candidate.initialRepository;
   const mainHead = repository.branches.main;
@@ -57,6 +110,10 @@ function validateGraphArchetype(candidate: PuzzleCandidate, brief: GenerationBri
     .filter(([branch]) => branch !== "main")
     .map(([, head]) => head);
   const fail = (message: string) => add(issues, "brief.graph-archetype", message, "$.initialRepository");
+  const actions = candidate.solutionCommands.flatMap((command) => {
+    const parsed = parseGitCommand(command);
+    return parsed.ok ? [parsed.action] : [];
+  });
 
   if (!mainHead) return fail("The requested graph archetype requires a main branch.");
   switch (brief.graphArchetype) {
@@ -64,27 +121,56 @@ function validateGraphArchetype(candidate: PuzzleCandidate, brief: GenerationBri
       if (!otherHeads.some((head) => isAncestor(repository, mainHead, head) && head !== mainHead)) {
         fail("Fast-forward briefs require another branch to descend from main.");
       }
+      if (!actions.some((action) => action.type === "merge" && action.ffOnly && action.branch !== "main")) {
+        fail("Fast-forward briefs require a --ff-only merge of a side branch in the proof.");
+      }
       return;
     case "divergent-merge":
       if (!otherHeads.some((head) => !isAncestor(repository, mainHead, head) && !isAncestor(repository, head, mainHead) && shareAncestor(repository, head, mainHead))) {
         fail("Divergent-merge briefs require main and another branch to have diverged from a shared ancestor.");
       }
+      if (!actions.some((action) => action.type === "merge" && !action.ffOnly && action.branch !== "main")) {
+        fail("Divergent-merge briefs require a non-fast-forward side-branch merge in the proof.");
+      }
       return;
     case "curate-and-undo":
-      if (!brief.requiredConcepts.includes("revert") || !brief.requiredConcepts.some((value) => value === "merge" || value === "cherry-pick")) {
-        fail("Curate-and-undo briefs require revert plus merge or cherry-pick.");
+      if (!brief.requiredConcepts.includes("revert") || !brief.requiredConcepts.includes("cherry-pick")) {
+        fail("Curate-and-undo briefs require revert plus cherry-pick.");
+      }
+      const reverted = actions.filter((action): action is Extract<GitAction, { type: "revert" }> => action.type === "revert" && repository.commits[action.commit]?.parents.length === 1);
+      const imported = actions.filter((action): action is Extract<GitAction, { type: "cherry-pick" }> => action.type === "cherry-pick");
+      if (reverted.length === 0 || imported.length === 0) {
+        fail("Curate-and-undo proofs must revert a normal commit and import useful work.");
+      }
+      if (reverted.some((action) => imported.some((pick) => changesOverlap(repository, action.commit, pick.commit)))) {
+        fail("Curate-and-undo must keep reverted and imported accessory properties disjoint.");
       }
       return;
     case "multi-branch-curation":
       if (Object.keys(repository.branches).length < 3 || brief.requiredConcepts.length < 3) {
         fail("Multi-branch curation requires at least three branches and three proof concepts.");
       }
+      const picked = actions.filter((action): action is Extract<GitAction, { type: "cherry-pick" }> => action.type === "cherry-pick").map((action) => action.commit);
+      if (new Set(picked).size < 2) {
+        fail("Multi-branch curation proofs must import at least two distinct commits.");
+      }
+      if (picked.some((id, index) => picked.slice(index + 1).some((other) => changesOverlap(repository, id, other)))) {
+        fail("Multi-branch curation must assign imported commits different accessory properties.");
+      }
       return;
     case "single-transfer":
       if (otherHeads.length !== 1 || otherHeads[0] === mainHead) {
         fail("Single-transfer briefs require exactly one distinct side branch.");
       }
+      if (!actions.some((action) => action.type === "cherry-pick")) {
+        fail("Single-transfer briefs require a literal cherry-pick proof step.");
+      }
   }
+}
+
+function changesOverlap(repository: PuzzleCandidate["initialRepository"], left: string, right: string) {
+  const leftProperties = new Set((repository.commits[left]?.changes ?? []).map((change) => change.property));
+  return (repository.commits[right]?.changes ?? []).some((change) => leftProperties.has(change.property));
 }
 
 function isAncestor(repository: PuzzleCandidate["initialRepository"], ancestor: string, descendant: string): boolean {

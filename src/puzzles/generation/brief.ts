@@ -35,11 +35,11 @@ interface DifficultyProfile {
 }
 
 const ARCHETYPE_CONCEPT_OPTIONS: Record<GraphArchetype, readonly (readonly GitConcept[])[]> = {
-  "single-transfer": [["switch"], ["cherry-pick"], ["revert"]],
-  "fast-forward": [["merge"], ["ff-only"]],
+  "single-transfer": [["cherry-pick"]],
+  "fast-forward": [["ff-only"]],
   "divergent-merge": [["switch", "merge"]],
-  "curate-and-undo": [["cherry-pick", "revert"], ["merge", "revert"]],
-  "multi-branch-curation": [["switch", "cherry-pick", "revert"], ["switch", "merge", "revert"]],
+  "curate-and-undo": [["cherry-pick", "revert"]],
+  "multi-branch-curation": [["switch", "cherry-pick", "revert"]],
 };
 
 export const GENERATION_PROFILES: Record<PuzzleDifficulty, DifficultyProfile> = {

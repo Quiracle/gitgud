@@ -30,8 +30,8 @@ var CHICKEN_V2_SEMANTIC_POLICY = {
 };
 
 // src/puzzles/generation/types.ts
-var GENERATION_BRIEF_VERSION = 1;
-var GENERATION_PROMPT_VERSION = 1;
+var GENERATION_BRIEF_VERSION = 2;
+var GENERATION_PROMPT_VERSION = 2;
 
 // src/puzzles/generation/brief.ts
 var STORY_THEMES = [
@@ -45,11 +45,11 @@ var STORY_THEMES = [
   "sports day"
 ];
 var ARCHETYPE_CONCEPT_OPTIONS = {
-  "single-transfer": [["switch"], ["cherry-pick"], ["revert"]],
-  "fast-forward": [["merge"], ["ff-only"]],
+  "single-transfer": [["cherry-pick"]],
+  "fast-forward": [["ff-only"]],
   "divergent-merge": [["switch", "merge"]],
-  "curate-and-undo": [["cherry-pick", "revert"], ["merge", "revert"]],
-  "multi-branch-curation": [["switch", "cherry-pick", "revert"], ["switch", "merge", "revert"]]
+  "curate-and-undo": [["cherry-pick", "revert"]],
+  "multi-branch-curation": [["switch", "cherry-pick", "revert"]]
 };
 var GENERATION_PROFILES = {
   easy: {
@@ -1350,6 +1350,8 @@ function validatePuzzleCandidate(input, config) {
   validateActionRequirements(candidate, limits, issues);
   validateDifficulty(candidate, limits, config.difficultyPolicy ?? DEFAULT_DIFFICULTY_POLICY, issues);
   if (issues.length > 0) return { ok: false, issues };
+  validateHistoricalChangePreconditions(candidate.initialRepository, issues);
+  if (issues.length > 0) return { ok: false, issues };
   const initialValidation = validatePuzzleCompletion(
     candidate.initialRepository,
     candidate.target,
@@ -1370,6 +1372,17 @@ function validatePuzzleCandidate(input, config) {
       privateMetadata: { solutionCommands: [...solutionCommands] }
     }
   };
+}
+function validateHistoricalChangePreconditions(repository, issues) {
+  for (const [id, commit] of Object.entries(repository.commits)) {
+    try {
+      const baseline = commit.parents[0] ? getSnapshot(repository, commit.parents[0]) : repository.initialState;
+      applyChanges(baseline, commit.changes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Commit changes do not apply to its first parent.";
+      add(issues, "repository.incorrect-change-from", message, `$.initialRepository.commits.${id}.changes`);
+    }
+  }
 }
 function validateIdentity(candidate, limits, issues) {
   if (!PUZZLE_ID_PATTERN.test(candidate.id) || candidate.id.length > limits.maxPuzzleIdLength) {
@@ -1605,6 +1618,8 @@ function validateCandidateAgainstBrief(input, brief) {
   if (!semanticEqual(candidate.target.snapshot, brief.targetState)) {
     add2(issues, "brief.target-state", "Candidate target accessories or colors differ from the persisted brief.", "$.target.snapshot");
   }
+  validateImmutableGenerationShape(candidate, brief, issues);
+  validateCommitChangePreconditions(candidate, issues);
   validateGraphArchetype(candidate, brief, issues);
   if (candidate.target.branch !== "main") {
     add2(issues, "brief.target-branch", "Daily puzzles must finish on main.", "$.target.branch");
@@ -1624,38 +1639,110 @@ function validateCandidateAgainstBrief(input, brief) {
   }
   return { ok: issues.length === 0, issues };
 }
+function validateImmutableGenerationShape(candidate, brief, issues) {
+  const expectedCommitIds = Array.from({ length: brief.commitCount }, (_, index) => `c${index + 1}`);
+  const expectedBranches = ["main", "feature", "style", "polish"].slice(0, brief.branchCount);
+  const commitIds = Object.keys(candidate.initialRepository.commits).sort();
+  const branches = Object.keys(candidate.initialRepository.branches).sort();
+  if (!sameSet(commitIds, expectedCommitIds)) add2(issues, "brief.commit-ids", "Daily generation must use exactly c1 through cN, each exactly once.", "$.initialRepository.commits");
+  if (!sameSet(branches, expectedBranches)) add2(issues, "brief.branch-set", "Daily generation must use the canonical branch names for its branch count.", "$.initialRepository.branches");
+  if (candidate.initialRepository.currentBranch !== "main") add2(issues, "brief.initial-branch", "Daily generation must start on main.", "$.initialRepository.currentBranch");
+  if (candidate.initialRepository.head !== candidate.initialRepository.branches.main) add2(issues, "brief.initial-head", "Daily generation HEAD must equal the main branch head.", "$.initialRepository.head");
+  if (!semanticEqual(candidate.initialRepository.initialState, EMPTY_CHICKEN_STATE)) add2(issues, "brief.initial-state", "Daily generation must use the canonical empty chicken baseline.", "$.initialRepository.initialState");
+  if (candidate.initialRepository.nextGeneratedId !== 1) add2(issues, "brief.generated-id-baseline", "Daily generation must begin generated IDs at g1.", "$.initialRepository.nextGeneratedId");
+  if (Object.keys(candidate.target.branchHeads ?? {}).length !== 0) add2(issues, "brief.target-branch-heads", "Daily generation does not permit model-defined branch-head requirements.", "$.target.branchHeads");
+  if ((candidate.target.requiredProvenance ?? []).length !== 0) add2(issues, "brief.target-provenance", "Daily generation does not permit model-defined provenance requirements.", "$.target.requiredProvenance");
+  for (const [id, commit] of Object.entries(candidate.initialRepository.commits)) {
+    const index = Number(id.slice(1));
+    if (!Number.isInteger(index) || id !== `c${index}`) continue;
+    for (const parent of commit.parents) {
+      const parentIndex = Number(parent.slice(1));
+      if (!Number.isInteger(parentIndex) || parent !== `c${parentIndex}` || parentIndex >= index) {
+        add2(issues, "brief.forward-parent", "A generated commit may reference only an earlier cN parent.", `$.initialRepository.commits.${id}.parents`);
+      }
+    }
+    if (id === "c1" && commit.parents.length !== 0) add2(issues, "brief.root-parent", "c1 must be the root commit with no parents.", `$.initialRepository.commits.${id}.parents`);
+    if (commit.provenance?.type !== "original" || (commit.provenance.sourceCommits ?? []).length !== 0) add2(issues, "brief.initial-provenance", "Initial generated commits must have empty original provenance.", `$.initialRepository.commits.${id}.provenance`);
+  }
+}
+function validateCommitChangePreconditions(candidate, issues) {
+  const commits = candidate.initialRepository.commits;
+  for (const id of Object.keys(commits).sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)))) {
+    const commit = commits[id];
+    if (commit.parents.some((parent) => !Object.hasOwn(commits, parent))) continue;
+    try {
+      const parentSnapshot = commit.parents[0] ? getSnapshot(candidate.initialRepository, commit.parents[0]) : candidate.initialRepository.initialState;
+      applyChanges(parentSnapshot, commit.changes);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Commit semantic precondition failed.";
+      add2(issues, "repository.incorrect-change-from", message, `$.initialRepository.commits.${id}.changes`);
+    }
+  }
+}
 function validateGraphArchetype(candidate, brief, issues) {
   const repository = candidate.initialRepository;
   const mainHead = repository.branches.main;
   const otherHeads = Object.entries(repository.branches).filter(([branch]) => branch !== "main").map(([, head]) => head);
   const fail = (message) => add2(issues, "brief.graph-archetype", message, "$.initialRepository");
+  const actions = candidate.solutionCommands.flatMap((command) => {
+    const parsed = parseGitCommand(command);
+    return parsed.ok ? [parsed.action] : [];
+  });
   if (!mainHead) return fail("The requested graph archetype requires a main branch.");
   switch (brief.graphArchetype) {
     case "fast-forward":
       if (!otherHeads.some((head) => isAncestor2(repository, mainHead, head) && head !== mainHead)) {
         fail("Fast-forward briefs require another branch to descend from main.");
       }
+      if (!actions.some((action) => action.type === "merge" && action.ffOnly && action.branch !== "main")) {
+        fail("Fast-forward briefs require a --ff-only merge of a side branch in the proof.");
+      }
       return;
     case "divergent-merge":
       if (!otherHeads.some((head) => !isAncestor2(repository, mainHead, head) && !isAncestor2(repository, head, mainHead) && shareAncestor(repository, head, mainHead))) {
         fail("Divergent-merge briefs require main and another branch to have diverged from a shared ancestor.");
       }
+      if (!actions.some((action) => action.type === "merge" && !action.ffOnly && action.branch !== "main")) {
+        fail("Divergent-merge briefs require a non-fast-forward side-branch merge in the proof.");
+      }
       return;
     case "curate-and-undo":
-      if (!brief.requiredConcepts.includes("revert") || !brief.requiredConcepts.some((value) => value === "merge" || value === "cherry-pick")) {
-        fail("Curate-and-undo briefs require revert plus merge or cherry-pick.");
+      if (!brief.requiredConcepts.includes("revert") || !brief.requiredConcepts.includes("cherry-pick")) {
+        fail("Curate-and-undo briefs require revert plus cherry-pick.");
+      }
+      const reverted = actions.filter((action) => action.type === "revert" && repository.commits[action.commit]?.parents.length === 1);
+      const imported = actions.filter((action) => action.type === "cherry-pick");
+      if (reverted.length === 0 || imported.length === 0) {
+        fail("Curate-and-undo proofs must revert a normal commit and import useful work.");
+      }
+      if (reverted.some((action) => imported.some((pick2) => changesOverlap(repository, action.commit, pick2.commit)))) {
+        fail("Curate-and-undo must keep reverted and imported accessory properties disjoint.");
       }
       return;
     case "multi-branch-curation":
       if (Object.keys(repository.branches).length < 3 || brief.requiredConcepts.length < 3) {
         fail("Multi-branch curation requires at least three branches and three proof concepts.");
       }
+      const picked = actions.filter((action) => action.type === "cherry-pick").map((action) => action.commit);
+      if (new Set(picked).size < 2) {
+        fail("Multi-branch curation proofs must import at least two distinct commits.");
+      }
+      if (picked.some((id, index) => picked.slice(index + 1).some((other) => changesOverlap(repository, id, other)))) {
+        fail("Multi-branch curation must assign imported commits different accessory properties.");
+      }
       return;
     case "single-transfer":
       if (otherHeads.length !== 1 || otherHeads[0] === mainHead) {
         fail("Single-transfer briefs require exactly one distinct side branch.");
       }
+      if (!actions.some((action) => action.type === "cherry-pick")) {
+        fail("Single-transfer briefs require a literal cherry-pick proof step.");
+      }
   }
+}
+function changesOverlap(repository, left, right) {
+  const leftProperties = new Set((repository.commits[left]?.changes ?? []).map((change) => change.property));
+  return (repository.commits[right]?.changes ?? []).some((change) => leftProperties.has(change.property));
 }
 function isAncestor2(repository, ancestor, descendant) {
   const pending = [descendant];
