@@ -104,8 +104,9 @@ export function SolveScreen({
     }
     const g = goal.current?.getBoundingClientRect();
     setConfetti({ x: g ? g.left + g.width / 2 : window.innerWidth / 2, y: g ? g.top + g.height / 2 : 120, key: Date.now() });
-    const open = window.setTimeout(() => setPanel("result"), 900);
-    const clear = window.setTimeout(() => setConfetti(null), 2200);
+    // Let the final command's result land on the graph before the popup covers it.
+    const open = window.setTimeout(() => setPanel("result"), 2200);
+    const clear = window.setTimeout(() => setConfetti(null), 2400);
     return () => {
       window.clearTimeout(open);
       window.clearTimeout(clear);

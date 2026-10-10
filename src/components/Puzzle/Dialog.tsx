@@ -18,8 +18,8 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
   useEffect(() => {
     if (!open) return;
     const previous = document.activeElement as HTMLElement | null;
-    // Focus the first action so keyboard users land inside the dialog.
-    const timer = window.setTimeout(() => panel.current?.querySelector<HTMLElement>("button, a")?.focus(), 50);
+    // Move focus into the dialog itself (not a button) so no focus ring flashes on open.
+    const timer = window.setTimeout(() => panel.current?.focus({ preventScroll: true }), 50);
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose?.();
     };
@@ -46,7 +46,8 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
             role="dialog"
             aria-modal="true"
             aria-labelledby={titleId}
-            className="relative flex w-full max-w-[327px] flex-col gap-6 rounded border border-lime-400 bg-green-950 p-6"
+            tabIndex={-1}
+            className="relative flex outline-none w-full max-w-[327px] flex-col gap-6 rounded border border-lime-400 bg-green-950 p-6"
             initial={{ opacity: 0, scale: 0.88, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 12, transition: { duration: 0.16 } }}
@@ -60,7 +61,7 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
                 type="button"
                 onClick={onClose}
                 aria-label="Close"
-                className="absolute right-1.5 top-1.5 flex size-11 items-center justify-center text-lime-400 transition-colors hover:text-lime-300"
+                className="absolute right-1.5 top-1.5 flex size-11 items-center justify-center rounded text-lime-400 outline-none transition-colors hover:text-lime-300 focus-visible:bg-lime-400/10 focus-visible:text-lime-300"
               >
                 <Icon name="close" size={16} />
               </button>
