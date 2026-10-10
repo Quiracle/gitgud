@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TerminalEntry } from "../components/Puzzle/CommandPanel";
+import { useAuth } from "../context/AuthContext";
 import {
   executeCommand,
   formatInteractiveRebaseCommand,
@@ -11,8 +12,14 @@ import {
   type Repository,
 } from "../engine";
 import { validatePuzzleCompletion, type PublicPuzzleDefinition } from "../puzzles";
+import { startDailyAttempt, submitDailyResult } from "../services/leaderboard";
+import { openProgressStore } from "../storage/browserProgress";
+import type { CompletionRecord, LocalProgressStore, StoredAttempt } from "../storage/progress";
 
 export type SessionStatus = "active" | "surrendered" | "completed";
+
+/** Where a finished run stands with the daily leaderboard. */
+export type SubmissionState = "guest" | "not-ranked" | "assisted" | "submitting" | "submitted" | "failed";
 
 export interface CommandOutcome {
   ok: boolean;
@@ -26,47 +33,78 @@ interface PendingRebase {
 }
 
 /**
- * One run of a puzzle: repository, transcript, retries, hints, and timing. Timing is
- * cumulative active time from the first start; it pauses while the page is hidden and
- * never resets on restart.
+ * One attempt at a puzzle, persisted through the progress store so a refresh resumes
+ * the same run and timer. Time is measured from the attempt's first start and never
+ * resets on restart. Authenticated daily runs start a server attempt and submit the
+ * result when solved; assisted runs are never ranked.
  */
 export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
-  const [repository, setRepository] = useState<Repository>(() => structuredClone(puzzle.initialRepository));
-  const [entries, setEntries] = useState<TerminalEntry[]>([]);
-  const [actions, setActions] = useState<GitAction[]>([]);
-  const [restartCount, setRestartCount] = useState(0);
-  const [commandCount, setCommandCount] = useState(0);
+  const { status: authStatus, user } = useAuth();
+  const [boot] = useState(() => {
+    const store = openProgressStore();
+    const attempt = store.start(puzzle);
+    return { store, attempt, restored: restoreRun(puzzle, attempt) };
+  });
+  const store: LocalProgressStore = boot.store;
+
+  const [attempt, setAttempt] = useState<StoredAttempt>(boot.attempt);
+  const [repository, setRepository] = useState<Repository>(boot.restored.repository);
+  const [entries, setEntries] = useState<TerminalEntry[]>(boot.restored.entries);
+  const [actions, setActions] = useState<GitAction[]>(boot.restored.actions);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [status, setStatus] = useState<SessionStatus>("active");
   const [assisted, setAssisted] = useState(false);
   const [pendingRebase, setPendingRebase] = useState<PendingRebase | null>(null);
-  const [finalElapsedMs, setFinalElapsedMs] = useState<number>();
+  const [completion, setCompletion] = useState<CompletionRecord>();
+  const [submission, setSubmission] = useState<{ state: SubmissionState; error?: string }>({
+    state: puzzle.kind === "daily" ? "guest" : "not-ranked",
+  });
+  const serverAttempt = useRef<Promise<string>>();
 
-  const clock = useRef({ accumulated: 0, since: Date.now() as number | null });
-  const elapsedMs = useCallback(() => {
-    const { accumulated, since } = clock.current;
-    return accumulated + (since === null ? 0 : Date.now() - since);
-  }, []);
-  const pauseClock = useCallback(() => {
-    clock.current = { accumulated: elapsedMs(), since: null };
-  }, [elapsedMs]);
-  const resumeClock = useCallback(() => {
-    if (clock.current.since === null) clock.current.since = Date.now();
-  }, []);
-
-  useEffect(() => {
-    const onVisibility = () => {
-      if (status !== "active") return;
-      if (document.hidden) pauseClock();
-      else resumeClock();
-    };
-    document.addEventListener("visibilitychange", onVisibility);
-    return () => document.removeEventListener("visibilitychange", onVisibility);
-  }, [status, pauseClock, resumeClock]);
+  const elapsedMs = useCallback(
+    () => completion?.elapsedMs ?? Math.max(0, Date.now() - Date.parse(attempt.startedAt)),
+    [attempt.startedAt, completion],
+  );
 
   const validation = useMemo(
     () => validatePuzzleCompletion(repository, puzzle.target, actions, puzzle.actionRequirements),
     [actions, puzzle, repository],
+  );
+
+  // Signed-in daily players get a server-side start time for the ranked attempt.
+  const ensureServerAttempt = useCallback((): Promise<string> => {
+    if (attempt.serverAttemptId && user && attempt.serverUserId === user.id) return Promise.resolve(attempt.serverAttemptId);
+    serverAttempt.current ??= startDailyAttempt(puzzle);
+    return serverAttempt.current;
+  }, [attempt.serverAttemptId, attempt.serverUserId, puzzle, user]);
+
+  useEffect(() => {
+    if (puzzle.kind !== "daily" || authStatus !== "authenticated" || !user || completion) return;
+    if (attempt.serverAttemptId && attempt.serverUserId === user.id) return;
+    ensureServerAttempt()
+      .then((id) => setAttempt((current) => store.attachServerAttempt(current, id, user.id)))
+      .catch((reason) =>
+        setSubmission((current) => ({ ...current, error: reason instanceof Error ? reason.message : "Ranked attempt unavailable." })),
+      );
+  }, [attempt.serverAttemptId, attempt.serverUserId, authStatus, completion, ensureServerAttempt, puzzle.kind, store, user]);
+
+  const submit = useCallback(
+    async (finished: StoredAttempt, record: CompletionRecord, wasAssisted: boolean) => {
+      if (puzzle.kind !== "daily") return setSubmission({ state: "not-ranked" });
+      if (wasAssisted) return setSubmission({ state: "assisted" });
+      if (authStatus !== "authenticated" || !user) return setSubmission({ state: "guest" });
+      setSubmission({ state: "submitting" });
+      try {
+        const id =
+          finished.serverAttemptId && finished.serverUserId === user.id ? finished.serverAttemptId : await ensureServerAttempt();
+        await submitDailyResult(id, record);
+        store.markCompletionRanked(record.id);
+        setSubmission({ state: "submitted" });
+      } catch (reason) {
+        setSubmission({ state: "failed", error: reason instanceof Error ? reason.message : "Leaderboard submission failed." });
+      }
+    },
+    [authStatus, ensureServerAttempt, puzzle.kind, store, user],
   );
 
   const record = useCallback((entry: Omit<TerminalEntry, "id">) => {
@@ -99,33 +137,43 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
         result.ok &&
         validatePuzzleCompletion(result.repository, puzzle.target, nextActions, puzzle.actionRequirements).solved;
 
+      const nextAttempt = store.recordCommand(
+        attempt,
+        { command, elapsedMs: Date.now() - Date.parse(attempt.startedAt), ok: result.ok, output: result.output.join("\n") },
+        result.ok,
+      );
       record({ command, lines: result.output, tone: result.ok ? "normal" : "error" });
-      setCommandCount((count) => count + 1);
       setActions(nextActions);
       setRepository(result.repository);
+      setAttempt(nextAttempt);
 
       if (solved && !validation.solved) {
         record({ lines: ["Puzzle solved!"], tone: "success" });
-        setFinalElapsedMs(elapsedMs());
-        pauseClock();
+        const done = store.complete(nextAttempt, false);
+        setCompletion(done);
         setStatus("completed");
+        void submit(nextAttempt, done, assisted);
       }
       return { ok: result.ok, mutated: result.ok && result.mutated, solved };
     },
-    [actions, elapsedMs, pauseClock, puzzle, record, repository, validation.solved],
+    [actions, assisted, attempt, puzzle, record, repository, store, submit, validation.solved],
   );
 
   const restart = useCallback(() => {
+    // After a solve, a restart is a fresh replay attempt; earlier completions stay saved.
+    const next = completion ? store.start(puzzle) : store.restart(attempt);
+    if (completion) {
+      serverAttempt.current = undefined;
+      setCompletion(undefined);
+      setSubmission({ state: puzzle.kind === "daily" ? "guest" : "not-ranked" });
+    }
+    setAttempt(next);
     setPendingRebase(null);
     setRepository(structuredClone(puzzle.initialRepository));
     setEntries([]);
     setActions([]);
-    setCommandCount(0);
-    setRestartCount((count) => count + 1);
-    setFinalElapsedMs(undefined);
     setStatus("active");
-    resumeClock();
-  }, [puzzle, resumeClock]);
+  }, [attempt, completion, puzzle, store]);
 
   /** Reveals the next hint, counting it once. Returns undefined when none are left. */
   const takeHint = useCallback((): string | undefined => {
@@ -134,29 +182,22 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
     return hint;
   }, [hintsUsed, puzzle.hints]);
 
-  const giveUp = useCallback(() => {
-    pauseClock();
-    setStatus("surrendered");
-  }, [pauseClock]);
+  const giveUp = useCallback(() => setStatus((current) => (current === "completed" ? current : "surrendered")), []);
+  const resume = useCallback(() => setStatus((current) => (current === "surrendered" ? "active" : current)), []);
 
-  /** Backs out of giving up and carries on with the same run. */
-  const resume = useCallback(() => {
-    setStatus((current) => {
-      if (current !== "surrendered") return current;
-      resumeClock();
-      return "active";
-    });
-  }, [resumeClock]);
-
-  /** Marks the run assisted: it can still be finished, but earns no points. */
+  /** Marks the run assisted: it can still be finished, but earns no points and isn't ranked. */
   const revealSolution = useCallback(() => setAssisted(true), []);
 
   const cancelRebase = useCallback(() => {
     if (!pendingRebase) return;
+    const command = `git rebase -i ${pendingRebase.onto}`;
+    const output = "Interactive rebase cancelled. Nothing changed.";
     setPendingRebase(null);
-    setCommandCount((count) => count + 1);
-    record({ command: `git rebase -i ${pendingRebase.onto}`, lines: ["Interactive rebase cancelled. Nothing changed."] });
-  }, [pendingRebase, record]);
+    setAttempt((current) =>
+      store.recordCommand(current, { command, elapsedMs: Date.now() - Date.parse(current.startedAt), ok: false, output }, false),
+    );
+    record({ command, lines: [output] });
+  }, [pendingRebase, record, store]);
 
   const confirmRebase = useCallback(
     (todo: RebaseTodoItem[]) => {
@@ -173,12 +214,13 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
     validation,
     status,
     assisted,
-    restartCount,
-    commandCount,
+    restartCount: attempt.restartCount,
+    commandCount: attempt.commands.length - attempt.runTranscriptStart,
     hintsUsed,
     hintsTotal: puzzle.hints.length,
     pendingRebase,
-    finalElapsedMs,
+    finalElapsedMs: completion?.elapsedMs,
+    submission,
     elapsedMs,
     runCommand,
     restart,
@@ -192,3 +234,23 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
 }
 
 export type PuzzleSession = ReturnType<typeof usePuzzleSession>;
+
+/** Rebuilds a saved run by replaying its commands through the engine. */
+function restoreRun(puzzle: PublicPuzzleDefinition, attempt: StoredAttempt) {
+  let repository = structuredClone(puzzle.initialRepository);
+  const actions: GitAction[] = [];
+  for (const command of attempt.runCommands) {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok || !puzzle.allowedCommands.includes(parsed.action.type)) continue;
+    const result = executeCommand(repository, command);
+    repository = result.repository;
+    if (result.ok) actions.push(result.action);
+  }
+  const entries: TerminalEntry[] = attempt.commands.slice(attempt.runTranscriptStart).map((entry, index) => ({
+    id: index,
+    command: entry.command,
+    lines: entry.output ? entry.output.split("\n") : [],
+    tone: entry.ok ? "normal" : "error",
+  }));
+  return { repository, actions, entries };
+}

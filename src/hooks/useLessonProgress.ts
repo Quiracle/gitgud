@@ -1,34 +1,41 @@
-import { useCallback, useEffect, useState } from "react";
-import { readLessonProgress, recordLessonCompletion, type LessonResult } from "../storage/lessonProgress";
+import { useEffect, useState } from "react";
+import { openProgressStore, PROGRESS_CHANGED } from "../storage/browserProgress";
 
-const CHANGED = "gitgud:lesson-progress";
-
-function storage() {
-  try {
-    return window.localStorage;
-  } catch {
-    return undefined;
-  }
+export interface LessonBest {
+  completedAt: string;
+  bestElapsedMs: number;
+  bestRestartCount: number;
 }
 
-/** Lesson completions for this browser, shared live across screens. */
+/** Completed lessons for this browser, from the shared progress store, kept live. */
 export function useLessonProgress() {
-  const [lessons, setLessons] = useState<Record<string, LessonResult>>(() => readLessonProgress(storage()));
+  const [lessons, setLessons] = useState(readLessons);
 
   useEffect(() => {
-    const refresh = () => setLessons(readLessonProgress(storage()));
-    window.addEventListener(CHANGED, refresh);
+    const refresh = () => setLessons(readLessons());
+    window.addEventListener(PROGRESS_CHANGED, refresh);
     window.addEventListener("storage", refresh);
     return () => {
-      window.removeEventListener(CHANGED, refresh);
+      window.removeEventListener(PROGRESS_CHANGED, refresh);
       window.removeEventListener("storage", refresh);
     };
   }, []);
 
-  const complete = useCallback((lessonId: string, run: { elapsedMs: number; restartCount: number; hintsUsed: number }) => {
-    setLessons(recordLessonCompletion(storage(), lessonId, run));
-    window.dispatchEvent(new Event(CHANGED));
-  }, []);
+  return { lessons };
+}
 
-  return { lessons, complete };
+function readLessons(): Record<string, LessonBest> {
+  const best: Record<string, LessonBest> = {};
+  for (const completion of openProgressStore().completions()) {
+    if (completion.kind !== "lesson") continue;
+    const previous = best[completion.puzzleId];
+    if (!previous || completion.elapsedMs < previous.bestElapsedMs) {
+      best[completion.puzzleId] = {
+        completedAt: previous?.completedAt ?? completion.completedAt,
+        bestElapsedMs: completion.elapsedMs,
+        bestRestartCount: completion.restartCount,
+      };
+    }
+  }
+  return best;
 }

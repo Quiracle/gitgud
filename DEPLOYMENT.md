@@ -150,6 +150,8 @@ Operational checks in Supabase:
 - `daily_puzzle_private` contains the proof solution but is unreadable with the public key.
 - `daily_generation_runs` records model, temperature, attempts, and validation result.
 - Failed generation uses a fallback of the already-reserved difficulty.
+- An authenticated daily run creates one active `attempts` row, then a completion updates `progress` and `leaderboard_entries` through `submit_daily_result`.
+- Anonymous users can read the leaderboard RPC but cannot read raw profiles, attempts, transcripts, or progress rows.
 
 ## Emergency recovery
 

@@ -11,6 +11,8 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
 import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
 import { AuthPanel } from "./components/AuthPanel";
+import { StatsPanel } from "./components/StatsPanel";
+import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -100,14 +102,15 @@ function renderScreen(
       <main className="min-h-dvh bg-green-50 px-6 pb-[var(--nav-clearance)] pt-[calc(40px+env(safe-area-inset-top))]">
         <div className="mx-auto max-w-md">
           <AuthPanel />
+          <div className="mt-4">
+            <StatsPanel />
+          </div>
         </div>
       </main>
     );
   }
 
-  if (path === "/leaderboard") {
-    return <ComingSoon title="Leaderboard" onNavigate={navigate} />;
-  }
+  if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
 
   if (path.startsWith("/course/")) {
     const lessonId = decodeURIComponent(path.slice("/course/".length));
@@ -133,19 +136,5 @@ function renderScreen(
         </AppLink>
       </div>
     </div>
-  );
-}
-
-function ComingSoon({ title, onNavigate }: { title: string; onNavigate: (path: string) => void }) {
-  return (
-    <main className="grid min-h-dvh place-items-center bg-green-50 px-6 pb-[var(--nav-clearance)] text-grey-950">
-      <div className="max-w-sm text-center">
-        <p className="font-secondary text-xs uppercase tracking-[0.2em] text-grey-600">Coming soon</p>
-        <h1 className="mt-2 text-3xl">{title}</h1>
-        <AppLink href="/" onNavigate={onNavigate} className="mt-6 inline-flex min-h-11 items-center underline">
-          Back home
-        </AppLink>
-      </div>
-    </main>
   );
 }

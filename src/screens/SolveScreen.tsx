@@ -10,26 +10,17 @@ import { Confetti } from "../components/Puzzle/Confetti";
 import { Dialog, StatRow } from "../components/Puzzle/Dialog";
 import { InteractiveRebaseDialog } from "../components/RebaseDialog/InteractiveRebaseDialog";
 import { useMediaQuery } from "../hooks/useMediaQuery";
-import { usePuzzleSession } from "../hooks/usePuzzleSession";
+import { usePuzzleSession, type SubmissionState } from "../hooks/usePuzzleSession";
 import { useVisualViewport } from "../hooks/useVisualViewport";
 import { clearCanvasOrigin, peekCanvasOrigin } from "../lib/canvasTransition";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
 import type { PublicPuzzleDefinition } from "../puzzles";
 
-export interface SolvedRun {
-  elapsedMs: number;
-  restartCount: number;
-  hintsUsed: number;
-  assisted: boolean;
-}
-
 interface SolveScreenProps {
   puzzle: PublicPuzzleDefinition;
   exitHref?: string;
   onNavigate: (path: string) => void;
-  /** Called once when the puzzle is solved, before the result popup opens. */
-  onSolved?: (run: SolvedRun) => void;
   /** Main button in the result popup; defaults to the daily leaderboard. */
   resultAction?: { label: string; icon: IconName; href: string };
 }
@@ -43,7 +34,6 @@ export function SolveScreen({
   puzzle,
   exitHref = "/",
   onNavigate,
-  onSolved,
   resultAction = { label: "See leaderboard", icon: "crown", href: "/leaderboard" },
 }: SolveScreenProps) {
   const session = usePuzzleSession(puzzle);
@@ -90,18 +80,8 @@ export function SolveScreen({
   }, [origin]);
 
   // Celebrate, then show the result.
-  const reported = useRef(false);
   useEffect(() => {
     if (!solved) return;
-    if (!reported.current) {
-      reported.current = true;
-      onSolved?.({
-        elapsedMs: session.finalElapsedMs ?? session.elapsedMs(),
-        restartCount: session.restartCount,
-        hintsUsed: session.hintsUsed,
-        assisted: session.assisted,
-      });
-    }
     const g = goal.current?.getBoundingClientRect();
     setConfetti({ x: g ? g.left + g.width / 2 : window.innerWidth / 2, y: g ? g.top + g.height / 2 : 120, key: Date.now() });
     // Let the final command's result land on the graph before the popup covers it.
@@ -111,8 +91,6 @@ export function SolveScreen({
       window.clearTimeout(open);
       window.clearTimeout(clear);
     };
-    // Report and celebrate once per solve.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solved]);
 
   const chromeDelay = origin ? 0.42 : 0.15;
@@ -135,7 +113,6 @@ export function SolveScreen({
   }
 
   function restart() {
-    reported.current = false;
     session.restart();
     setExpanded(false);
     closePanel();
@@ -236,6 +213,19 @@ export function SolveScreen({
           <StatRow label="Time taken:" value={formatDuration(session.finalElapsedMs ?? session.elapsedMs())} large />
           {session.assisted && <StatRow label="Points:" value="0 (solution revealed)" />}
         </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.p
+            key={session.submission.state}
+            className={`text-xs ${session.submission.state === "failed" ? "text-red-400" : "text-grey-400"}`}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.18 }}
+            aria-live="polite"
+          >
+            {submissionMessage(session.submission.state, session.submission.error)}
+          </motion.p>
+        </AnimatePresence>
         <div className="flex flex-col gap-2">
           <Button onClick={() => onNavigate(resultAction.href)}>
             <span>{resultAction.label}</span>
@@ -372,4 +362,21 @@ export function SolveScreen({
 function hintTitle(used: number, total: number) {
   if (total === 0) return "No hints";
   return `Hint ${Math.max(1, used)} of ${total}`;
+}
+
+function submissionMessage(state: SubmissionState, error?: string): string {
+  switch (state) {
+    case "guest":
+      return "Saved on this device. Log in before your next daily to get ranked.";
+    case "not-ranked":
+      return "Progress saved on this device.";
+    case "assisted":
+      return "Solution revealed, so this run isn't ranked.";
+    case "submitting":
+      return "Sending your result to the leaderboard…";
+    case "submitted":
+      return "You're on today's leaderboard!";
+    case "failed":
+      return error ?? "Saved here, but the leaderboard couldn't be reached.";
+  }
 }
