@@ -48,10 +48,21 @@ export function layoutCommitTree(repository: Repository): TreeLayout {
     else roots.push(id);
   }
 
+  const laneOf = branchLanes(repository);
+  const sameLane = (a: string, b: string) => laneOf.get(a) === undefined || laneOf.get(a) === laneOf.get(b);
+
   const colOf = new Map<string, number>();
   let nextLeaf = 0;
   const place = (id: string) => {
-    const kids = children.get(id) ?? [];
+    // The child that continues this commit's branch goes first (leftmost).
+    const kids = [...(children.get(id) ?? [])].sort((a, b) => Number(!sameLane(a, id)) - Number(!sameLane(b, id)));
+    if (kids.length && !kids.some((kid) => sameLane(kid, id))) {
+      // Every child starts a different branch: keep this commit in its own column so
+      // the new branch steps sideways instead of reading as a continuation below it.
+      colOf.set(id, nextLeaf++);
+      kids.forEach(place);
+      return;
+    }
     kids.forEach(place);
     colOf.set(id, kids.length ? (colOf.get(kids[0])! + colOf.get(kids[kids.length - 1])!) / 2 : nextLeaf++);
   };
@@ -70,4 +81,23 @@ export function layoutCommitTree(repository: Repository): TreeLayout {
     columns: Math.max(1, nextLeaf),
     rows: nodes.length ? Math.max(...nodes.map((node) => node.row)) + 1 : 0,
   };
+}
+
+/**
+ * Assigns each commit to the branch that "owns" it: walking first parents back from
+ * each tip, main/master first so the trunk stays stable when HEAD moves.
+ * Commits no branch reaches are left unassigned.
+ */
+function branchLanes(repository: Repository): Map<string, string> {
+  const trunk = (name: string) => (name === "main" || name === "master" ? 0 : 1);
+  const names = Object.keys(repository.branches).sort((a, b) => trunk(a) - trunk(b));
+  const laneOf = new Map<string, string>();
+  for (const name of names) {
+    let id: string | undefined = repository.branches[name];
+    while (id && id in repository.commits && !laneOf.has(id)) {
+      laneOf.set(id, name);
+      id = repository.commits[id].parents[0];
+    }
+  }
+  return laneOf;
 }
