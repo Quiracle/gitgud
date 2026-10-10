@@ -46,6 +46,10 @@ export function SolveScreen({
   const roomy = useMediaQuery("(min-width: 640px)");
   const docked = desktop || roomy;
   const viewport = useVisualViewport();
+  useLayoutEffect(() => {
+    document.documentElement.classList.add("dark-backdrop");
+    return () => document.documentElement.classList.remove("dark-backdrop");
+  }, []);
   const [origin] = useState(peekCanvasOrigin);
   const [expanded, setExpanded] = useState(false);
   const [panel, setPanel] = useState<Panel>("none");

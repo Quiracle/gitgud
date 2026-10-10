@@ -116,6 +116,12 @@ html {
   scroll-padding-bottom: 45dvh;
 }
 
+/* Puzzle screens fit the area above the keyboard; whatever Safari shows below it
+   continues the terminal instead of the light page background. */
+html.dark-backdrop {
+  background: rgb(var(--colors-green-950));
+}
+
 * {
   box-sizing: border-box;
 }
