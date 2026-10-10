@@ -11,8 +11,11 @@ import { getSupabaseClient } from "./supabase";
 export type LinkedInStatus =
   /** Still asking the Edge Function. */
   | { state: "loading" }
-  /** Supabase or the LinkedIn app isn't configured: fall back to share sheet and copy. */
-  | { state: "unavailable" }
+  /**
+   * Fall back to share sheet and copy. `reason` is set when the player is signed in but
+   * the server has LinkedIn switched off ("not-configured") or couldn't answer ("error").
+   */
+  | { state: "unavailable"; reason?: "not-configured" | "error" }
   /** Guests can't hold a LinkedIn connection; they log in first. */
   | { state: "signed-out" }
   | { state: "disconnected"; expired?: boolean }
@@ -73,12 +76,12 @@ export class SupabaseLinkedInService implements LinkedInService {
     if (!session.session) return { state: "signed-out" };
     try {
       const data = await this.call({ action: "status" });
-      if (!data?.configured) return { state: "unavailable" };
+      if (!data?.configured) return { state: "unavailable", reason: "not-configured" };
       return data.connected
         ? { state: "connected", name: typeof data.name === "string" ? data.name : undefined }
         : { state: "disconnected", expired: data.expired === true };
     } catch {
-      return { state: "unavailable" };
+      return { state: "unavailable", reason: "error" };
     }
   }
 

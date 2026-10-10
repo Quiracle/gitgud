@@ -99,6 +99,7 @@ async function start(supabase: Supabase, config: Config, userId: string, body: R
   const returnPath = safeReturnPath(body.returnPath);
   const redirectUri = typeof body.redirectUri === "string" ? body.redirectUri : "";
   if (!config.redirectUris.includes(redirectUri)) {
+    console.warn(`LinkedIn redirect ${redirectUri} isn't in LINKEDIN_REDIRECT_URIS.`);
     throw new FriendlyError("LinkedIn isn't set up for this address.", 400, "redirect_not_allowed");
   }
 
@@ -361,14 +362,35 @@ function safeReturnPath(value: unknown): string {
   return value;
 }
 
-/** Missing secrets mean the feature is off, not broken: status reports `configured: false`. */
+/**
+ * Missing or malformed secrets mean the feature is off, not broken: status reports
+ * `configured: false` and the logs name the secrets to fix (never their values).
+ */
 function readConfig() {
-  const clientId = Deno.env.get("LINKEDIN_CLIENT_ID");
-  const clientSecret = Deno.env.get("LINKEDIN_CLIENT_SECRET");
+  const clientId = Deno.env.get("LINKEDIN_CLIENT_ID")?.trim();
+  const clientSecret = Deno.env.get("LINKEDIN_CLIENT_SECRET")?.trim();
   const redirectUris = (Deno.env.get("LINKEDIN_REDIRECT_URIS") ?? "").split(",").map((uri) => uri.trim()).filter(Boolean);
-  const tokenKey = Deno.env.get("LINKEDIN_TOKEN_KEY");
-  if (!clientId || !clientSecret || !redirectUris.length || !tokenKey) return undefined;
-  return { clientId, clientSecret, redirectUris, tokenKey };
+  const tokenKey = Deno.env.get("LINKEDIN_TOKEN_KEY")?.trim();
+
+  const problems: string[] = [];
+  if (!clientId) problems.push("LINKEDIN_CLIENT_ID is missing");
+  if (!clientSecret) problems.push("LINKEDIN_CLIENT_SECRET is missing");
+  if (!redirectUris.length) problems.push("LINKEDIN_REDIRECT_URIS is missing");
+  if (!tokenKey) problems.push("LINKEDIN_TOKEN_KEY is missing");
+  else if (decodedLength(tokenKey) !== 32) problems.push("LINKEDIN_TOKEN_KEY must be 32 bytes, base64 encoded (openssl rand -base64 32)");
+  if (problems.length) {
+    console.warn(`LinkedIn sharing is off: ${problems.join("; ")}.`);
+    return undefined;
+  }
+  return { clientId: clientId!, clientSecret: clientSecret!, redirectUris, tokenKey: tokenKey! };
+}
+
+function decodedLength(base64: string): number {
+  try {
+    return atob(base64).length;
+  } catch {
+    return -1;
+  }
 }
 
 // --- Token encryption: AES-256-GCM with a 32-byte base64 key from LINKEDIN_TOKEN_KEY. ---

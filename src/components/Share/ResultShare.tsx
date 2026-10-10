@@ -1,12 +1,11 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useId, useState, type ReactNode } from "react";
-import { useAuth } from "../../context/AuthContext";
+import { useLinkedInStatus } from "../../hooks/useLinkedInStatus";
 import { useI18n } from "../../i18n/I18nProvider";
 import type { TranslationKey } from "../../i18n/translate";
 import { canShareFile, copyImage, downloadImage, linkedInComposeUrl, shareFileName, shareText, type ShareSummary } from "../../lib/share";
 import { renderShareCard } from "../../lib/shareCard";
 import type { PublicPuzzleDefinition } from "../../puzzles";
-import { isSupabaseConfigured } from "../../services/supabase";
 import {
   LinkedInError,
   linkedInService,
@@ -296,33 +295,12 @@ function statusNote(status: LinkedInStatus): TranslationKey {
     case "loading":
       return "share.linkedIn.loadingNote";
     default:
-      return "share.help";
+      return status.reason ? "share.linkedIn.unavailableNote" : "share.help";
   }
 }
 
 function openLinkedInComposer(summary: ShareSummary) {
   window.open(linkedInComposeUrl(shareText(summary, window.location.origin)), "_blank", "noopener,noreferrer");
-}
-
-/** Asked once a card exists and again when the player logs in or out. */
-function useLinkedInStatus(enabled: boolean) {
-  const { status: authStatus } = useAuth();
-  const [status, set] = useState<LinkedInStatus>(() => ({ state: isSupabaseConfigured() ? "loading" : "unavailable" }));
-
-  useEffect(() => {
-    if (!enabled || authStatus === "loading") return;
-    let cancelled = false;
-    void linkedInService()
-      .status()
-      .then((next) => {
-        if (!cancelled) set(next);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [enabled, authStatus]);
-
-  return { status, set };
 }
 
 function useShareCard(summary: ShareSummary | null, puzzle: PublicPuzzleDefinition | undefined): ShareCard | null {
