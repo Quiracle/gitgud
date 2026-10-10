@@ -23,6 +23,11 @@ export interface StoredAttempt {
   serverUserId?: string;
   /** The solution was revealed: the run can finish but is never ranked. Survives refresh and restart. */
   assisted?: boolean;
+  /**
+   * Time spent with the puzzle open and visible, banked every few seconds. Restarts never
+   * reset it; closing the app or hiding the tab pauses it. Only ever grows.
+   */
+  activeMs?: number;
 }
 
 export interface CompletionRecord {
@@ -143,9 +148,19 @@ export class LocalProgressStore {
     return next;
   }
 
-  complete(attempt: StoredAttempt, ranked: boolean): CompletionRecord {
+  /** Banks active play time. Values lower than what is already saved are ignored. */
+  setActiveMs(attempt: StoredAttempt, activeMs: number): StoredAttempt {
+    const next: StoredAttempt = { ...attempt, activeMs: Math.max(activeMs, attempt.activeMs ?? 0) };
+    return this.saveAttempt(next);
+  }
+
+  /** `elapsedMs` is the active play time; without it, the banked active time or legacy wall-clock time. */
+  complete(attempt: StoredAttempt, ranked: boolean, elapsedMs?: number): CompletionRecord {
     const completedAtMs = this.now();
     const startedAtMs = Date.parse(attempt.startedAt);
+    const saved = this.read().activeAttempts[attemptKey(attempt.puzzleId, attempt.puzzleVersion)];
+    const banked = Math.max(attempt.activeMs ?? 0, saved?.id === attempt.id ? saved.activeMs ?? 0 : 0);
+    const active = elapsedMs ?? (banked > 0 ? banked : undefined);
     const completion: CompletionRecord = {
       id: attempt.id,
       puzzleId: attempt.puzzleId,
@@ -153,7 +168,7 @@ export class LocalProgressStore {
       kind: attempt.kind,
       startedAt: attempt.startedAt,
       completedAt: new Date(completedAtMs).toISOString(),
-      elapsedMs: Math.max(0, completedAtMs - startedAtMs),
+      elapsedMs: Math.max(0, Math.round(active ?? completedAtMs - startedAtMs)),
       restartCount: attempt.restartCount,
       commandCount: attempt.commandCount,
       commands: attempt.commands,
@@ -200,10 +215,16 @@ export class LocalProgressStore {
     return this.read().completions;
   }
 
-  private saveAttempt(attempt: StoredAttempt) {
+  private saveAttempt(attempt: StoredAttempt): StoredAttempt {
     const document = this.read();
-    document.activeAttempts[attemptKey(attempt.puzzleId, attempt.puzzleVersion)] = attempt;
+    const key = attemptKey(attempt.puzzleId, attempt.puzzleVersion);
+    const saved = document.activeAttempts[key];
+    // Active time only grows: a stale in-memory copy never rolls back banked time.
+    const activeMs = Math.max(attempt.activeMs ?? 0, saved?.id === attempt.id ? saved.activeMs ?? 0 : 0);
+    const next = activeMs > 0 ? { ...attempt, activeMs } : attempt;
+    document.activeAttempts[key] = next;
     this.write(document);
+    return next;
   }
 
   private read(): ProgressDocument {
@@ -232,6 +253,14 @@ export class LocalProgressStore {
       // A storage quota or privacy-mode failure must never block the puzzle.
     }
   }
+}
+
+/**
+ * Active play time already banked for an attempt. Attempts started before active timing
+ * existed use their last command time, the best record of when the player was playing.
+ */
+export function bankedActiveMs(attempt: StoredAttempt): number {
+  return attempt.activeMs ?? attempt.commands.at(-1)?.elapsedMs ?? 0;
 }
 
 export function browserProgressStore(): LocalProgressStore {
