@@ -247,6 +247,7 @@ function RecommendedCard({ href, icon, title, description, puzzle, onNavigate }:
         <CommitTree
           repository={puzzle.initialRepository}
           padding={6}
+          showRefs={false}
           animateIn={false}
           className="size-16 shrink-0 rounded bg-green-900"
         />
