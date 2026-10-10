@@ -16,15 +16,12 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
       <h2 id="time-distribution-title" className="text-xl leading-[25px] text-green-950">
         Solve times
       </h2>
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-grey-700">
-        <p>Ranked finishes, faster to slower.</p>
-        {currentUserEntry && (
-          <p className="flex items-center gap-2 text-green-950">
-            <span className="size-2.5 rounded bg-lime-500" aria-hidden="true" />
-            Your solve: {formatElapsed(currentUserEntry.elapsedMs)}
-          </p>
-        )}
-      </div>
+      {currentUserEntry && (
+        <p className="flex items-center gap-2 text-xs text-green-950">
+          <span className="size-2.5 rounded bg-lime-500" aria-hidden="true" />
+          Your solve: {formatElapsed(currentUserEntry.elapsedMs)}
+        </p>
+      )}
 
       <ul
         className="mt-4 grid gap-1"

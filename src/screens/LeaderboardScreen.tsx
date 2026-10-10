@@ -154,7 +154,6 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
                 <EntryRow key={`${entry.rank}-${entry.displayName}-${entry.completedAt}`} entry={entry} />
               ))}
             </motion.ol>
-            <p className="text-xs text-grey-600">Ranked by time, then retries, then commands.</p>
             <TimeHistogram entries={entries} />
           </div>
         </section>
