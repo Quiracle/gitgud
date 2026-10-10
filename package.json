@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "supabase:bundle": "node scripts/bundle-edge-domain.mjs",
     "supabase:check": "pnpm supabase:bundle && supabase functions serve generate-daily-puzzle --env-file supabase/.env.local",
-    "supabase:deploy": "pnpm supabase:bundle && supabase db push && supabase functions deploy generate-daily-puzzle --no-verify-jwt",
+    "supabase:deploy": "pnpm supabase:bundle && supabase db push && supabase functions deploy generate-daily-puzzle --no-verify-jwt && supabase functions deploy generate-guided-lesson",
     "test": "vitest run --pool=threads --poolOptions.threads.singleThread=true",
     "test:watch": "vitest"
   },

@@ -8,3 +8,12 @@ export {
   type GitConcept,
   type GraphArchetype,
 } from "./types";
+export {
+  classifyGuidedGoal,
+  createGuidedBrief,
+  normalizeGuidedGoal,
+  toGuidedPuzzle,
+  GUIDED_GOAL_MAX_LENGTH,
+  GUIDED_HINT_COUNT,
+  type GuidedFocus,
+} from "./guided";

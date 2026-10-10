@@ -7,6 +7,7 @@ import { spring } from "./lib/motion";
 import { learnBasicsCatalog } from "./puzzles";
 import { LearnScreen } from "./screens/LearnScreen";
 import { LessonScreen } from "./screens/LessonScreen";
+import { GuidedLessonScreen } from "./screens/GuidedLessonScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
 import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
@@ -98,6 +99,11 @@ function renderScreen(
   if (path === "/account") return <AccountScreen onNavigate={navigate} />;
 
   if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
+
+  if (path.startsWith("/course/practice/")) {
+    const lessonId = decodeURIComponent(path.slice("/course/practice/".length));
+    return <GuidedLessonScreen key={lessonId} lessonId={lessonId} onNavigate={navigate} />;
+  }
 
   if (path.startsWith("/course/")) {
     const lessonId = decodeURIComponent(path.slice("/course/".length));

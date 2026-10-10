@@ -2,3 +2,7 @@ project_id = "gitgud"
 
 [functions.generate-daily-puzzle]
 verify_jwt = false
+
+[functions.generate-guided-lesson]
+# Learners call this from the browser; the gateway rejects requests without a valid user JWT.
+verify_jwt = true

@@ -83,7 +83,7 @@ var GENERATION_PROFILES = {
     archetypes: ["curate-and-undo", "multi-branch-curation"]
   }
 };
-function createGenerationBrief(date, difficulty, seed) {
+function createGenerationBrief(date, difficulty, seed, overrides = {}) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Daily puzzle date must use YYYY-MM-DD.");
   if (!seed.trim()) throw new Error("A non-empty generation seed is required.");
   const random = seededRandom(`${date}:${difficulty}:${seed}`);
@@ -91,7 +91,8 @@ function createGenerationBrief(date, difficulty, seed) {
   const branchCount = integer(random, ...profile.branches);
   const commitCount = integer(random, ...profile.commits);
   const targetState = chooseTargetState(random, integer(random, ...profile.accessories));
-  const graphArchetype = pick(random, profile.archetypes);
+  const randomArchetype = pick(random, profile.archetypes);
+  const graphArchetype = overrides.graphArchetype ?? randomArchetype;
   const compatibleOptions = ARCHETYPE_CONCEPT_OPTIONS[graphArchetype].filter(
     (option) => option.length >= profile.concepts[0] && option.length <= profile.concepts[1]
   );
@@ -109,7 +110,7 @@ function createGenerationBrief(date, difficulty, seed) {
     requiredConcepts,
     allowedCommands: commandsFor(requiredConcepts),
     solutionLength: { min: profile.solution[0], max: profile.solution[1] },
-    hintCount: integer(random, ...profile.hints),
+    hintCount: overrides.hintCount ?? integer(random, ...profile.hints),
     storyTheme: pick(random, STORY_THEMES)
   };
 }
@@ -1835,9 +1836,73 @@ function equal(actual, expected, code, message, path, issues) {
 function add2(issues, code, message, path) {
   issues.push({ code, message, path });
 }
+
+// src/puzzles/generation/guided.ts
+var GUIDED_GOAL_MAX_LENGTH = 200;
+var GUIDED_HINT_COUNT = 3;
+var FOCUS_RULES = [
+  {
+    pattern: /\b(everything|all of it|all commands|challenge|advanced|several branches|many branches|multiple branches)\b/,
+    focus: { graphArchetype: "multi-branch-curation", difficulty: "hard", topic: "combining several branches" }
+  },
+  {
+    pattern: /\b(revert|undo|undoing|back ?out|roll ?back|remove a commit|bad commit|mistake)/,
+    focus: { graphArchetype: "curate-and-undo", difficulty: "medium", topic: "undoing a commit with git revert" }
+  },
+  {
+    pattern: /\b(cherry|pick|copy|single commit|one commit|port)/,
+    focus: { graphArchetype: "single-transfer", difficulty: "easy", topic: "copying one commit with git cherry-pick" }
+  },
+  {
+    pattern: /\b(ff|fast[- ]?forward|ff-only|linear)/,
+    focus: { graphArchetype: "fast-forward", difficulty: "easy", topic: "fast-forward merges" }
+  },
+  {
+    pattern: /\b(merge|merging|diverg|combine|integrat|join|conflict|rebase|squash)/,
+    focus: { graphArchetype: "divergent-merge", difficulty: "medium", topic: "merging diverged branches" }
+  },
+  {
+    pattern: /\b(switch|switching|checkout|branch|branches|head|log|history)\b/,
+    focus: { graphArchetype: "fast-forward", difficulty: "easy", topic: "moving between branches" }
+  }
+];
+var DEFAULT_FOCUS = {
+  graphArchetype: "divergent-merge",
+  difficulty: "medium",
+  topic: "branches and merging"
+};
+function normalizeGuidedGoal(input) {
+  if (typeof input !== "string") return void 0;
+  const goal = input.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
+  if (!goal || goal.length > GUIDED_GOAL_MAX_LENGTH) return void 0;
+  return goal;
+}
+function classifyGuidedGoal(goal) {
+  const text2 = goal.toLowerCase();
+  return FOCUS_RULES.find((rule) => rule.pattern.test(text2))?.focus ?? DEFAULT_FOCUS;
+}
+function createGuidedBrief(goal, date, seed) {
+  const focus = classifyGuidedGoal(goal);
+  const brief = createGenerationBrief(date, focus.difficulty, seed, {
+    graphArchetype: focus.graphArchetype,
+    hintCount: GUIDED_HINT_COUNT
+  });
+  return { brief, focus };
+}
+function toGuidedPuzzle(candidate, lessonId) {
+  const { solutionCommands, publishedOn: _publishedOn, ...rest } = candidate;
+  const id = `guided-${lessonId}`;
+  return {
+    puzzle: { ...rest, id, slug: id, version: 1, kind: "generated" },
+    solutionCommands
+  };
+}
 export {
   CHICKEN_V2_SEMANTIC_POLICY,
   createGenerationBrief,
+  createGuidedBrief,
+  normalizeGuidedGoal,
+  toGuidedPuzzle,
   validateCandidateAgainstBrief,
   validatePuzzleCandidate
 };
