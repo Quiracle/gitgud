@@ -1,11 +1,12 @@
 import { motion, type Variants } from "motion/react";
-import type { MouseEvent } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Button } from "../components/Button/Button";
+import { CommitTree } from "../components/GitGraph/CommitTree";
+import { GuidedLessonPrompt } from "../components/GuidedLesson/GuidedLessonPrompt";
 import { Icon } from "../components/Icon/Icon";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
 import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
-import { PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { useLessonProgress } from "../hooks/useLessonProgress";
 import { spring } from "../lib/motion";
 import { learnBasicsCatalog } from "../puzzles";
@@ -20,11 +21,8 @@ type Step = "done" | "next" | "todo";
 /** Figma "learning" frame (node 39:120578). */
 export function LearnScreen({ onNavigate }: LearnScreenProps) {
   const { lessons: completed } = useLessonProgress();
-  const handOff = useCanvasHandOff(onNavigate);
   const available = learnBasicsCatalog.filter(isAvailableLesson);
   const next = available.find((lesson) => !completed[lesson.id]);
-  const featured = next ?? available.at(-1);
-  const started = available.some((lesson) => completed[lesson.id]);
   const stepOf = (lesson: LearnBasicsLesson): Step =>
     completed[lesson.id] ? "done" : lesson.id === next?.id ? "next" : "todo";
 
@@ -32,47 +30,49 @@ export function LearnScreen({ onNavigate }: LearnScreenProps) {
     <div className="min-h-dvh bg-green-50">
       <section className="bg-green-950 px-6 pb-6 pt-[calc(40px+env(safe-area-inset-top))]">
         <div className="mx-auto flex max-w-md flex-col gap-6">
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-col gap-4">
-              <motion.h1
-                className="text-3xl text-grey-50"
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={spring.soft}
-              >
-                {!next ? "You learned the basics!" : started ? "Continue learning!" : "Learn the basics!"}
-              </motion.h1>
-              <motion.div
-                className="flex flex-col gap-0.5"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring.soft, delay: 0.08 }}
-              >
-                <p className="text-xs leading-[15px] text-grey-300">{next ? "Next lesson:" : "Replay any lesson, or:"}</p>
-                <p className="flex items-center gap-1 text-paragraph leading-5 text-grey-50">
-                  <Icon name={next ? "import_contacts" : "extension"} size={16} />
-                  {next ? next.title : "Try today's daily game"}
-                </p>
-              </motion.div>
-              <PuzzlePreview
-                canvasRef={handOff.canvasRef}
-                puzzle={featured?.puzzle}
-                onScale={handOff.onScale}
-                onOpen={() => handOff.open(featured ? `/course/${featured.id}` : "/play")}
-                openLabel={featured ? `Open lesson: ${featured.title}` : "Open today's puzzle"}
-              />
-            </div>
-            <HowToPlayLink onNavigate={onNavigate} />
-          </div>
-          {next ? (
-            <Button href={`/course/${next.id}`} onNavigate={handOff.open}>
+          <div className="flex flex-col gap-4">
+            <motion.h1
+              className="text-3xl text-grey-50"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={spring.soft}
+            >
               Start learning!
-            </Button>
-          ) : (
-            <Button href="/play" onNavigate={onNavigate}>
-              Play the daily game
-            </Button>
-          )}
+            </motion.h1>
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...spring.soft, delay: 0.06 }}
+            >
+              {/* No practice route yet: wire `onGenerated` to the generated puzzle's screen. */}
+              <GuidedLessonPrompt returnPath="/course" onGenerated={() => undefined} />
+            </motion.div>
+          </div>
+
+          <motion.div
+            className="flex flex-col gap-2"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...spring.soft, delay: 0.12 }}
+          >
+            {next ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1">
+                  <p className="text-paragraph text-grey-50">Or continue with your lessons.</p>
+                  <p className="text-xs leading-[15px] text-grey-300">Next lesson:</p>
+                </div>
+                <LessonCard lesson={next} thumbnail="graph" onNavigate={onNavigate} />
+              </div>
+            ) : (
+              <div className="flex flex-col gap-4">
+                <p className="text-paragraph text-grey-50">Or play today's daily game.</p>
+                <Button variant="outline" href="/play" onNavigate={onNavigate}>
+                  Play the daily game
+                </Button>
+              </div>
+            )}
+            <HowToPlayLink onNavigate={onNavigate} />
+          </motion.div>
         </div>
       </section>
 
@@ -140,35 +140,6 @@ interface CourseRowProps {
  * so each marker sits exactly at the card's vertical centre whatever the card height.
  */
 function CourseRow({ lesson, step, first, last, onNavigate }: CourseRowProps) {
-  const available = isAvailableLesson(lesson);
-  const href = `/course/${lesson.id}`;
-  const card = (
-    <>
-      <PixelChicken
-        look={chickenLookFromState(available ? lesson.puzzle.target.snapshot : {})}
-        size={64}
-        className="rounded"
-      />
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2 text-grey-700">
-          <span className="flex-1 text-xs leading-[15px]">Course {lesson.order}</span>
-          {available ? (
-            <Icon name="arrow_forward_ios" size={16} className="text-grey-950" />
-          ) : (
-            <span className="text-2xs">Soon</span>
-          )}
-        </div>
-        <p className="text-paragraph leading-5 text-grey-950">{lesson.title}</p>
-      </div>
-    </>
-  );
-
-  const follow = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    event.preventDefault();
-    onNavigate(href);
-  };
-
   return (
     <motion.li className="flex gap-4" variants={rowVariants}>
       <div className="flex w-3 shrink-0 flex-col items-center" aria-hidden>
@@ -186,21 +157,77 @@ function CourseRow({ lesson, step, first, last, onNavigate }: CourseRowProps) {
       </div>
       <div className={`min-w-0 flex-1 ${last ? "" : "pb-2"}`}>
         <span className="sr-only">{STEP_LABELS[step]}: </span>
-        {available ? (
-          <motion.a
-            href={href}
-            onClick={follow}
-            className={`flex items-center gap-4 p-2 ${CARD_SURFACE}`}
-            whileHover={{ y: -2 }}
-            whileTap={{ y: 0 }}
-            transition={spring.snappy}
-          >
-            {card}
-          </motion.a>
-        ) : (
-          <div className="flex items-center gap-4 rounded border border-grey-300 bg-grey-300 p-2 opacity-60">{card}</div>
-        )}
+        <LessonCard lesson={lesson} thumbnail="chicken" onNavigate={onNavigate} />
       </div>
     </motion.li>
+  );
+}
+
+interface LessonCardProps {
+  lesson: LearnBasicsLesson;
+  /** "graph" is the lesson's starting history (Figma node 45:158202); "chicken" its goal. */
+  thumbnail: "graph" | "chicken";
+  onNavigate: (path: string) => void;
+}
+
+/** Grey course card (Figma node 45:158201). Lessons that aren't ready render dimmed. */
+function LessonCard({ lesson, thumbnail, onNavigate }: LessonCardProps) {
+  const available = isAvailableLesson(lesson);
+  const href = `/course/${lesson.id}`;
+  let picture: ReactNode;
+  if (thumbnail === "graph" && available) {
+    picture = (
+      <div className="pointer-events-none size-16 shrink-0 overflow-hidden rounded bg-green-900">
+        <CommitTree repository={lesson.puzzle.initialRepository} padding={9} showRefs={false} className="size-full" />
+      </div>
+    );
+  } else {
+    picture = (
+      <PixelChicken
+        look={chickenLookFromState(available ? lesson.puzzle.target.snapshot : {})}
+        size={64}
+        className="rounded"
+      />
+    );
+  }
+
+  const card = (
+    <>
+      {picture}
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="flex items-center gap-2 text-grey-700">
+          <span className="flex-1 text-xs leading-[15px]">Course {lesson.order}</span>
+          {available ? (
+            <Icon name="arrow_forward_ios" size={16} className="text-grey-950" />
+          ) : (
+            <span className="text-2xs">Soon</span>
+          )}
+        </div>
+        <p className="text-paragraph leading-5 text-grey-950">{lesson.title}</p>
+      </div>
+    </>
+  );
+
+  if (!available) {
+    return <div className="flex items-center gap-4 rounded border border-grey-300 bg-grey-300 p-2 opacity-60">{card}</div>;
+  }
+
+  const follow = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    onNavigate(href);
+  };
+
+  return (
+    <motion.a
+      href={href}
+      onClick={follow}
+      className={`flex items-center gap-4 p-2 ${CARD_SURFACE}`}
+      whileHover={{ y: -2 }}
+      whileTap={{ y: 0 }}
+      transition={spring.snappy}
+    >
+      {card}
+    </motion.a>
   );
 }
