@@ -21,6 +21,8 @@ export interface StoredAttempt {
   runTranscriptStart: number;
   serverAttemptId?: string;
   serverUserId?: string;
+  /** The solution was revealed: the run can finish but is never ranked. Survives refresh and restart. */
+  assisted?: boolean;
 }
 
 export interface CompletionRecord {
@@ -35,6 +37,9 @@ export interface CompletionRecord {
   commandCount: number;
   commands: AttemptCommand[];
   ranked: boolean;
+  /** Account the solve was submitted for. Guest solves have none until claimed after login. */
+  rankedUserId?: string;
+  assisted?: boolean;
   /** The final run after any restarts, so a solved puzzle can be shown again. */
   runCommands?: string[];
   runTranscriptStart?: number;
@@ -132,6 +137,12 @@ export class LocalProgressStore {
     return next;
   }
 
+  markAssisted(attempt: StoredAttempt): StoredAttempt {
+    const next: StoredAttempt = { ...attempt, assisted: true };
+    this.saveAttempt(next);
+    return next;
+  }
+
   complete(attempt: StoredAttempt, ranked: boolean): CompletionRecord {
     const completedAtMs = this.now();
     const startedAtMs = Date.parse(attempt.startedAt);
@@ -147,6 +158,7 @@ export class LocalProgressStore {
       commandCount: attempt.commandCount,
       commands: attempt.commands,
       ranked,
+      ...(attempt.assisted ? { assisted: true } : {}),
       runCommands: attempt.runCommands,
       runTranscriptStart: attempt.runTranscriptStart,
     };
@@ -159,10 +171,10 @@ export class LocalProgressStore {
     return completion;
   }
 
-  markCompletionRanked(completionId: string): void {
+  markCompletionRanked(completionId: string, userId?: string): void {
     const document = this.read();
     document.completions = document.completions.map((item) =>
-      item.id === completionId ? { ...item, ranked: true } : item,
+      item.id === completionId ? { ...item, ranked: true, ...(userId ? { rankedUserId: userId } : {}) } : item,
     );
     this.write(document);
   }
@@ -176,6 +188,11 @@ export class LocalProgressStore {
     return this.read()
       .completions.filter((item) => item.puzzleId === puzzleId && item.puzzleVersion === puzzleVersion)
       .at(-1);
+  }
+
+  /** Unassisted daily solves not yet on any leaderboard, such as ones finished as a guest. */
+  unrankedDailyCompletions(): CompletionRecord[] {
+    return this.read().completions.filter((item) => item.kind === "daily" && !item.ranked && !item.assisted);
   }
 
   /** Every saved completion, oldest first; replays add records and never remove them. */

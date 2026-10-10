@@ -12,7 +12,7 @@ import {
   type Repository,
 } from "../engine";
 import { validatePuzzleCompletion, type PublicPuzzleDefinition } from "../puzzles";
-import { startDailyAttempt, submitDailyResult } from "../services/leaderboard";
+import { claimDailyCompletion, startDailyAttempt, submitDailyResult } from "../services/leaderboard";
 import { openProgressStore } from "../storage/browserProgress";
 import type { CompletionRecord, LocalProgressStore, StoredAttempt } from "../storage/progress";
 
@@ -61,11 +61,17 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const [actions, setActions] = useState<GitAction[]>(boot.restored.actions);
   const [hintsUsed, setHintsUsed] = useState(0);
   const [status, setStatus] = useState<SessionStatus>(boot.solved ? "completed" : "active");
-  const [assisted, setAssisted] = useState(false);
+  const [assisted, setAssisted] = useState(Boolean(boot.attempt.assisted || boot.solved?.assisted));
   const [pendingRebase, setPendingRebase] = useState<PendingRebase | null>(null);
   const [completion, setCompletion] = useState<CompletionRecord | undefined>(boot.solved);
   const [submission, setSubmission] = useState<{ state: SubmissionState; error?: string }>({
-    state: boot.solved?.ranked ? "submitted" : puzzle.kind === "daily" ? "guest" : "not-ranked",
+    state: boot.solved?.ranked
+      ? "submitted"
+      : boot.solved?.assisted
+        ? "assisted"
+        : puzzle.kind === "daily"
+          ? "guest"
+          : "not-ranked",
   });
   /** Today's daily is already solved: show the result, but no more commands or restarts. */
   const locked = puzzle.kind === "daily" && status === "completed";
@@ -108,7 +114,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
         const id =
           finished.serverAttemptId && finished.serverUserId === user.id ? finished.serverAttemptId : await ensureServerAttempt();
         await submitDailyResult(id, record);
-        store.markCompletionRanked(record.id);
+        store.markCompletionRanked(record.id, user.id);
         setSubmission({ state: "submitted" });
       } catch (reason) {
         setSubmission({ state: "failed", error: reason instanceof Error ? reason.message : "Leaderboard submission failed." });
@@ -116,6 +122,27 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
     },
     [authStatus, ensureServerAttempt, puzzle.kind, store, user],
   );
+
+  // A daily solved as a guest goes on the leaderboard as soon as the player signs in.
+  useEffect(() => {
+    if (submission.state !== "guest" || !completion || completion.ranked || completion.assisted) return;
+    if (puzzle.kind !== "daily" || authStatus !== "authenticated" || !user) return;
+    // The app-wide sign-in claim may already have submitted it.
+    if (store.completions().some((item) => item.id === completion.id && item.ranked)) {
+      setCompletion({ ...completion, ranked: true });
+      setSubmission({ state: "submitted" });
+      return;
+    }
+    setSubmission({ state: "submitting" });
+    claimDailyCompletion(store, completion, user.id)
+      .then(() => {
+        setCompletion((current) => (current?.id === completion.id ? { ...current, ranked: true, rankedUserId: user.id } : current));
+        setSubmission({ state: "submitted" });
+      })
+      .catch((reason) =>
+        setSubmission({ state: "failed", error: reason instanceof Error ? reason.message : "Leaderboard submission failed." }),
+      );
+  }, [authStatus, completion, puzzle.kind, store, submission.state, user]);
 
   const record = useCallback((entry: Omit<TerminalEntry, "id">) => {
     setEntries((current) => [...current, { ...entry, id: current.length }]);
@@ -207,7 +234,10 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const resume = useCallback(() => setStatus((current) => (current === "surrendered" ? "active" : current)), []);
 
   /** Marks the run assisted: it can still be finished, but earns no points and isn't ranked. */
-  const revealSolution = useCallback(() => setAssisted(true), []);
+  const revealSolution = useCallback(() => {
+    setAssisted(true);
+    setAttempt((current) => store.markAssisted(current));
+  }, [store]);
 
   const cancelRebase = useCallback(() => {
     if (!pendingRebase) return;
