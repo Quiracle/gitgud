@@ -80,7 +80,7 @@ export function GuidedLessonPrompt({ onGenerated, returnPath, service = guidedLe
           enterKeyHint="send"
           placeholder="What do you want to learn?"
           aria-describedby="guided-goal-status"
-          className="min-h-11 min-w-0 flex-1 rounded border border-lime-400 bg-green-900 p-3 font-secondary text-code text-grey-50 outline-none transition-colors duration-200 placeholder:text-grey-400 focus-visible:border-lime-300 disabled:cursor-wait disabled:text-grey-400"
+          className="min-h-11 min-w-0 flex-1 rounded border border-lime-400 bg-green-900 p-3 font-secondary text-code text-grey-50 outline-none transition-colors duration-200 placeholder:text-grey-400 focus:border-lime-300 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-300 disabled:cursor-wait disabled:text-grey-400"
         />
         <button
           type="submit"
