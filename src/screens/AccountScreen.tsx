@@ -1,5 +1,6 @@
 import { animate, motion, useMotionValue, useTransform, type Variants } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
+import { LinkedInSetting } from "../components/Account/LinkedInSetting";
 import { LoginDialog } from "../components/Auth/LoginDialog";
 import { Button } from "../components/Button/Button";
 import { Icon } from "../components/Icon/Icon";
@@ -183,6 +184,7 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
             {signedIn && user && (
               <>
               <DisplayNameForm userId={user.id} fallback={user.displayName} />
+              <LinkedInSetting />
               <Button variant="outline" onClick={() => void signOut().then(() => onNavigate("/"))}>
                 {t("account.logOut")}
               </Button>

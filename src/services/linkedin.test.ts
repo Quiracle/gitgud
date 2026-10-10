@@ -25,7 +25,10 @@ describe("LinkedIn service", () => {
   });
 
   it("maps the function's status answers", async () => {
-    expect(await fakeClient({ invoke: () => ({ configured: false }) }).service.status()).toEqual({ state: "unavailable" });
+    expect(await fakeClient({ invoke: () => ({ configured: false }) }).service.status()).toEqual({
+      state: "unavailable",
+      reason: "not-configured",
+    });
     expect(await fakeClient({ invoke: () => ({ configured: true, connected: true, name: "Ada" }) }).service.status()).toEqual({
       state: "connected",
       name: "Ada",
@@ -38,7 +41,7 @@ describe("LinkedIn service", () => {
 
   it("treats an unreachable function as unavailable so copy and download still work", async () => {
     const { service } = fakeClient({ invoke: () => { throw new Error("offline"); } });
-    expect(await service.status()).toEqual({ state: "unavailable" });
+    expect(await service.status()).toEqual({ state: "unavailable", reason: "error" });
   });
 
   it("sends the card as base64 PNG with the puzzle identity", async () => {
