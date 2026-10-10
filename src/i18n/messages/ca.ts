@@ -43,7 +43,7 @@ export const ca: Messages = {
   "nav.main": "Principal",
   "nav.home": "Inici",
   "nav.learn": "Aprèn",
-  "nav.solve": "Resol",
+  "nav.daily": "Diari",
   "nav.leaderboard": "Rànquing",
   "nav.you": "Tu",
   "nav.logIn": "Entra",

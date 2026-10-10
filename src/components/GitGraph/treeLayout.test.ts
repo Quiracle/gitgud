@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Repository } from "../../engine";
-import { layoutCommitTree } from "./treeLayout";
+import { branchColours, branchLanes, layoutCommitTree } from "./treeLayout";
 
 function repo(commits: Record<string, string[]>, branches: Record<string, string> = {}): Repository {
   return {
@@ -57,5 +57,14 @@ describe("layoutCommitTree", () => {
     const layout = layoutCommitTree(repo({ a: [], b: ["a"], c: ["a"], m: ["b", "c"] }));
     expect(layout.nodes.find((node) => node.id === "m")).toEqual({ id: "m", col: 0, row: 2 });
     expect(layout.edges).toContainEqual({ from: "c", to: "m", secondary: true });
+  });
+
+  it("gives main the trunk colour and colours each commit by its owning branch", () => {
+    const repository = repo({ b00: [], c01: ["b00"], s01: ["b00"] }, { feature: "s01", main: "c01" });
+    const colours = branchColours(repository);
+    expect(colours.get("main")).toBe("rgb(var(--colors-branch-1))");
+    expect(colours.get("feature")).toBe("rgb(var(--colors-branch-2))");
+    const lanes = branchLanes(repository);
+    expect([lanes.get("b00"), lanes.get("c01"), lanes.get("s01")]).toEqual(["main", "main", "feature"]);
   });
 });

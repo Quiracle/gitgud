@@ -43,7 +43,7 @@ export const es: Messages = {
   "nav.main": "Principal",
   "nav.home": "Inicio",
   "nav.learn": "Aprende",
-  "nav.solve": "Resuelve",
+  "nav.daily": "Diario",
   "nav.leaderboard": "Ranking",
   "nav.you": "Tú",
   "nav.logIn": "Entrar",

@@ -80,6 +80,15 @@
   /* Grey 300 darkened by 6% grey 950: grey 700 text keeps ~6:1 contrast. */
   --colors-card-hover: 198 198 198; /* #c6c6c6 */
 
+  /* Commit-graph branch colours: light hues that read on green-950 and never clash
+     with lime, which stays reserved for HEAD. Branch 1 is the trunk (main). */
+  --colors-branch-1: 253 184 116; /* #fdb874 orange 300 */
+  --colors-branch-2: 125 196 250; /* #7dc4fa */
+  --colors-branch-3: 196 165 250; /* #c4a5fa */
+  --colors-branch-4: 249 168 212; /* #f9a8d4 */
+  --colors-branch-5: 253 240 139; /* #fdf08b yellow 200 */
+  --colors-branch-6: 94 234 212; /* #5eead4 */
+
   --type-font-primary: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --type-font-secondary: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   --type-weight-light: 300;

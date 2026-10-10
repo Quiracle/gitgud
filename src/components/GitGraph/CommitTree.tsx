@@ -8,12 +8,17 @@ import { spring } from "../../lib/motion";
 import { Icon, type IconName } from "../Icon/Icon";
 import { chickenLookFromState, PixelChicken, type ChickenLook } from "../Illustration/PixelChicken";
 import { centerOn, clampPan, zoomAt, type Camera, type Size } from "./camera";
-import { layoutCommitTree } from "./treeLayout";
+import { branchColours, branchLanes, layoutCommitTree } from "./treeLayout";
 
 /* Figma "card branch" (node 24:64232): 66x85, or 66x102 with a branch tag. */
 const CARD_W = 66;
 const CARD_H = 85;
 const TAG_H = 17;
+/** Connector arrowhead: half-width and length. */
+const ARROW_W = 4;
+const ARROW_L = 6;
+/** Commits no branch reaches keep the neutral card colour. */
+const UNOWNED = "rgb(var(--colors-grey-500))";
 
 interface CommitTreeProps {
   repository: Repository;
@@ -54,6 +59,11 @@ export function CommitTree({
   );
 
   const tagsOf = (id: string) => (showRefs ? branchesAtCommit(repository, id) : []);
+  // Every commit takes the colour of the branch that owns it, so a branch reads as one colour.
+  const colours = useMemo(() => branchColours(repository), [repository]);
+  const lanes = useMemo(() => branchLanes(repository), [repository]);
+  const colourOfCommit = (id: string) => colours.get(lanes.get(id) ?? "") ?? UNOWNED;
+  const colourOfBranch = (name: string) => colours.get(name) ?? UNOWNED;
   // Two-column trees use the airy Figma spacing; wider trees tighten up.
   const colStep = layout.columns <= 2 ? 130 : CARD_W + 16;
   const rowStep = (layout.rows <= 2 ? 150 : CARD_H + 32) + (showRefs ? TAG_H : 0);
@@ -83,17 +93,27 @@ export function CommitTree({
         {layout.edges.map((edge) => {
           const from = position.get(edge.from)!;
           const to = position.get(edge.to)!;
+          // A merged-in line belongs to the branch it brings in; any other line to the commit it leads to.
+          const colour = colourOfCommit(edge.secondary ? edge.from : edge.to);
+          const delay = delayFor(from.row, from.x) + 0.12;
           return (
-            <motion.path
-              key={`${edge.from}-${edge.to}`}
-              fill="none"
-              stroke="rgb(var(--colors-grey-500))"
-              strokeWidth={1}
-              strokeDasharray={edge.secondary ? "4 3" : undefined}
-              initial={animateIn ? { pathLength: 0, opacity: 0, d: connector(from, to) } : false}
-              animate={{ pathLength: 1, opacity: 1, d: connector(from, to) }}
-              transition={{ duration: 0.45, ease: "easeInOut", delay: delayFor(from.row, from.x) + 0.12 }}
-            />
+            <g key={`${edge.from}-${edge.to}`} style={{ color: colour, transition: "color 300ms" }}>
+              <motion.path
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1}
+                strokeDasharray={edge.secondary ? "4 3" : undefined}
+                initial={animateIn ? { pathLength: 0, opacity: 0, d: connector(from, to) } : false}
+                animate={{ pathLength: 1, opacity: 1, d: connector(from, to) }}
+                transition={{ duration: 0.45, ease: "easeInOut", delay }}
+              />
+              <motion.path
+                fill="currentColor"
+                initial={animateIn ? { opacity: 0, d: arrowhead(to) } : false}
+                animate={{ opacity: 1, d: arrowhead(to) }}
+                transition={{ duration: 0.15, delay: animateIn ? delay + 0.4 : 0 }}
+              />
+            </g>
           );
         })}
       </svg>
@@ -115,6 +135,8 @@ export function CommitTree({
                 branches={tagsOf(node.id)}
                 currentBranch={repository.currentBranch}
                 focused={showRefs && node.id === repository.head}
+                colour={colourOfCommit(node.id)}
+                colourOf={colourOfBranch}
               />
             </motion.div>
           );
@@ -335,19 +357,41 @@ export interface CommitCardProps {
   branches: string[];
   currentBranch: string;
   focused: boolean;
+  /** Outline colour: the branch that owns this commit. */
+  colour?: string;
+  /** Tag colour for each branch name. */
+  colourOf?: (branch: string) => string;
 }
 
-/** One Figma "card branch" variant: optional branch tag, focus outline and dot for HEAD. */
-export function CommitCard({ id, look, branches, currentBranch, focused }: CommitCardProps) {
+/** Trunk orange, anything else the second branch colour: for cards drawn outside a graph. */
+const defaultColourOf = (branch: string) =>
+  `rgb(var(--colors-branch-${branch === "main" || branch === "master" ? 1 : 2}))`;
+
+/**
+ * One Figma "card branch" variant: outline and tag in the branch colour, with a glow
+ * and pulsing lime dot on the commit HEAD points at.
+ */
+export function CommitCard({
+  id,
+  look,
+  branches,
+  currentBranch,
+  focused,
+  colour = UNOWNED,
+  colourOf = defaultColourOf,
+}: CommitCardProps) {
   const ordered = [...branches].sort((a, b) => Number(b === currentBranch) - Number(a === currentBranch));
-  const onCurrent = ordered[0] === currentBranch;
 
   return (
     <div
-      className={`flex flex-col overflow-hidden rounded border bg-green-900 transition-colors duration-300 ${
-        focused ? "border-lime-400" : "border-grey-500"
-      }`}
-      style={{ width: CARD_W }}
+      className="flex flex-col overflow-hidden rounded border bg-green-900"
+      style={{
+        width: CARD_W,
+        borderColor: colour,
+        // A ring outside the border marks HEAD without changing the card's size.
+        boxShadow: focused ? `0 0 0 1px ${colour}, 0 0 14px -2px ${colour}` : `0 0 0 0 ${colour}`,
+        transition: "border-color 300ms, box-shadow 300ms",
+      }}
     >
       <AnimatePresence initial={false}>
         {ordered.length > 0 && (
@@ -357,10 +401,19 @@ export function CommitCard({ id, look, branches, currentBranch, focused }: Commi
             animate={{ height: TAG_H, opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={spring.snappy}
-            className={`flex shrink-0 items-center px-1 transition-colors duration-300 ${onCurrent ? "bg-grey-50" : "bg-grey-300"}`}
+            className="flex shrink-0 overflow-hidden"
             title={ordered.join(", ")}
           >
-            <span className="truncate text-2xs leading-[13px] text-green-950">{ordered.join(", ")}</span>
+            {/* One coloured segment per branch; names that don't fit stay in the tooltip. */}
+            {ordered.map((name, index) => (
+              <span
+                key={name}
+                className={`truncate px-1 text-2xs leading-[17px] text-green-950 ${index === 0 ? "shrink-0 max-w-full" : "min-w-0"}`}
+                style={{ backgroundColor: colourOf(name), transition: "background-color 300ms" }}
+              >
+                {name}
+              </span>
+            ))}
           </motion.div>
         )}
       </AnimatePresence>
@@ -383,6 +436,12 @@ export function CommitCard({ id, look, branches, currentBranch, focused }: Commi
       </div>
     </div>
   );
+}
+
+/** A filled arrowhead whose tip touches the child card's top edge. */
+function arrowhead(to: { x: number; y: number }): string {
+  const x = to.x + CARD_W / 2;
+  return `M${x - ARROW_W} ${to.y - ARROW_L}L${x} ${to.y}L${x + ARROW_W} ${to.y - ARROW_L}Z`;
 }
 
 /** Figma connectors leave the parent's side at mid-height, then drop to the child. */

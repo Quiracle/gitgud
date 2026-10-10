@@ -46,7 +46,7 @@ export const en = {
   "nav.main": "Main",
   "nav.home": "Home",
   "nav.learn": "Learn",
-  "nav.solve": "Solve",
+  "nav.daily": "Daily",
   "nav.leaderboard": "Leaderboard",
   "nav.you": "You",
   "nav.logIn": "Log in",
