@@ -146,6 +146,30 @@ export function chickenLookFromState(state: SemanticState): ChickenLook {
   return { chicken: !bodyAbsent, body, parts };
 }
 
+/**
+ * The layers a look paints, bottom to top, with their colours, for static renders such
+ * as the share card. Follows the same feet and crest rules as PixelChicken.
+ */
+export function chickenPaintLayers(look: ChickenLook): { layer: PixelLayer; colors: Record<string, string> }[] {
+  const layers: { layer: PixelLayer; colors: Record<string, string> }[] = [];
+  if (look.chicken) {
+    const body = bodyColors(look.body);
+    layers.push({ layer: CHICKEN_PIXELS.chicken, colors: body });
+    if (!look.parts.longLegs) layers.push({ layer: CHICKEN_PIXELS.feet, colors: body });
+  }
+  for (const part of PART_ORDER) {
+    const tint = look.parts[part];
+    if (!tint || (part === "crest" && look.parts.hat)) continue;
+    const t = tone(part, tint);
+    layers.push({ layer: CHICKEN_PIXELS[part], colors: { o: OUTLINE, p: t.base, s: t.shade, l: t.light, g: BACKGROUND } });
+  }
+  return layers;
+}
+
+/** Colour behind every chicken; also the share card's tile. */
+export const CHICKEN_BACKGROUND = BACKGROUND;
+export const CHICKEN_OUTLINE = OUTLINE;
+
 interface PixelChickenProps {
   look: ChickenLook;
   /** Rendered edge length in CSS pixels. Use className to override responsively. */
