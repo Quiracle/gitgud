@@ -6,7 +6,7 @@ const LEVEL: Record<PuzzleDifficulty, number> = { easy: 1, medium: 2, hard: 3 };
 const LABEL: Record<PuzzleDifficulty, string> = { easy: "Easy", medium: "Medium", hard: "Hard" };
 const BAR_HEIGHTS = [6, 9, 13];
 
-/** Figma "difficulty" badge (node 24:37157): signal bars filled up to the level. */
+/** Figma "difficulty" badge (node 24:37157) with the updated bars (node 24:9475): 4px bars, 1.2px stroke, 1px corners, filled up to the level. */
 export function DifficultyBadge({ difficulty, className = "" }: { difficulty: PuzzleDifficulty; className?: string }) {
   const level = LEVEL[difficulty];
   return (
@@ -15,7 +15,7 @@ export function DifficultyBadge({ difficulty, className = "" }: { difficulty: Pu
         {BAR_HEIGHTS.map((height, index) => (
           <span
             key={height}
-            className="relative w-1 overflow-hidden rounded border-[0.8px] border-green-950"
+            className="relative w-1 overflow-hidden rounded-[1px] border-[1.2px] border-green-950"
             style={{ height }}
           >
             {index < level && (
