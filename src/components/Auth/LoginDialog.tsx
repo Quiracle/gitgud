@@ -3,6 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import { spring } from "../../lib/motion";
 import type { OAuthProvider } from "../../services/auth";
 import { Button } from "../Button/Button";
+import { Icon } from "../Icon/Icon";
 import { Dialog } from "../Puzzle/Dialog";
 
 interface LoginDialogProps {
@@ -12,9 +13,11 @@ interface LoginDialogProps {
   returnPath: string;
 }
 
-const PROVIDERS: { id: OAuthProvider; label: string }[] = [
-  { id: "google", label: "Continue with Google" },
-  { id: "github", label: "Continue with GitHub" },
+/* Figma marks: Google (node 43:151218) and GitHub's Invertocat (node 43:151217). The
+   Invertocat file includes GitHub's required clear space, so it renders larger. */
+const PROVIDERS: { id: OAuthProvider; label: string; icon: "google" | "github"; size: number }[] = [
+  { id: "google", label: "Continue with Google", icon: "google", size: 20 },
+  { id: "github", label: "Continue with GitHub", icon: "github", size: 30 },
 ];
 
 /** Sign-in popup: Google or GitHub through Supabase Auth. Guest play stays available. */
@@ -36,6 +39,7 @@ export function LoginDialog({ open, onClose, returnPath }: LoginDialogProps) {
               disabled={busy}
               onClick={() => void signIn(provider.id, returnPath)}
             >
+              <Icon name={provider.icon} size={provider.size} className="-my-1.5 mr-2" />
               {pendingProvider === provider.id ? "Opening…" : provider.label}
             </Button>
           ))}

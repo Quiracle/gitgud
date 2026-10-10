@@ -4,6 +4,8 @@ import accountCircleFill from "../../assets/icons/account_circle_fill.svg";
 import add2 from "../../assets/icons/add_2.svg";
 import arrowBackIosNew from "../../assets/icons/arrow_back_ios_new.svg";
 import arrowForwardIos from "../../assets/icons/arrow_forward_ios.svg";
+import github from "../../assets/brand/github.png";
+import google from "../../assets/brand/google.svg";
 import close from "../../assets/icons/close.svg";
 import crown from "../../assets/icons/crown.svg";
 import extension from "../../assets/icons/extension.svg";
@@ -17,7 +19,7 @@ import myLocation from "../../assets/icons/my_location.svg";
 import remove from "../../assets/icons/remove.svg";
 import share from "../../assets/icons/share.svg";
 
-/** Google Material Symbols, Outlined, weight 300, 24px. */
+/** Google Material Symbols, Outlined, weight 300, 24px, plus sign-in brand marks from Figma. */
 const ICONS = {
   account_circle: accountCircle,
   account_circle_fill: accountCircleFill,
@@ -28,6 +30,8 @@ const ICONS = {
   crown,
   extension,
   flag_2: flag2,
+  github,
+  google,
   forward_media: forwardMedia,
   help,
   home,
