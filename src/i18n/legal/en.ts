@@ -58,7 +58,7 @@ export const en: LegalDocument = {
             [
               "Usage statistics from Google Analytics: pages visited, device and browser type, approximate location and a random cookie ID",
               "Understand how GitGud is played and improve it",
-              "Your consent (Art. 6.1.a), which you can withdraw in Cookie settings",
+              "Your consent (Art. 6.1.a), which you can withdraw at any time in Account settings",
               "Up to 14 months",
             ],
             [
@@ -160,7 +160,7 @@ export const en: LegalDocument = {
         },
         {
           kind: "p",
-          text: "You can change your choice at any time with Cookie settings at the bottom of the page or the button below. Rejecting later deletes these cookies.",
+          text: "You can change your choice at any time in Account settings or with the button below. Rejecting later deletes these cookies.",
         },
         { kind: "consent" },
       ],

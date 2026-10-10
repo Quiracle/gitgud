@@ -17,7 +17,7 @@ interface CookieBannerProps {
 
 /**
  * Asks before Google Analytics loads. Reject and Accept share one style and size, as the
- * AEPD requires, and Cookie settings in the footer brings the banner back.
+ * AEPD requires. Account settings and the legal page bring the banner back.
  */
 export function CookieBanner({ visible, aboveNav, onNavigate }: CookieBannerProps) {
   const { t } = useI18n();
