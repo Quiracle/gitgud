@@ -7,6 +7,7 @@ import { Icon, type IconName } from "../components/Icon/Icon";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
+import { useDragScroll } from "../hooks/useDragScroll";
 import { setCanvasOrigin } from "../lib/canvasTransition";
 import { rise, spring, stagger } from "../lib/motion";
 import { learnBasicsCatalog, type PublicPuzzleDefinition } from "../puzzles";
@@ -32,6 +33,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const daily = useDailyPuzzle();
   const preview = useRef<HTMLDivElement>(null);
   const treeScale = useRef(1);
+  const courses = useDragScroll<HTMLUListElement>();
 
   // Hand the preview's position to the puzzle screen so its canvas grows out of it.
   function solve(path: string) {
@@ -132,7 +134,8 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           <div className="flex flex-col gap-4">
             <SectionTitle>Start here</SectionTitle>
             <motion.ul
-              className="no-scrollbar -mx-6 -my-2 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-6 px-6 py-2"
+              ref={courses}
+              className="no-scrollbar -mx-6 -my-2 flex cursor-grab select-none snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-6 px-6 py-2"
               variants={stagger(0.07)}
               initial="hidden"
               whileInView="show"
