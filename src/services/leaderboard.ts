@@ -43,6 +43,8 @@ export async function submitDailyResult(
     submitted_restart_count: completion.restartCount,
     submitted_command_count: completion.commandCount,
     submitted_transcript: completion.commands,
+    submitted_run_commands: completion.runCommands ?? completion.commands.filter((entry) => entry.ok).map((entry) => entry.command),
+    submitted_run_transcript_start: completion.runTranscriptStart ?? 0,
   });
   if (error) throw new Error(`Leaderboard submission failed: ${error.message}`);
 }

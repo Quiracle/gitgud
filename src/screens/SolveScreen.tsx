@@ -22,6 +22,7 @@ import { goalLabel } from "../i18n/goals";
 import { useI18n } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/translate";
 import type { PublicPuzzleDefinition } from "../puzzles";
+import type { CompletionRecord } from "../storage/progress";
 
 interface SolveScreenProps {
   puzzle: PublicPuzzleDefinition;
@@ -31,6 +32,8 @@ interface SolveScreenProps {
   resultAction?: { label: string; icon: IconName; href: string };
   /** Lesson explainer: opens on a fresh run when `autoOpen`, and from the help button. */
   intro?: { title: string; body: ReactNode; autoOpen: boolean };
+  /** A completion loaded from the signed-in player's other devices. */
+  syncedCompletion?: CompletionRecord;
 }
 
 type Panel = "none" | "intro" | "goals" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
@@ -44,11 +47,12 @@ export function SolveScreen({
   onNavigate,
   resultAction,
   intro,
+  syncedCompletion,
 }: SolveScreenProps) {
   const i18n = useI18n();
   const { t } = i18n;
   const action = resultAction ?? { label: t("solve.seeLeaderboard"), icon: "crown" as const, href: "/leaderboard" };
-  const session = usePuzzleSession(puzzle);
+  const session = usePuzzleSession(puzzle, syncedCompletion);
   const desktop = useMediaQuery("(min-width: 1024px)");
   // Tablets and narrow desktop windows: terminal stays at the bottom but shows history.
   const roomy = useMediaQuery("(min-width: 640px)");

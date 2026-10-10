@@ -855,18 +855,28 @@ function validateRepository(repository, target) {
       `Branch '${target.branch}' does not contain the target repository state.`
     );
   }
-  checks.push({ id: "snapshot", label: `${target.branch} matches the goal`, met: matchesSnapshot });
+  checks.push({
+    id: "snapshot",
+    label: `${target.branch} matches the goal`,
+    met: matchesSnapshot,
+    goal: { type: "snapshot", branch: target.branch }
+  });
   const onTarget = repository.currentBranch === target.branch;
   if (!onTarget) {
     unmet.push(`HEAD must finish on branch '${target.branch}'.`);
   }
-  checks.push({ id: "head", label: `Finish on ${target.branch}`, met: onTarget });
+  checks.push({ id: "head", label: `Finish on ${target.branch}`, met: onTarget, goal: { type: "head", branch: target.branch } });
   for (const [branch, expectedHead] of Object.entries(target.branchHeads ?? {})) {
     const met = Object.hasOwn(repository.branches, branch) && repository.branches[branch] === expectedHead;
     if (!met) {
       unmet.push(`Branch '${branch}' does not point to the required commit.`);
     }
-    checks.push({ id: `branch:${branch}`, label: `Leave ${branch} at ${expectedHead}`, met });
+    checks.push({
+      id: `branch:${branch}`,
+      label: `Leave ${branch} at ${expectedHead}`,
+      met,
+      goal: { type: "branch-head", branch, commit: expectedHead }
+    });
   }
   if (target.requiredProvenance?.length) {
     const reachable = getReachableCommits(repository);
@@ -881,14 +891,20 @@ function validateRepository(repository, target) {
         );
       }
       if (requirement.type === "squash") squashes.push({ sourceCommit: requirement.sourceCommit, met: found });
-      else checks.push({ id: `${requirement.type}:${requirement.sourceCommit}`, label: provenanceLabel(requirement), met: found });
+      else checks.push({
+        id: `${requirement.type}:${requirement.sourceCommit}`,
+        label: provenanceLabel(requirement),
+        met: found,
+        goal: { type: "provenance", provenance: requirement.type, commits: [requirement.sourceCommit] }
+      });
     }
     if (squashes.length) {
       const sources = squashes.map((squash) => squash.sourceCommit);
       checks.push({
         id: `squash:${sources.join(",")}`,
         label: `Squash ${joinWords(sources)} into one commit`,
-        met: squashes.every((squash) => squash.met)
+        met: squashes.every((squash) => squash.met),
+        goal: { type: "provenance", provenance: "squash", commits: sources }
       });
     }
   }
@@ -1340,7 +1356,8 @@ function validatePuzzleCompletion(repository, target, executed, requirements = [
     if (!met) {
       unmet.push(`A required action has not been executed: ${formatRequirement(requirement)}.`);
     }
-    checks.push({ id: `action:${index}`, label: `Run ${formatRequirement(requirement)}`, met });
+    const command = formatRequirement(requirement);
+    checks.push({ id: `action:${index}`, label: `Run ${command}`, met, goal: { type: "action", command } });
   });
   return { solved: unmet.length === 0, unmet, checks };
 }

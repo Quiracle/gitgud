@@ -1,5 +1,5 @@
 import { motion, type Variants } from "motion/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { LoginDialog } from "../components/Auth/LoginDialog";
 import { Button } from "../components/Button/Button";
 import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
@@ -9,11 +9,11 @@ import { SiteFooter } from "../components/Layout/SiteFooter";
 import { TimeHistogram } from "../components/Leaderboard/TimeHistogram";
 import { useAuth } from "../context/AuthContext";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
+import { useDailyCompletion } from "../hooks/useDailyCompletion";
 import { useI18n } from "../i18n/I18nProvider";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
 import { getDailyLeaderboard, type LeaderboardEntry } from "../services/leaderboard";
-import { openProgressStore } from "../storage/browserProgress";
 
 interface LeaderboardScreenProps {
   onNavigate: (path: string) => void;
@@ -59,11 +59,9 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
   const [board, setBoard] = useState<Board>({ status: "loading" });
 
   const puzzle = daily.status === "ready" ? daily.puzzle : undefined;
+  const { completion } = useDailyCompletion(puzzle);
   const dailyError = daily.status === "error" ? daily.message : undefined;
-  const solvedToday = useMemo(
-    () => Boolean(puzzle && openProgressStore().latestCompletion(puzzle.id, puzzle.version)),
-    [puzzle],
-  );
+  const solvedToday = Boolean(completion);
 
   useEffect(() => {
     if (dailyError) setBoard({ status: "error", message: dailyError });

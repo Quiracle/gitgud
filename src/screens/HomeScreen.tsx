@@ -1,5 +1,5 @@
 import { motion, useInView } from "motion/react";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { Button } from "../components/Button/Button";
 import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { CommitTree } from "../components/GitGraph/CommitTree";
@@ -12,11 +12,11 @@ import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
 import { PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
+import { useDailyCompletion } from "../hooks/useDailyCompletion";
 import { useLessonCatalog } from "../hooks/useLessonCatalog";
 import { useI18n } from "../i18n/I18nProvider";
 import { useDragScroll } from "../hooks/useDragScroll";
 import { useProgressInsights } from "../hooks/useProgressInsights";
-import { openProgressStore } from "../storage/browserProgress";
 import { hasSeenWelcome, markWelcomeSeen } from "../storage/onboarding";
 import { rise, spring, stagger } from "../lib/motion";
 import type { PublicPuzzleDefinition } from "../puzzles";
@@ -37,10 +37,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const daily = useDailyPuzzle();
   const handOff = useCanvasHandOff(onNavigate);
   const { streak, recent } = useProgressInsights();
-  const todaysResult = useMemo(
-    () => (daily.status === "ready" ? openProgressStore().latestCompletion(daily.puzzle.id, daily.puzzle.version) : undefined),
-    [daily],
-  );
+  const { completion: todaysResult } = useDailyCompletion(daily.status === "ready" ? daily.puzzle : undefined);
   const solvedToday = Boolean(todaysResult);
   const sharing = useResultShare(
     daily.status === "ready" ? daily.puzzle : undefined,

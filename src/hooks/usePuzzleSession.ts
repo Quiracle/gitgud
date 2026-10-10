@@ -40,13 +40,13 @@ interface PendingRebase {
  * resets on restart. Authenticated daily runs start a server attempt and submit the
  * result when solved; assisted runs are never ranked.
  */
-export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
+export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletion?: CompletionRecord) {
   const { status: authStatus, user } = useAuth();
   const i18n = useI18n();
   const [boot] = useState(() => {
     const store = openProgressStore();
     // A daily can be solved once: reopening it shows the solved run, read-only.
-    const solved = puzzle.kind === "daily" ? store.latestCompletion(puzzle.id, puzzle.version) : undefined;
+    const solved = puzzle.kind === "daily" ? syncedCompletion ?? store.latestCompletion(puzzle.id, puzzle.version) : undefined;
     if (solved) {
       const attempt = attemptFromCompletion(solved);
       const restored = restoreRun(puzzle, attempt);
