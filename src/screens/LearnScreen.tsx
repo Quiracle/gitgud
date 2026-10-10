@@ -203,16 +203,15 @@ function LessonCard({ lesson, thumbnail, onNavigate }: LessonCardProps) {
     <>
       {picture}
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <div className="flex items-center gap-2 text-grey-700">
-          <span className="flex-1 text-xs leading-[15px]">{t("common.course", { number: lesson.order })}</span>
-          {available ? (
-            <Icon name="arrow_forward_ios" size={16} className="text-grey-950" />
-          ) : (
-            <span className="text-2xs">{t("common.soon")}</span>
-          )}
-        </div>
+        <span className="text-xs leading-[15px] text-grey-700">{t("common.course", { number: lesson.order })}</span>
         <p className="text-paragraph leading-5 text-grey-950">{lesson.title}</p>
       </div>
+      {/* Sits on the card's vertical centre, whatever the title wraps to. */}
+      {available ? (
+        <Icon name="arrow_forward_ios" size={16} className="shrink-0 text-grey-950" />
+      ) : (
+        <span className="shrink-0 text-2xs text-grey-700">{t("common.soon")}</span>
+      )}
     </>
   );
 
