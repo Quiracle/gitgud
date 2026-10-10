@@ -53,8 +53,12 @@ export function BottomNav({ path, onNavigate }: BottomNavProps) {
                 aria-current={active ? "page" : undefined}
                 whileTap={{ scale: 0.88 }}
                 transition={spring.snappy}
-                className="relative flex min-h-11 w-[59px] flex-col items-center justify-center gap-0.5 text-lime-400"
+                className="group relative flex min-h-11 w-[59px] flex-col items-center justify-center gap-0.5 text-lime-400"
               >
+                {/* Hover previews the active highlight at half strength. */}
+                {!active && (
+                  <span className="absolute -inset-x-1 -inset-y-1.5 rounded transition-colors duration-200 group-hover:bg-lime-400/[0.07]" />
+                )}
                 {active && (
                   <motion.span
                     layoutId="bottom-nav-active"
