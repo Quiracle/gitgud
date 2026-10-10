@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppLink } from "../components/AppLink";
 import { LeaderboardTable } from "../components/Leaderboard/LeaderboardTable";
+import { TimeHistogram } from "../components/Leaderboard/TimeHistogram";
 import type { PublicPuzzleDefinition } from "../puzzles";
 import { createDailyPuzzleSource, utcDate } from "../services/dailyPuzzles";
 import { getDailyLeaderboard, type LeaderboardEntry } from "../services/leaderboard";
@@ -14,7 +15,7 @@ export function LeaderboardScreen({ onNavigate }: { onNavigate: (path: string) =
     void createDailyPuzzleSource().getByDate(utcDate())
       .then(async (daily) => {
         setPuzzle(daily);
-        setEntries(await getDailyLeaderboard(daily.id, daily.version));
+        setEntries(await getDailyLeaderboard(daily.id, daily.version, 100));
       })
       .catch((reason) => setError(reason instanceof Error ? reason.message : "Leaderboard unavailable."));
   }, []);
@@ -36,7 +37,12 @@ export function LeaderboardScreen({ onNavigate }: { onNavigate: (path: string) =
         <p className="mt-3 text-slate-400">
           {puzzle ? `${puzzle.title} · ${puzzle.difficulty}` : "Loading today's ranking…"}
         </p>
-        <section className="mt-7 rounded-3xl border border-slate-800 bg-slate-900 p-3 sm:p-6">
+        {!error && entries.length > 0 && (
+          <div className="mt-7">
+            <TimeHistogram entries={entries} />
+          </div>
+        )}
+        <section className="mt-5 rounded-3xl border border-slate-800 bg-slate-900 p-3 sm:p-6">
           {error ? <p className="p-5 text-rose-200">{error}</p> : <LeaderboardTable entries={entries} />}
         </section>
       </div>
