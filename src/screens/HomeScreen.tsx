@@ -1,5 +1,6 @@
 import { AppLink } from "../components/AppLink";
 import { AuthPanel } from "../components/AuthPanel";
+import { StatsPanel } from "../components/StatsPanel";
 
 export function HomeScreen({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
@@ -65,6 +66,25 @@ export function HomeScreen({ onNavigate }: { onNavigate: (path: string) => void 
           <div className="md:col-span-2">
             <AuthPanel />
           </div>
+
+          <section className="rounded-3xl border border-cyan-400/30 bg-cyan-400/10 p-6 sm:p-8">
+            <span className="rounded-full bg-cyan-300 px-3 py-1 text-xs font-black uppercase tracking-wider text-cyan-950">
+              Ranking
+            </span>
+            <h2 className="mt-5 text-2xl font-black">Today's leaderboard</h2>
+            <p className="mt-2 text-slate-300">
+              Compare authenticated solves by time, restarts, and command count.
+            </p>
+            <AppLink
+              href="/leaderboard"
+              onNavigate={onNavigate}
+              className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-cyan-300 px-5 py-3 font-bold text-cyan-950"
+            >
+              View leaderboard
+            </AppLink>
+          </section>
+
+          <StatsPanel />
         </div>
       </main>
     </div>

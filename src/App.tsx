@@ -6,6 +6,7 @@ import { HomeScreen } from "./screens/HomeScreen";
 import { PuzzleScreen } from "./screens/PuzzleScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
 import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
+import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -40,6 +41,8 @@ export default function App() {
   if (path === "/play") return <DailyPuzzleScreen onNavigate={navigate} />;
 
   if (path === "/course") return <CourseScreen onNavigate={navigate} />;
+
+  if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
 
   if (path === "/auth/callback") {
     return <AuthCallbackScreen onNavigate={navigate} onReplace={replace} />;
