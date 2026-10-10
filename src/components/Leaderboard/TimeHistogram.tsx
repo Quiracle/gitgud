@@ -27,7 +27,7 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
       </div>
 
       <ul
-        className="mt-4 grid gap-1 border-b border-grey-500"
+        className="mt-4 grid gap-1"
         style={{ gridTemplateColumns: `repeat(${bins.length}, minmax(0, 1fr))` }}
         aria-label={histogramSummary(entries.length, bins.length)}
       >
@@ -72,9 +72,6 @@ export function TimeHistogram({ entries }: { entries: readonly LeaderboardEntry[
           );
         })}
       </ul>
-      <p className="text-right text-xs text-grey-600">
-        Solve time
-      </p>
     </section>
   );
 }
