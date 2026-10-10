@@ -5,7 +5,8 @@ export function dailySolveDates(completions: readonly CompletionRecord[]): Set<s
   const dates = new Set<string>();
   for (const completion of completions) {
     if (completion.kind !== "daily") continue;
-    const puzzleDate = /^daily-(\d{4}-\d{2}-\d{2})$/.exec(completion.puzzleId)?.[1];
+    // Corrected republications get a version suffix: daily-2026-10-10-v2.
+    const puzzleDate = /^daily-(\d{4}-\d{2}-\d{2})(?:-v\d+)?$/.exec(completion.puzzleId)?.[1];
     // Archive replays don't count: the solve must happen on the puzzle's UTC date.
     if (puzzleDate && completion.completedAt.slice(0, 10) === puzzleDate) dates.add(puzzleDate);
   }

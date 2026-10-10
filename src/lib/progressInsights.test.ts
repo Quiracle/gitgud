@@ -32,6 +32,11 @@ describe("daily streaks", () => {
     expect([...dailySolveDates(completions)].sort()).toEqual(["2026-10-07", "2026-10-08", "2026-10-09"]);
   });
 
+  it("counts a corrected republication of the day's daily", () => {
+    const republished = [solve("daily-2026-10-10-v2", "2026-10-10T13:00:00Z", { puzzleVersion: 2 })];
+    expect([...dailySolveDates(republished)]).toEqual(["2026-10-10"]);
+  });
+
   it("keeps the streak alive until today ends", () => {
     const dates = dailySolveDates(completions);
     expect(currentStreak(dates, "2026-10-09")).toBe(3);
