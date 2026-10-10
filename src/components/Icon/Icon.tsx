@@ -17,6 +17,7 @@ import forwardMedia from "../../assets/icons/forward_media.svg";
 import help from "../../assets/icons/help.svg";
 import home from "../../assets/icons/home.svg";
 import importContacts from "../../assets/icons/import_contacts.svg";
+import keyboardArrowDown from "../../assets/icons/keyboard_arrow_down.svg";
 import language from "../../assets/icons/language.svg";
 import lightbulb2 from "../../assets/icons/lightbulb_2.svg";
 import myLocation from "../../assets/icons/my_location.svg";
@@ -44,6 +45,7 @@ const ICONS = {
   help,
   home,
   import_contacts: importContacts,
+  keyboard_arrow_down: keyboardArrowDown,
   language,
   lightbulb_2: lightbulb2,
   my_location: myLocation,
