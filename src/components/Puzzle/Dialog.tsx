@@ -27,7 +27,8 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("keydown", onKey);
-      previous?.focus?.();
+      // Hand focus back without scrolling the page to the trigger.
+      previous?.focus?.({ preventScroll: true });
     };
   }, [open, onClose]);
 
