@@ -6,6 +6,7 @@ import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { Icon } from "../components/Icon/Icon";
 import { PixelChicken, type ChickenLook } from "../components/Illustration/PixelChicken";
 import { SiteFooter } from "../components/Layout/SiteFooter";
+import { TimeHistogram } from "../components/Leaderboard/TimeHistogram";
 import { useAuth } from "../context/AuthContext";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
 import { formatDuration } from "../lib/format";
@@ -67,7 +68,7 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
     if (!puzzle) return;
     let cancelled = false;
     setBoard({ status: "loading" });
-    const load = DEMO ? demoEntries() : getDailyLeaderboard(puzzle.id, puzzle.version);
+    const load = DEMO ? demoEntries() : getDailyLeaderboard(puzzle.id, puzzle.version, 100);
     load
       .then((entries) => !cancelled && setBoard({ status: "ready", entries }))
       .catch((reason) => {
@@ -154,6 +155,7 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
               ))}
             </motion.ol>
             <p className="text-xs text-grey-600">Ranked by time, then retries, then commands.</p>
+            <TimeHistogram entries={entries} />
           </div>
         </section>
       )}
