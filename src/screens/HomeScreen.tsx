@@ -31,9 +31,9 @@ export function HomeScreen({ onNavigate }: { onNavigate: (path: string) => void 
             <span className="rounded-full bg-emerald-300 px-3 py-1 text-xs font-black uppercase tracking-wider text-emerald-950">
               Puzzle
             </span>
-            <h2 className="mt-5 text-2xl font-black">Daily-style challenge</h2>
+            <h2 className="mt-5 text-2xl font-black">Official daily challenge</h2>
             <p className="mt-2 text-slate-300">
-              Test the original multi-command chicken puzzle and the Git simulator.
+              Solve today's shared AI-generated chicken puzzle with the Git simulator.
             </p>
             <AppLink
               href="/play"

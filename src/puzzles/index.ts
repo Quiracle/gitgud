@@ -11,7 +11,10 @@ export {
   type LearnBasicsLessonId,
 } from "./learnBasics";
 export { validatePuzzleCandidate } from "./validateCandidate";
-export { parsePuzzleCandidate } from "./schema";
+export { parsePuzzleCandidate, parsePublicPuzzleDefinition } from "./schema";
+export { createDailyFixture } from "./dailyFixture";
+export * from "./chickenTheme";
+export * from "./generation";
 export { validatePuzzleCompletion, matchesActionRequirement, type ExecutedAction } from "./completion";
 export {
   DEFAULT_DIFFICULTY_POLICY,
@@ -22,6 +25,7 @@ export {
 } from "./policy";
 export {
   PUZZLE_SCHEMA_VERSION,
+  DAILY_PUZZLE_SCHEMA_VERSION,
   type PublicPuzzleDefinition,
   type ActionRequirement,
   type PuzzleCandidate,

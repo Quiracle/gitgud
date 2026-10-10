@@ -5,6 +5,10 @@ export type JsonPrimitive = string | number | boolean | null;
 export type JsonValue = JsonPrimitive | JsonValue[] | { [key: string]: JsonValue };
 
 export const PUZZLE_SCHEMA_VERSION = 1 as const;
+export const DAILY_PUZZLE_SCHEMA_VERSION = 2 as const;
+export type PuzzleSchemaVersion =
+  | typeof PUZZLE_SCHEMA_VERSION
+  | typeof DAILY_PUZZLE_SCHEMA_VERSION;
 
 export type PuzzleKind = "daily" | "lesson" | "generated";
 export type PuzzleDifficulty = "easy" | "medium" | "hard";
@@ -29,7 +33,9 @@ export type ActionRequirement =
  * `objectives` remains optional while the provisional UI is still present.
  */
 export interface PublicPuzzleDefinition {
-  schemaVersion: typeof PUZZLE_SCHEMA_VERSION;
+  schemaVersion: PuzzleSchemaVersion;
+  /** Required by schema v2. Version 1 lessons use the legacy chicken renderer. */
+  themeId?: "chicken-v1";
   id: string;
   version: number;
   kind: PuzzleKind;
@@ -37,6 +43,8 @@ export interface PublicPuzzleDefinition {
   title: string;
   description: string;
   difficulty: PuzzleDifficulty;
+  /** Canonical UTC publication date for official daily puzzles. */
+  publishedOn?: string;
   objectives?: string[];
   initialRepository: Repository;
   target: PuzzleTarget;

@@ -3,6 +3,7 @@ import type {
   ActionRequirement,
   JsonValue,
   PuzzleCandidate,
+  PublicPuzzleDefinition,
   PuzzleDifficulty,
   PuzzleKind,
   SupportedCommand,
@@ -28,6 +29,31 @@ export interface SchemaParseResult {
   issues: ValidationIssue[];
 }
 
+export interface PublicSchemaParseResult {
+  puzzle?: PublicPuzzleDefinition;
+  issues: ValidationIssue[];
+}
+
+/** Parses a player-safe published definition without requiring private solution data. */
+export function parsePublicPuzzleDefinition(input: unknown): PublicSchemaParseResult {
+  if (!isPlainRecord(input)) {
+    return { issues: [{ code: "schema.invalid-type", message: "Expected an object.", path: "$" }] };
+  }
+  if (Object.hasOwn(input, "solutionCommands")) {
+    return {
+      issues: [{
+        code: "schema.private-data-exposed",
+        message: "Published puzzle definitions must not contain solutionCommands.",
+        path: "$.solutionCommands",
+      }],
+    };
+  }
+  const parsed = parsePuzzleCandidate({ ...input, solutionCommands: [] });
+  if (!parsed.candidate) return { issues: parsed.issues };
+  const { solutionCommands: _privateSolution, ...puzzle } = parsed.candidate;
+  return { puzzle, issues: parsed.issues };
+}
+
 /** Strictly parses JSON-shaped data; semantic and graph policy checks happen afterwards. */
 export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
   const issues: ValidationIssue[] = [];
@@ -39,13 +65,15 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
     [
       "schemaVersion", "id", "version", "kind", "slug", "title", "description",
       "difficulty", "objectives", "initialRepository", "target", "allowedCommands",
-      "hints", "actionRequirements", "solutionCommands",
+      "hints", "actionRequirements", "solutionCommands", "themeId", "publishedOn",
     ],
     "$",
     issues,
   );
 
   const schemaVersion = integer(root.schemaVersion, "$.schemaVersion", issues);
+  const themeId = optionalString(root.themeId, "$.themeId", issues);
+  const publishedOn = optionalString(root.publishedOn, "$.publishedOn", issues);
   const id = string(root.id, "$.id", issues);
   const version = integer(root.version, "$.version", issues);
   const kind = enumValue(root.kind, kinds, "$.kind", issues);
@@ -63,12 +91,18 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
     : parseActionRequirements(root.actionRequirements, "$.actionRequirements", issues);
   const solutionCommands = stringArray(root.solutionCommands, "$.solutionCommands", issues, false);
 
-  if (schemaVersion !== undefined && schemaVersion !== 1) {
-    issue(issues, "schema.unsupported-version", "Only puzzle schema version 1 is supported.", "$.schemaVersion");
+  if (schemaVersion !== undefined && schemaVersion !== 1 && schemaVersion !== 2) {
+    issue(issues, "schema.unsupported-version", "Only puzzle schema versions 1 and 2 are supported.", "$.schemaVersion");
+  }
+  if (schemaVersion === 2 && themeId !== "chicken-v1") {
+    issue(issues, "schema.invalid-theme", "Puzzle schema version 2 requires themeId 'chicken-v1'.", "$.themeId");
+  }
+  if (publishedOn !== undefined && !/^\d{4}-\d{2}-\d{2}$/.test(publishedOn)) {
+    issue(issues, "schema.invalid-date", "publishedOn must use YYYY-MM-DD UTC format.", "$.publishedOn");
   }
 
   if (
-    issues.length > 0 || schemaVersion !== 1 || id === undefined || version === undefined || kind === undefined || slug === undefined ||
+    issues.length > 0 || (schemaVersion !== 1 && schemaVersion !== 2) || id === undefined || version === undefined || kind === undefined || slug === undefined ||
     title === undefined || description === undefined || difficulty === undefined || repository === undefined || target === undefined || allowedCommands === undefined || hints === undefined ||
     solutionCommands === undefined || (root.actionRequirements !== undefined && actionRequirements === undefined)
   ) {
@@ -78,7 +112,8 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
   return {
     issues,
     candidate: {
-      schemaVersion: 1,
+      schemaVersion,
+      ...(themeId === "chicken-v1" ? { themeId } : {}),
       id,
       version,
       kind,
@@ -86,6 +121,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
       title,
       description,
       difficulty,
+      ...(publishedOn ? { publishedOn } : {}),
       ...(objectives ? { objectives } : {}),
       initialRepository: repository,
       target,

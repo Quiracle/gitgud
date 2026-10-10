@@ -1,0 +1,53 @@
+-- Run this in Supabase Dashboard -> SQL Editor only after:
+-- 1. the function is deployed;
+-- 2. fallback preflight reports ready=true;
+-- 3. both placeholders below have been replaced.
+
+create extension if not exists pg_cron;
+create extension if not exists pg_net;
+create extension if not exists supabase_vault;
+
+select vault.create_secret(
+  'https://YOUR_PROJECT_REF.supabase.co',
+  'gitgud_project_url',
+  'GitGud Supabase project URL'
+);
+
+select vault.create_secret(
+  'YOUR_DAILY_GENERATION_SECRET',
+  'gitgud_daily_generation_secret',
+  'Secret header used only by the daily generation cron'
+);
+
+select cron.schedule(
+  'gitgud-generate-tomorrow',
+  '45 23 * * *',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'gitgud_project_url') || '/functions/v1/generate-daily-puzzle',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-generation-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'gitgud_daily_generation_secret')
+    ),
+    body := '{"mode":"generate"}'::jsonb
+  );
+  $$
+);
+
+select cron.schedule(
+  'gitgud-recover-today',
+  '5 0 * * *',
+  $$
+  select net.http_post(
+    url := (select decrypted_secret from vault.decrypted_secrets where name = 'gitgud_project_url') || '/functions/v1/generate-daily-puzzle',
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-generation-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'gitgud_daily_generation_secret')
+    ),
+    body := jsonb_build_object(
+      'mode', 'generate',
+      'date', ((now() at time zone 'UTC')::date)::text
+    )
+  );
+  $$
+);

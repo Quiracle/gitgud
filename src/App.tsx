@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { AppLink } from "./components/AppLink";
-import { chickenCoronationPuzzle, learnBasicsCatalog } from "./puzzles";
+import { learnBasicsCatalog } from "./puzzles";
 import { CourseScreen } from "./screens/CourseScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { PuzzleScreen } from "./screens/PuzzleScreen";
+import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -28,19 +29,7 @@ export default function App() {
 
   if (path === "/") return <HomeScreen onNavigate={navigate} />;
 
-  if (path === "/play") {
-    return (
-      <PuzzleScreen
-        key={chickenCoronationPuzzle.id}
-        puzzle={chickenCoronationPuzzle}
-        eyebrow="Daily-style puzzle preview"
-        backHref="/"
-        backLabel="Home"
-        accent="emerald"
-        onNavigate={navigate}
-      />
-    );
-  }
+  if (path === "/play") return <DailyPuzzleScreen onNavigate={navigate} />;
 
   if (path === "/course") return <CourseScreen onNavigate={navigate} />;
 
