@@ -94,7 +94,16 @@ export interface PuzzleTarget {
   requiredProvenance?: RequiredProvenance[];
 }
 
+/** One player-facing completion condition and whether the repository meets it now. */
+export interface GoalCheck {
+  id: string;
+  label: string;
+  met: boolean;
+}
+
 export interface ValidationResult {
   solved: boolean;
   unmet: string[];
+  /** Every condition, met or not, in display order. */
+  checks: GoalCheck[];
 }

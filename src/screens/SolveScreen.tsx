@@ -27,7 +27,7 @@ interface SolveScreenProps {
   intro?: { title: string; body: ReactNode; autoOpen: boolean };
 }
 
-type Panel = "none" | "intro" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
+type Panel = "none" | "intro" | "goals" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
@@ -52,8 +52,10 @@ export function SolveScreen({
 
   const canvas = useRef<HTMLDivElement>(null);
   const tree = useRef<HTMLDivElement>(null);
-  const goal = useRef<HTMLDivElement>(null);
+  const goal = useRef<HTMLButtonElement>(null);
   const solved = session.status === "completed";
+  const checks = session.validation.checks;
+  const goalsMet = solved ? checks.length : checks.filter((check) => check.met).length;
 
   // Grow the canvas out of the Home preview: clip from the old rectangle to the full
   // canvas while the tree slides into place, then the controls rise in.
@@ -100,10 +102,11 @@ export function SolveScreen({
   const closePanel = () => setPanel("none");
   const openHelp = () => setPanel(intro ? "intro" : "help");
 
-  // Explain the lesson once the canvas has settled, unless the run is already under way.
+  // Explain the lesson (or list the goals) once the canvas has settled, unless the run is already under way.
   useEffect(() => {
-    if (!intro?.autoOpen || solved || session.commandCount > 0) return;
-    const timer = window.setTimeout(() => setPanel((current) => (current === "none" ? "intro" : current)), origin ? 750 : 400);
+    const first: Panel | undefined = intro ? (intro.autoOpen ? "intro" : undefined) : "goals";
+    if (!first || solved || session.commandCount > 0) return;
+    const timer = window.setTimeout(() => setPanel((current) => (current === "none" ? first : current)), origin ? 750 : 400);
     return () => window.clearTimeout(timer);
     // Only on arrival: later commands or restarts must not reopen it.
   }, []);
@@ -151,18 +154,24 @@ export function SolveScreen({
             className="size-full"
           />
         </div>
-        <motion.div
+        <motion.button
           ref={goal}
-          className="absolute right-6 top-6 flex flex-col rounded border border-grey-300 bg-grey-50 p-2 shadow-[0_8px_24px_-12px_rgb(0_0_0/0.6)]"
+          type="button"
+          onClick={() => setPanel("goals")}
+          aria-label={`Goals: ${goalsMet} of ${checks.length} done`}
+          className="absolute right-6 top-6 flex flex-col items-center rounded border border-grey-300 bg-grey-50 p-2 shadow-[0_8px_24px_-12px_rgb(0_0_0/0.6)]"
           animate={solved ? { y: [0, -14, 0], rotate: [0, -4, 4, 0] } : {}}
           transition={{ duration: 0.7, ease: "easeOut" }}
         >
-          <div className="flex items-center gap-1 text-grey-950">
+          <div className="flex items-center gap-1 self-start text-grey-950">
             <Icon name="flag_2" size={16} />
             <span className="text-paragraph leading-5">Goal</span>
           </div>
           <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
-        </motion.div>
+          <span className="mt-1 rounded-sm bg-green-950 px-1.5 font-secondary text-xs leading-5 text-lime-400">
+            {goalsMet}/{checks.length} goals
+          </span>
+        </motion.button>
       </motion.div>
 
       <motion.div
@@ -349,6 +358,38 @@ export function SolveScreen({
           </div>
         </Dialog>
       )}
+
+      <Dialog open={panel === "goals"} title="Goals" onClose={closePanel}>
+        <div className="flex flex-col gap-4 text-sm">
+          <p className="text-grey-50">{puzzle.description}</p>
+          <ul className="flex flex-col gap-2" aria-label="Goal checklist">
+            {checks.map((check) => {
+              const met = solved || check.met;
+              return (
+                <li key={check.id} className={`flex gap-2 ${met ? "text-lime-400" : "text-grey-300"}`}>
+                  <span aria-hidden className="w-4 shrink-0 text-center">{met ? "✓" : "○"}</span>
+                  <span>
+                    {check.label}
+                    <span className="sr-only">{met ? " (done)" : " (not done yet)"}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+          <p className="text-xs text-grey-400">
+            The puzzle is solved when every goal is ticked. A matching chicken isn't enough while history goals are open.
+          </p>
+        </div>
+        <div className="flex flex-col gap-2">
+          <Button onClick={closePanel}>
+            <span>{session.commandCount > 0 || solved ? "Back to puzzle" : "Let's go"}</span>
+            <Icon name="arrow_forward_ios" size={20} className="ml-2" />
+          </Button>
+          <Button variant="tertiary" onClick={() => setPanel("help")}>
+            How to play
+          </Button>
+        </div>
+      </Dialog>
 
       <Dialog open={panel === "help"} title="How to play" onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">

@@ -144,9 +144,10 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
             output: [`This puzzle doesn't use \`git ${command.split(/\s+/)[1] ?? "command"}\`.`, `Try: ${puzzle.allowedCommands.join(", ")}.`],
           };
       const nextActions = result.ok ? [...actions, result.action] : actions;
-      const solved =
-        result.ok &&
-        validatePuzzleCompletion(result.repository, puzzle.target, nextActions, puzzle.actionRequirements).solved;
+      const next = result.ok
+        ? validatePuzzleCompletion(result.repository, puzzle.target, nextActions, puzzle.actionRequirements)
+        : validation;
+      const solved = result.ok && next.solved;
 
       const nextAttempt = store.recordCommand(
         attempt,
@@ -154,6 +155,14 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
         result.ok,
       );
       record({ command, lines: result.output, tone: result.ok ? "normal" : "error" });
+      // The state can look finished while history goals are still open: say which ones.
+      if (result.ok && result.mutated && !solved && next.checks.find((check) => check.id === "snapshot")?.met) {
+        const open = next.checks.filter((check) => !check.met).map((check) => `  - ${check.label}`);
+        record({
+          lines: ["The state matches the goal, but the history doesn't yet:", ...open, "Tap Goal for the full checklist."],
+          tone: "info",
+        });
+      }
       setActions(nextActions);
       setRepository(result.repository);
       setAttempt(nextAttempt);

@@ -82,7 +82,7 @@ describe("executeCommand", () => {
     repository = run(repository, "git revert b22");
     repository = run(repository, "git merge style");
 
-    expect(validateRepository(repository, chickenCoronationPuzzle.target)).toEqual({
+    expect(validateRepository(repository, chickenCoronationPuzzle.target)).toMatchObject({
       solved: true,
       unmet: [],
     });

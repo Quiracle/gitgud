@@ -40,7 +40,7 @@ export function applyChanges(
   for (const change of changes) {
     if (!semanticEqual(result[change.property], change.from)) {
       throw new GitSimulationError(
-        `Semantic conflict on \`${change.property}\`: expected ${formatValue(change.from)}, found ${formatValue(result[change.property])}.`,
+        `Merge conflict on \`${change.property}\`: this change expects ${formatValue(change.from)}, but here it is ${formatValue(result[change.property])}.\n\nConflict resolution is not supported in this version.`,
       );
     }
     result[change.property] = structuredClone(change.to);
