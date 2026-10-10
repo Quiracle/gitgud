@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatPuzzleDate, linkedInShareUrl, shareFileName, shareText } from "./share";
+import { formatPuzzleDate, linkedInComposeUrl, shareFileName, shareText } from "./share";
 
 const summary = { publishedOn: "2026-10-10", difficulty: "medium", elapsedMs: 167_000, restartCount: 1, assisted: false } as const;
 
@@ -23,8 +23,8 @@ describe("share text", () => {
   });
 
   it("builds the LinkedIn link and file name", () => {
-    expect(linkedInShareUrl("https://gitgudgame.lol/")).toBe(
-      "https://www.linkedin.com/sharing/share-offsite/?url=https%3A%2F%2Fgitgudgame.lol%2F",
+    expect(linkedInComposeUrl("Solved!\nhttps://gitgudgame.lol/")).toBe(
+      "https://www.linkedin.com/feed/?shareActive=true&text=Solved!%0Ahttps%3A%2F%2Fgitgudgame.lol%2F",
     );
     expect(shareFileName("2026-10-10")).toBe("gitgud-2026-10-10.png");
   });
