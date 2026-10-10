@@ -77,6 +77,9 @@
   --colors-green-900: 25 29 27; /* #191d1b */
   --colors-green-950: 5 14 8; /* #050e08 */
 
+  /* Grey 300 darkened by 6% grey 950: grey 700 text keeps ~6:1 contrast. */
+  --colors-card-hover: 198 198 198; /* #c6c6c6 */
+
   --type-font-primary: "Outfit", ui-sans-serif, system-ui, sans-serif;
   --type-font-secondary: "IBM Plex Mono", ui-monospace, SFMono-Regular, monospace;
   --type-weight-light: 300;

@@ -13,6 +13,10 @@ const scale = (name) =>
 const type = (size, lineHeight) => [`var(--type-size-${size})`, { lineHeight: `var(--type-line-${lineHeight})` }];
 
 export default {
+  future: {
+    // Touch devices never get stuck in a hover state after a tap.
+    hoverOnlyWhenSupported: true,
+  },
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
@@ -23,6 +27,7 @@ export default {
         orange: scale("orange"),
         red: scale("red"),
         green: scale("green"),
+        "card-hover": "rgb(var(--colors-card-hover) / <alpha-value>)",
       },
       fontFamily: {
         primary: ["Outfit", "ui-sans-serif", "system-ui", "sans-serif"],

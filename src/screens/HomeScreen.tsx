@@ -15,6 +15,10 @@ interface HomeScreenProps {
   onNavigate: (path: string) => void;
 }
 
+/** Grey card from Figma; hover darkens the fill only, so the card never changes size. */
+const CARD_SURFACE =
+  "rounded border border-grey-300 bg-grey-300 transition-colors duration-200 hover:border-card-hover hover:bg-card-hover";
+
 /** Lessons that introduce the headline concepts, shown under "Recommended for you". */
 const RECOMMENDED_LESSONS = ["basics-05-three-way-merge", "basics-06-cherry-pick", "basics-08-rebase"];
 
@@ -107,7 +111,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           <div className="flex flex-col gap-4">
             <SectionTitle>Start here</SectionTitle>
             <motion.ul
-              className="no-scrollbar -mx-6 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-6 px-6 pb-1"
+              className="no-scrollbar -mx-6 -my-2 flex snap-x snap-mandatory gap-3 overflow-x-auto scroll-px-6 px-6 py-2"
               variants={stagger(0.07)}
               initial="hidden"
               whileInView="show"
@@ -235,9 +239,9 @@ function RecommendedCard({ href, icon, title, description, puzzle, onNavigate }:
       <motion.a
         href={href}
         onClick={(event) => follow(event, href, onNavigate)}
-        className="flex gap-4 rounded border border-grey-300 bg-grey-300 p-2"
+        className={`flex gap-4 p-2 ${CARD_SURFACE}`}
         whileHover={{ y: -2 }}
-        whileTap={{ scale: 0.98 }}
+        whileTap={{ y: 0 }}
         transition={spring.snappy}
       >
         <CommitTree
@@ -279,14 +283,14 @@ function CourseCard({ lesson, onNavigate }: { lesson: LearnBasicsLesson; onNavig
   );
 
   return (
-    <motion.li variants={rise} className="snap-start">
+    <motion.li variants={rise} className="flex snap-start">
       {available ? (
         <motion.a
           href={`/course/${lesson.id}`}
           onClick={(event) => follow(event, `/course/${lesson.id}`, onNavigate)}
-          className="flex w-[124px] flex-col gap-2 rounded border border-grey-300 bg-grey-300 p-2"
+          className={`flex w-[124px] flex-col gap-2 p-2 ${CARD_SURFACE}`}
           whileHover={{ y: -3 }}
-          whileTap={{ scale: 0.96 }}
+          whileTap={{ y: 0 }}
           transition={spring.snappy}
         >
           {content}
