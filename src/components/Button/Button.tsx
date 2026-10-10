@@ -1,6 +1,4 @@
-import { motion } from "motion/react";
 import type { MouseEvent, ReactNode } from "react";
-import { spring, tap } from "../../lib/motion";
 
 type Variant = "primary" | "outline";
 
@@ -15,9 +13,10 @@ interface ButtonProps {
   disabled?: boolean;
 }
 
+/* Buttons never move: hover lightens, press deepens, both as colour only. */
 const VARIANTS: Record<Variant, string> = {
-  primary: "bg-lime-400 text-green-950",
-  outline: "border border-lime-400 bg-green-950 text-lime-400",
+  primary: "bg-lime-400 text-green-950 hover:bg-lime-300 active:bg-lime-500",
+  outline: "border border-lime-400 bg-green-950 text-lime-400 hover:bg-lime-400/10 active:bg-lime-400/20",
 };
 
 export function Button({
@@ -29,12 +28,7 @@ export function Button({
   onClick,
   disabled,
 }: ButtonProps) {
-  const classes = `relative flex min-h-11 w-full select-none items-center justify-center overflow-hidden rounded p-3 text-paragraph disabled:opacity-50 ${VARIANTS[variant]} ${className}`;
-  const motionProps = {
-    whileTap: disabled ? undefined : tap,
-    whileHover: disabled ? undefined : { y: -1 },
-    transition: spring.snappy,
-  };
+  const classes = `relative flex min-h-11 w-full select-none items-center justify-center overflow-hidden rounded p-3 text-paragraph transition-colors duration-200 disabled:pointer-events-none disabled:opacity-50 ${VARIANTS[variant]} ${className}`;
 
   if (href) {
     const follow = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -43,15 +37,15 @@ export function Button({
       onNavigate(href);
     };
     return (
-      <motion.a href={href} onClick={follow} className={classes} {...motionProps}>
+      <a href={href} onClick={follow} className={classes}>
         {children}
-      </motion.a>
+      </a>
     );
   }
 
   return (
-    <motion.button type="button" onClick={onClick} disabled={disabled} className={classes} {...motionProps}>
+    <button type="button" onClick={onClick} disabled={disabled} className={classes}>
       {children}
-    </motion.button>
+    </button>
   );
 }
