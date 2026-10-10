@@ -19,13 +19,53 @@ describe("Learn Basics catalog", () => {
     expect(new Set(learnBasicsCatalog.map((lesson) => lesson.id)).size).toBe(10);
   });
 
-  it("ships current commands and marks rebase-dependent lessons explicitly", () => {
-    expect(learnBasicsCatalog.slice(0, 7).every(isAvailableLesson)).toBe(true);
-    expect(learnBasicsCatalog.slice(7).map((lesson) => lesson.status)).toEqual([
-      "coming-soon",
-      "coming-soon",
-      "coming-soon",
-    ]);
+  it("ships every lesson as playable", () => {
+    expect(learnBasicsCatalog.every(isAvailableLesson)).toBe(true);
+  });
+
+  it("accepts different capstone solutions that reach the same history invariants", () => {
+    const capstone = getLearnBasicsLesson("basics-10-capstone");
+    if (!capstone || !isAvailableLesson(capstone)) throw new Error("capstone missing");
+
+    for (const solutionCommands of [
+      ["git cherry-pick x21", "git merge feature", "git revert b20"],
+      ["git cherry-pick f20", "git revert b20", "git cherry-pick x21"],
+      [
+        "git switch feature",
+        "git rebase main",
+        "git switch main",
+        "git merge --ff-only feature",
+        "git cherry-pick x21",
+        "git revert b20",
+      ],
+    ]) {
+      const result = validatePuzzleCandidate(
+        { ...structuredClone(capstone.puzzle), solutionCommands },
+        { semantic: CHICKEN_SEMANTIC_POLICY },
+      );
+      expect(result, solutionCommands.join("; ")).toMatchObject({ ok: true });
+    }
+  });
+
+  it("rejects histories that miss the lesson's featured behavior", () => {
+    const rebase = getLearnBasicsLesson("basics-08-rebase");
+    const squash = getLearnBasicsLesson("basics-09-interactive-rebase");
+    if (!rebase || !isAvailableLesson(rebase) || !squash || !isAvailableLesson(squash)) {
+      throw new Error("rebase lessons missing");
+    }
+
+    expect(
+      validatePuzzleCandidate(
+        { ...structuredClone(rebase.puzzle), allowedCommands: ["log", "switch", "rebase", "merge"], solutionCommands: ["git merge main"] },
+        { semantic: CHICKEN_SEMANTIC_POLICY },
+      ),
+    ).toMatchObject({ ok: false });
+    expect(
+      validatePuzzleCandidate(
+        { ...structuredClone(squash.puzzle), solutionCommands: ["git rebase -i main"] },
+        { semantic: CHICKEN_SEMANTIC_POLICY },
+      ),
+    ).toMatchObject({ ok: false });
   });
 
   it("validates every available lesson through the shared pipeline", () => {

@@ -15,7 +15,11 @@ git merge <branch>
 git merge --ff-only <branch>
 git cherry-pick <commit>
 git revert <commit>
+git rebase <branch>
+git rebase -i <branch>
 ```
+
+Interactive rebase opens a dialog instead of a text editor and supports only `pick` and `squash`, keeping commits in their original order. In transcripts and hidden solutions, the edited todo list is stored as extra lines after the command, for example `git rebase -i main\npick c31\nsquash c32`.
 
 ## Local development
 

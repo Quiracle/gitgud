@@ -1,7 +1,12 @@
 export { executeCommand } from "./execute";
 export { cloneRepository } from "./clone";
 export { parseGitCommand } from "./parser";
-export { SUPPORTED_ACTION_TYPES } from "./parser";
+export { SUPPORTED_ACTION_TYPES, formatInteractiveRebaseCommand } from "./parser";
+export {
+  planInteractiveRebase,
+  type InteractiveRebasePlan,
+  type InteractiveRebaseTodoEntry,
+} from "./commands/rebase";
 export { getSnapshot, applyChanges, diffSnapshots } from "./snapshot";
 export {
   findMergeBase,

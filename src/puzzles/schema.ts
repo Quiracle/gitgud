@@ -250,6 +250,15 @@ function parseActionRequirements(value: unknown, path: string, issues: Validatio
         }
         return;
       }
+      case "rebase":
+      case "interactive-rebase": {
+        rejectUnknownKeys(source, ["type", "onto"], itemPath, issues);
+        const onto = optionalString(source.onto, `${itemPath}.onto`, issues);
+        if (onto !== undefined || source.onto === undefined) {
+          requirements.push({ type, ...(onto === undefined ? {} : { onto }) });
+        }
+        return;
+      }
     }
   });
   return requirements;

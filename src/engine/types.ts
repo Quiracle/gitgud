@@ -37,12 +37,21 @@ export interface Repository {
   nextGeneratedId: number;
 }
 
+/** One line of an interactive-rebase todo list. Only pick and squash are simulated. */
+export interface RebaseTodoItem {
+  action: "pick" | "squash";
+  commit: string;
+}
+
 export type GitAction =
   | { type: "switch"; branch: string }
   | { type: "log"; all: boolean }
   | { type: "merge"; branch: string; ffOnly: boolean }
   | { type: "cherry-pick"; commit: string }
-  | { type: "revert"; commit: string };
+  | { type: "revert"; commit: string }
+  | { type: "rebase"; onto: string }
+  /** Without a todo list, every commit is picked, as if the editor were saved unchanged. */
+  | { type: "interactive-rebase"; onto: string; todo?: RebaseTodoItem[] };
 
 export interface CommandSuccess {
   ok: true;

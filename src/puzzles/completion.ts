@@ -43,6 +43,9 @@ export function matchesActionRequirement(
     case "cherry-pick":
     case "revert":
       return requirement.type === action.type && (requirement.commit === undefined || action.commit === requirement.commit);
+    case "rebase":
+    case "interactive-rebase":
+      return requirement.type === action.type && (requirement.onto === undefined || action.onto === requirement.onto);
   }
 }
 
@@ -58,5 +61,9 @@ function formatRequirement(requirement: ActionRequirement): string {
       return requirement.commit ? `git cherry-pick ${requirement.commit}` : "git cherry-pick";
     case "revert":
       return requirement.commit ? `git revert ${requirement.commit}` : "git revert";
+    case "rebase":
+      return requirement.onto ? `git rebase ${requirement.onto}` : "git rebase <branch>";
+    case "interactive-rebase":
+      return requirement.onto ? `git rebase -i ${requirement.onto}` : "git rebase -i <branch>";
   }
 }

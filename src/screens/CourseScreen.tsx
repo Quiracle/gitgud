@@ -31,8 +31,8 @@ export function CourseScreen({ onNavigate }: { onNavigate: (path: string) => voi
           <p className="text-sm font-bold text-violet-200">{availableCount} of 10 playable</p>
           <h2 className="mt-2 text-3xl font-black sm:text-4xl">Build your Git mental model</h2>
           <p className="mt-3 max-w-2xl text-slate-300">
-            Each lesson focuses on one command or behavior. Rebase lessons remain visible but
-            locked until that engine feature is implemented.
+            Each lesson focuses on one command or behavior, ending with a capstone that
+            combines them.
           </p>
         </section>
 
