@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, type Variants } from "motion/react";
+import { motion, type Variants } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { LoginDialog } from "../components/Auth/LoginDialog";
 import { Button } from "../components/Button/Button";
@@ -16,8 +16,6 @@ import { openProgressStore } from "../storage/browserProgress";
 interface LeaderboardScreenProps {
   onNavigate: (path: string) => void;
 }
-
-type Scope = "global" | "friends";
 
 type Board =
   | { status: "loading" }
@@ -54,7 +52,6 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
   const daily = useDailyPuzzle();
   const { status: authStatus } = useAuth();
   const signedIn = authStatus === "authenticated";
-  const [scope, setScope] = useState<Scope>("global");
   const [loginOpen, setLoginOpen] = useState(false);
   const [board, setBoard] = useState<Board>({ status: "loading" });
 
@@ -120,46 +117,14 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
             </motion.div>
           </div>
 
-          <ScopeTabs scope={scope} onChange={setScope} />
-
-          <AnimatePresence mode="wait" initial={false}>
-            {scope === "global" ? (
-              <motion.div
-                key="global"
-                initial={{ opacity: 0, x: -16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={spring.soft}
-              >
-                {board.status === "loading" && <PodiumSkeleton />}
-                {board.status === "ready" && podium.length > 0 && <Podium entries={podium} />}
-                {board.status === "ready" && podium.length === 0 && (
-                  <EmptyState
-                    title="No ranked solves yet"
-                    body="Be the first chicken on today's podium."
-                  />
-                )}
-                {board.status === "error" && <EmptyState title="Leaderboard offline" body={board.message} />}
-              </motion.div>
-            ) : (
-              <motion.div
-                key="friends"
-                initial={{ opacity: 0, x: 16 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 16 }}
-                transition={spring.soft}
-              >
-                <EmptyState
-                  title={signedIn ? "Friends are coming soon" : "Play with friends"}
-                  body={
-                    signedIn
-                      ? "Soon you'll invite friends and compare today's solves here."
-                      : "Log in to invite friends and compare today's solves."
-                  }
-                />
-              </motion.div>
+          <div>
+            {board.status === "loading" && <PodiumSkeleton />}
+            {board.status === "ready" && podium.length > 0 && <Podium entries={podium} />}
+            {board.status === "ready" && podium.length === 0 && (
+              <EmptyState title="No ranked solves yet" body="Be the first chicken on today's podium." />
             )}
-          </AnimatePresence>
+            {board.status === "error" && <EmptyState title="Leaderboard offline" body={board.message} />}
+          </div>
 
           {!signedIn ? (
             <Button onClick={() => setLoginOpen(true)}>Log in to get ranked</Button>
@@ -171,7 +136,7 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
         </div>
       </section>
 
-      {scope === "global" && board.status === "ready" && entries.length > 0 && (
+      {board.status === "ready" && entries.length > 0 && (
         <section className="px-6 py-6">
           <div className="mx-auto flex max-w-md flex-col gap-4">
             <div className="flex items-baseline justify-between">
@@ -195,33 +160,6 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
 
       <SiteFooter />
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} returnPath="/leaderboard" />
-    </div>
-  );
-}
-
-function ScopeTabs({ scope, onChange }: { scope: Scope; onChange: (scope: Scope) => void }) {
-  return (
-    <div role="tablist" aria-label="Leaderboard" className="flex rounded border border-lime-400 p-0.5">
-      {(["global", "friends"] as const).map((value) => {
-        const active = value === scope;
-        return (
-          <button
-            key={value}
-            type="button"
-            role="tab"
-            aria-selected={active}
-            onClick={() => onChange(value)}
-            className={`relative flex min-h-11 flex-1 items-center justify-center gap-2 rounded text-paragraph transition-colors ${
-              active ? "text-green-950" : "text-lime-400 hover:bg-lime-400/[0.07]"
-            }`}
-          >
-            {active && (
-              <motion.span layoutId="leaderboard-tab" className="absolute inset-0 rounded bg-lime-400" transition={spring.layout} />
-            )}
-            <span className="relative">{value === "global" ? "Global" : "Friends"}</span>
-          </button>
-        );
-      })}
     </div>
   );
 }
