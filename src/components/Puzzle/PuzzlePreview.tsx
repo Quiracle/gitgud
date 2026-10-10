@@ -86,13 +86,11 @@ function GoalCard({ puzzle }: { puzzle: PublicPuzzleDefinition }) {
       animate={{ opacity: 1, y: 0, rotate: 0 }}
       transition={{ ...spring.bouncy, delay: 0.45 }}
     >
-      <motion.div animate={{ y: [0, -3, 0] }} transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}>
-        <div className="flex items-center gap-1 text-grey-950">
-          <Icon name="flag_2" size={16} />
-          <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
-        </div>
-        <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
-      </motion.div>
+      <div className="flex items-center gap-1 text-grey-950">
+        <Icon name="flag_2" size={16} />
+        <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
+      </div>
+      <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
     </motion.div>
   );
 }

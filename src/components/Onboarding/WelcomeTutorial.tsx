@@ -201,7 +201,7 @@ function Card({ id, look, branch, delay }: { id: string; look: ChickenLook; bran
       look={look}
       branches={branch ? [branch] : []}
       currentBranch="main"
-      focused={branch === "main"}
+      head={branch === "main"}
       colour={branch ? `rgb(var(--colors-branch-${branch === "main" ? 1 : 2}))` : undefined}
     />
   );
