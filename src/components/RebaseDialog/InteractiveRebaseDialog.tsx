@@ -1,106 +1,147 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { InteractiveRebaseTodoEntry, RebaseTodoItem } from "../../engine";
+import { Button } from "../Button/Button";
+import { Dialog } from "../Puzzle/Dialog";
+
+interface PendingRebase {
+  onto: string;
+  todo: InteractiveRebaseTodoEntry[];
+}
 
 interface InteractiveRebaseDialogProps {
-  onto: string;
+  /** The rebase waiting for its todo list; null closes the dialog. */
+  pending: PendingRebase | null;
   branch: string;
-  todo: InteractiveRebaseTodoEntry[];
   onConfirm: (todo: RebaseTodoItem[]) => void;
   onCancel: () => void;
 }
+
+type Action = RebaseTodoItem["action"];
 
 /**
  * Replaces Git's todo editor. Commits stay in order; each one after the first
  * can be kept (pick) or folded into the commit above it (squash).
  */
-export function InteractiveRebaseDialog({
-  onto,
+export function InteractiveRebaseDialog({ pending, branch, onConfirm, onCancel }: InteractiveRebaseDialogProps) {
+  // Keep the last rebase on screen while the dialog animates out.
+  const shown = useRef(pending);
+  if (pending) shown.current = pending;
+  const rebase = shown.current;
+
+  return (
+    <Dialog size="wide" open={pending !== null} title="Interactive rebase" onClose={onCancel}>
+      {rebase && (
+        <TodoEditor
+          key={rebase.todo.map((item) => item.commit).join()}
+          rebase={rebase}
+          branch={branch}
+          onConfirm={onConfirm}
+          onCancel={onCancel}
+        />
+      )}
+    </Dialog>
+  );
+}
+
+function TodoEditor({
+  rebase,
   branch,
-  todo,
   onConfirm,
   onCancel,
-}: InteractiveRebaseDialogProps) {
-  const [actions, setActions] = useState(() => todo.map((item) => item.action));
+}: {
+  rebase: PendingRebase;
+  branch: string;
+  onConfirm: (todo: RebaseTodoItem[]) => void;
+  onCancel: () => void;
+}) {
+  const [actions, setActions] = useState<Action[]>(() => rebase.todo.map((item) => item.action));
 
-  function toggle(index: number) {
-    setActions((current) =>
-      current.map((action, itemIndex) =>
-        itemIndex === index ? (action === "pick" ? "squash" : "pick") : action,
-      ),
-    );
+  function choose(index: number, action: Action) {
+    setActions((current) => current.map((value, itemIndex) => (itemIndex === index ? action : value)));
   }
 
   function confirm() {
-    onConfirm(todo.map((item, index) => ({ action: actions[index], commit: item.commit })));
+    onConfirm(
+      rebase.todo.map((item, index) => ({
+        action: actions[index],
+        commit: item.commit,
+      })),
+    );
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/80 p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="rebase-dialog-title"
-    >
-      <div className="flex max-h-[85dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-700 bg-slate-900 shadow-2xl">
-        <div className="border-b border-slate-800 px-4 py-3">
-          <h2 id="rebase-dialog-title" className="font-bold text-slate-100">
-            Interactive rebase
-          </h2>
-          <p className="mt-1 text-sm text-slate-400">
-            Replaying <span className="font-mono text-slate-200">{branch}</span> onto{" "}
-            <span className="font-mono text-slate-200">{onto}</span>, oldest commit first.
-            Squash folds a commit into the one above it.
-          </p>
-        </div>
+    <>
+      <p className="-mt-2 text-sm text-grey-300">
+        Replaying <span className="font-secondary text-lime-400">{branch}</span> onto{" "}
+        <span className="font-secondary text-lime-400">{rebase.onto}</span>, oldest commit first. Squash folds a commit
+        into the one above it.
+      </p>
 
-        <ol className="flex-1 space-y-2 overflow-y-auto p-4">
-          {todo.map((item, index) => {
-            const action = actions[index];
-            const locked = index === 0;
-            return (
-              <li
-                key={item.commit}
-                className="flex items-center gap-3 rounded-lg bg-slate-950/60 p-2"
-              >
-                <button
-                  type="button"
-                  onClick={() => toggle(index)}
-                  disabled={locked}
-                  aria-label={`${action} ${item.commit}${locked ? " (the first commit must be picked)" : ""}`}
-                  className={`min-h-11 w-24 shrink-0 rounded-md font-mono text-sm font-semibold disabled:cursor-not-allowed ${
-                    action === "pick"
-                      ? "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/40"
-                      : "bg-amber-400/15 text-amber-200 ring-1 ring-amber-300/40"
-                  } ${locked ? "opacity-70" : "hover:brightness-125"}`}
-                >
-                  {action}
-                </button>
-                <div className="min-w-0">
-                  <p className="font-mono text-sm text-slate-200">{item.commit}</p>
-                  <p className="truncate text-sm text-slate-400">{item.message}</p>
-                </div>
-              </li>
-            );
-          })}
-        </ol>
+      <ol className="flex flex-col gap-2">
+        {rebase.todo.map((item, index) => (
+          <li key={item.commit} className="flex items-center gap-3 rounded bg-green-900 p-2 pl-3">
+            <div className="min-w-0 flex-1">
+              <p className="font-secondary text-xs text-lime-400">{item.commit}</p>
+              <p className="truncate text-sm text-grey-50">{item.message}</p>
+            </div>
+            <ActionToggle
+              commit={item.commit}
+              value={actions[index]}
+              locked={index === 0}
+              onChange={(action) => choose(index, action)}
+            />
+          </li>
+        ))}
+      </ol>
 
-        <div className="flex gap-2 border-t border-slate-800 p-3">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="min-h-11 flex-1 rounded-lg border border-slate-600 px-3 py-2 font-semibold text-slate-200 hover:bg-slate-800"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={confirm}
-            className="min-h-11 flex-1 rounded-lg bg-emerald-500 px-3 py-2 font-semibold text-slate-950 hover:bg-emerald-400"
-          >
-            Start rebase
-          </button>
-        </div>
+      <div className="flex flex-col gap-2">
+        <Button onClick={confirm}>Start rebase</Button>
+        <Button variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
       </div>
+    </>
+  );
+}
+
+const ACTIONS: Action[] = ["pick", "squash"];
+
+/** Two-option switch; the first commit has nothing above it to squash into, so it stays on pick. */
+function ActionToggle({
+  commit,
+  value,
+  locked,
+  onChange,
+}: {
+  commit: string;
+  value: Action;
+  locked: boolean;
+  onChange: (action: Action) => void;
+}) {
+  return (
+    <div role="radiogroup" aria-label={`Action for ${commit}`} className="flex shrink-0 rounded border border-lime-400">
+      {ACTIONS.map((action) => {
+        const selected = value === action;
+        const disabled = locked && action !== value;
+        return (
+          <button
+            key={action}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            disabled={disabled}
+            title={disabled ? "The first commit has nothing above it to squash into" : undefined}
+            onClick={() => onChange(action)}
+            className={`flex min-h-11 w-[68px] items-center justify-center font-secondary text-xs transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
+              selected
+                ? "bg-lime-400 text-green-950"
+                : "bg-green-950 text-lime-400 hover:bg-lime-400/10 active:bg-lime-400/20"
+            }`}
+          >
+            {action}
+          </button>
+        );
+      })}
     </div>
   );
 }

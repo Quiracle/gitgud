@@ -417,15 +417,12 @@ export function SolveScreen({
         <Button onClick={closePanel}>Got it</Button>
       </Dialog>
 
-      {session.pendingRebase && (
-        <InteractiveRebaseDialog
-          onto={session.pendingRebase.onto}
-          branch={session.repository.currentBranch}
-          todo={session.pendingRebase.todo}
-          onCancel={session.cancelRebase}
-          onConfirm={session.confirmRebase}
-        />
-      )}
+      <InteractiveRebaseDialog
+        pending={session.pendingRebase}
+        branch={session.repository.currentBranch}
+        onCancel={session.cancelRebase}
+        onConfirm={session.confirmRebase}
+      />
     </div>
   );
 }
