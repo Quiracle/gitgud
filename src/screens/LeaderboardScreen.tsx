@@ -186,9 +186,13 @@ function Podium({ entries }: { entries: LeaderboardEntry[] }) {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ ...spring.bouncy, delay: 0.35 + index * 0.12 }}
               >
-                <div className={`rounded border p-1.5 ${first ? "border-lime-400" : "border-grey-500"} ${entry.isCurrentUser ? "ring-2 ring-lime-400" : ""}`}>
-                  <PixelChicken look={PODIUM_LOOKS[rank]} size={first ? 64 : 48} className="rounded" label={`${entry.displayName}, rank ${rank}`} />
-                </div>
+                {/* Only your own chicken is outlined. */}
+                <PixelChicken
+                  look={PODIUM_LOOKS[rank]}
+                  size={first ? 64 : 48}
+                  className={`rounded ${entry.isCurrentUser ? "outline outline-2 outline-lime-400" : ""}`}
+                  label={`${entry.displayName}, rank ${rank}`}
+                />
                 <p className="w-full truncate text-center text-xs text-grey-50">{entry.isCurrentUser ? "You" : entry.displayName}</p>
                 <p className="text-xs text-grey-300">{formatDuration(entry.elapsedMs)}</p>
               </motion.div>
