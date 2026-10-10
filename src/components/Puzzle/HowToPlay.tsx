@@ -37,10 +37,12 @@ interface HowToPlayLinkProps {
   onNavigate: (path: string) => void;
   /** Offers the Learn Basics course from the popup; omit where the course is already on screen. */
   learnHref?: string;
+  /** Offers to replay the welcome tutorial from the popup. */
+  onTutorial?: () => void;
 }
 
 /** "How to play" link that opens a quick explainer of the game. */
-export function HowToPlayLink({ onNavigate, learnHref }: HowToPlayLinkProps) {
+export function HowToPlayLink({ onNavigate, learnHref, onTutorial }: HowToPlayLinkProps) {
   const [open, setOpen] = useState(false);
   const close = () => setOpen(false);
 
@@ -67,6 +69,11 @@ export function HowToPlayLink({ onNavigate, learnHref }: HowToPlayLinkProps) {
         </div>
         <div className="flex flex-col gap-2">
           <Button onClick={close}>Got it</Button>
+          {onTutorial && (
+            <Button variant="outline" onClick={() => { close(); onTutorial(); }}>
+              Watch the tutorial
+            </Button>
+          )}
           {learnHref && (
             <Button variant="tertiary" href={learnHref} onNavigate={(path) => { close(); onNavigate(path); }}>
               New to Git? Learn the basics

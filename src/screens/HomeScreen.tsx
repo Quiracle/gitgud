@@ -1,11 +1,12 @@
 import { motion } from "motion/react";
-import { useMemo, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from "react";
 import { Button } from "../components/Button/Button";
 import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { CommitTree } from "../components/GitGraph/CommitTree";
 import { Icon, type IconName } from "../components/Icon/Icon";
 import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
+import { WelcomeTutorial } from "../components/Onboarding/WelcomeTutorial";
 import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
 import { PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { StreakTrail } from "../components/Streak/StreakTrail";
@@ -13,6 +14,7 @@ import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
 import { useDragScroll } from "../hooks/useDragScroll";
 import { useProgressInsights } from "../hooks/useProgressInsights";
 import { openProgressStore } from "../storage/browserProgress";
+import { hasSeenWelcome, markWelcomeSeen } from "../storage/onboarding";
 import { rise, spring, stagger } from "../lib/motion";
 import { learnBasicsCatalog, type PublicPuzzleDefinition } from "../puzzles";
 import type { LearnBasicsLesson } from "../puzzles/learnBasics/types";
@@ -35,6 +37,18 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
     [daily],
   );
   const courses = useDragScroll<HTMLUListElement>();
+  const [tutorial, setTutorial] = useState(false);
+  const closeTutorial = useCallback(() => {
+    markWelcomeSeen();
+    setTutorial(false);
+  }, []);
+
+  // First visit: let Home settle in, then walk through how the game works.
+  useEffect(() => {
+    if (hasSeenWelcome()) return;
+    const timer = window.setTimeout(() => setTutorial(true), 700);
+    return () => window.clearTimeout(timer);
+  }, []);
 
 
   return (
@@ -76,7 +90,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                 }
               />
             </div>
-            <HowToPlayLink learnHref="/course" onNavigate={onNavigate} />
+            <HowToPlayLink learnHref="/course" onNavigate={onNavigate} onTutorial={() => setTutorial(true)} />
           </div>
           <Button href="/play" onNavigate={handOff.open}>
             <Shimmer />
@@ -142,6 +156,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
       </section>
 
       <SiteFooter />
+      <WelcomeTutorial open={tutorial} onClose={closeTutorial} onNavigate={onNavigate} />
     </div>
   );
 }

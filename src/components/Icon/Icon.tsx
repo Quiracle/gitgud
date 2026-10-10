@@ -6,6 +6,7 @@ import arrowBackIosNew from "../../assets/icons/arrow_back_ios_new.svg";
 import arrowForwardIos from "../../assets/icons/arrow_forward_ios.svg";
 import github from "../../assets/brand/github.png";
 import google from "../../assets/brand/google.svg";
+import check from "../../assets/icons/check.svg";
 import close from "../../assets/icons/close.svg";
 import crown from "../../assets/icons/crown.svg";
 import extension from "../../assets/icons/extension.svg";
@@ -26,6 +27,7 @@ const ICONS = {
   add_2: add2,
   arrow_back_ios_new: arrowBackIosNew,
   arrow_forward_ios: arrowForwardIos,
+  check,
   close,
   crown,
   extension,

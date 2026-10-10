@@ -327,7 +327,7 @@ function CanvasButton({ icon, label, onClick }: { icon: IconName; label: string;
   );
 }
 
-interface CommitCardProps {
+export interface CommitCardProps {
   id: string;
   look: ChickenLook;
   branches: string[];
@@ -336,7 +336,7 @@ interface CommitCardProps {
 }
 
 /** One Figma "card branch" variant: optional branch tag, focus outline and dot for HEAD. */
-function CommitCard({ id, look, branches, currentBranch, focused }: CommitCardProps) {
+export function CommitCard({ id, look, branches, currentBranch, focused }: CommitCardProps) {
   const ordered = [...branches].sort((a, b) => Number(b === currentBranch) - Number(a === currentBranch));
   const onCurrent = ordered[0] === currentBranch;
 
