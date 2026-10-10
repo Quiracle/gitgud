@@ -73,7 +73,11 @@ export function CommandPanel({
   }
 
   const border =
-    flash === "error" ? "border-red-500" : flash === "solved" ? "border-lime-300" : "border-lime-400";
+    flash === "error"
+      ? "border-red-500 outline-red-500"
+      : flash === "solved"
+        ? "border-lime-300 outline-lime-300"
+        : "border-lime-400 outline-lime-400";
 
   return (
     <div className={`flex min-h-0 flex-col bg-green-950 px-4 py-3 ${showHistory ? "h-full gap-2" : "gap-4"}`}>
@@ -99,7 +103,7 @@ export function CommandPanel({
           Git command
         </label>
         <motion.div
-          className={`flex min-w-0 flex-1 rounded border bg-green-900 transition-colors duration-200 ${border}`}
+          className={`flex min-w-0 flex-1 rounded border bg-green-900 transition-colors duration-200 focus-within:outline focus-within:outline-1 focus-within:-outline-offset-2 ${border}`}
           animate={flash === "solved" ? { boxShadow: ["0 0 0 0 rgb(158 232 43 / 0.6)", "0 0 0 10px rgb(158 232 43 / 0)"] } : {}}
           transition={{ duration: 0.8 }}
         >
