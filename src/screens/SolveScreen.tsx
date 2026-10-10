@@ -435,7 +435,7 @@ function hintTitle(used: number, total: number) {
 function submissionMessage(state: SubmissionState, error?: string): string {
   switch (state) {
     case "guest":
-      return "Saved on this device. Log in before your next daily to get ranked.";
+      return "Saved on this device. Log in and this solve joins the leaderboard.";
     case "not-ranked":
       return "Progress saved on this device.";
     case "assisted":

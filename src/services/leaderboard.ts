@@ -1,5 +1,5 @@
 import type { PublicPuzzleDefinition } from "../puzzles";
-import type { CompletionRecord } from "../storage/progress";
+import type { CompletionRecord, LocalProgressStore } from "../storage/progress";
 import { requireSupabaseClient } from "./supabase";
 
 export interface LeaderboardEntry {
@@ -21,7 +21,7 @@ export interface SyncedDailyStats {
 }
 
 export async function startDailyAttempt(
-  puzzle: PublicPuzzleDefinition,
+  puzzle: Pick<PublicPuzzleDefinition, "id" | "version" | "kind">,
 ): Promise<string> {
   if (puzzle.kind !== "daily") throw new Error("Only daily puzzles have ranked attempts.");
   const { data, error } = await requireSupabaseClient().rpc("start_daily_attempt", {
@@ -45,6 +45,35 @@ export async function submitDailyResult(
     submitted_transcript: completion.commands,
   });
   if (error) throw new Error(`Leaderboard submission failed: ${error.message}`);
+}
+
+const claims = new Map<string, Promise<void>>();
+
+/**
+ * Puts a finished daily (for example one solved as a guest) on the signed-in player's
+ * leaderboard, then marks it ranked for that account. Concurrent calls for the same solve
+ * share one submission; the server keeps the player's best result either way.
+ */
+export function claimDailyCompletion(store: LocalProgressStore, completion: CompletionRecord, userId: string): Promise<void> {
+  if (completion.kind !== "daily" || completion.assisted) return Promise.reject(new Error("This solve can't be ranked."));
+  const key = `${userId}:${completion.id}`;
+  const existing = claims.get(key);
+  if (existing) return existing;
+  const claim = (async () => {
+    const attemptId = await startDailyAttempt({ id: completion.puzzleId, version: completion.puzzleVersion, kind: "daily" });
+    await submitDailyResult(attemptId, completion);
+    store.markCompletionRanked(completion.id, userId);
+  })().finally(() => claims.delete(key));
+  claims.set(key, claim);
+  return claim;
+}
+
+/** Claims every unranked, unassisted daily solve saved on this device. Failures stay claimable. */
+export async function claimGuestDailies(store: LocalProgressStore, userId: string): Promise<number> {
+  const results = await Promise.allSettled(
+    store.unrankedDailyCompletions().map((completion) => claimDailyCompletion(store, completion, userId)),
+  );
+  return results.filter((result) => result.status === "fulfilled").length;
 }
 
 export async function getDailyLeaderboard(

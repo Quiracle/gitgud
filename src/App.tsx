@@ -1,6 +1,9 @@
 import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { AppLink } from "./components/AppLink";
+import { useAuth } from "./context/AuthContext";
+import { claimGuestDailies } from "./services/leaderboard";
+import { openProgressStore } from "./storage/browserProgress";
 import { BottomNav } from "./components/BottomNav/BottomNav";
 import { peekCanvasOrigin } from "./lib/canvasTransition";
 import { spring } from "./lib/motion";
@@ -21,6 +24,15 @@ function normalizePath(path: string): string {
 
 export default function App() {
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+  const { status: authStatus, user } = useAuth();
+
+  // Daily solves finished as a guest join the player's leaderboard once they sign in.
+  useEffect(() => {
+    if (authStatus !== "authenticated" || !user) return;
+    claimGuestDailies(openProgressStore(), user.id).catch(() => {
+      // Unsubmitted solves stay unranked and are retried on the next sign-in or visit.
+    });
+  }, [authStatus, user?.id]);
   // A shared-element hand-off (Home canvas → puzzle) replaces the page fade.
   const [handOff, setHandOff] = useState(false);
 
