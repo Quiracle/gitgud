@@ -31,7 +31,7 @@ export function ActionBar({
 }: ActionBarProps) {
   const { t } = useI18n();
   return (
-    <nav aria-label={t("actions.label")} className={`flex items-center justify-between bg-green-950 px-6 py-1 ${className}`}>
+    <nav aria-label={t("actions.label")} className={`flex items-center justify-between bg-green-950 px-6 py-1 lg:px-4 ${className}`}>
       <Action icon="arrow_back_ios_new" label={t("actions.exit")} onClick={onExit} />
       <Action icon="forward_media" label={t("actions.restart")} compact onClick={onRestart} disabled={restartDisabled} />
       <Action icon="help" label={t("actions.help")} compact onClick={onHelp} />

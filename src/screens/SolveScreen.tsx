@@ -158,7 +158,7 @@ export function SolveScreen({
 
   return (
     <div
-      className="fixed inset-x-0 top-0 flex flex-col overflow-hidden bg-green-950 lg:grid lg:grid-cols-[minmax(0,1fr)_400px]"
+      className="fixed inset-x-0 top-0 flex flex-col overflow-hidden bg-green-950 lg:grid lg:grid-cols-[minmax(0,1fr)_448px]"
       style={{ height: viewport.height, transform: `translateY(${viewport.offsetTop}px)` }}
     >
       <motion.div
