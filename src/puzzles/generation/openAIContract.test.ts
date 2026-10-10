@@ -56,6 +56,13 @@ describe("OpenAI generation request contract", () => {
     expect(schema.properties.hints).toMatchObject({ minItems: 2, maxItems: 2 });
     expect(schema.properties.solutionCommands).toMatchObject({ minItems: 3, maxItems: 7 });
     expect(schema.properties.initialRepository.properties.commits.items.properties.changes.maxItems).toBe(5);
+    expect(schema.properties.initialRepository.properties.commits.items.properties.id.enum)
+      .toEqual(["c1", "c2", "c3", "c4", "c5", "c6", "c7", "c8"]);
+    expect(schema.properties.initialRepository.properties.branches.items.properties.name.enum)
+      .toEqual(["main", "feature", "style"]);
+    expect(schema.properties.initialRepository.properties.currentBranch.enum).toEqual(["main"]);
+    expect(schema.properties.target.properties.branchHeads).toMatchObject({ minItems: 0, maxItems: 0 });
+    expect(schema.properties.target.properties.requiredProvenance).toMatchObject({ minItems: 0, maxItems: 0 });
   });
 
   it("reports incomplete responses before attempting to parse their partial JSON", () => {

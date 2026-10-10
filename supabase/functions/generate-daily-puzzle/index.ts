@@ -27,6 +27,8 @@ Deno.serve(async (request) => {
       date?: string;
       perDifficulty?: number;
       difficulty?: Difficulty;
+      retrySeed?: string;
+      previousIssues?: string[];
     };
     const supabase = createClient(config.supabaseUrl, config.serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
@@ -34,7 +36,14 @@ Deno.serve(async (request) => {
 
     if (body.mode === "preflight") return await preflight(supabase, config);
     if (body.mode === "seed-fallbacks") {
-      return await seedFallbacks(supabase, config, body.perDifficulty ?? 2, body.difficulty);
+      return await seedFallbacks(
+        supabase,
+        config,
+        body.perDifficulty ?? 2,
+        body.difficulty,
+        body.retrySeed,
+        body.previousIssues,
+      );
     }
     if (body.mode && body.mode !== "generate") return response({ error: "Unknown mode." }, 400);
 
@@ -151,10 +160,18 @@ async function seedFallbacks(
   config: ReturnType<typeof readConfig>,
   desired: number,
   requestedDifficulty?: Difficulty,
+  retrySeed?: string,
+  previousIssues: string[] = [],
 ) {
   if (!Number.isInteger(desired) || desired < 2 || desired > 10) return response({ error: "perDifficulty must be between 2 and 10." }, 400);
   if (requestedDifficulty && !difficulties.includes(requestedDifficulty)) {
     return response({ error: "difficulty must be easy, medium, or hard." }, 400);
+  }
+  if (retrySeed && !/^[A-Za-z0-9-]{1,100}$/.test(retrySeed)) {
+    return response({ error: "retrySeed is invalid." }, 400);
+  }
+  if (!Array.isArray(previousIssues) || previousIssues.length > 12 || previousIssues.some((issue) => typeof issue !== "string" || issue.length > 500)) {
+    return response({ error: "previousIssues must contain at most 12 short strings." }, 400);
   }
 
   const counts = await fallbackCounts(supabase);
@@ -167,10 +184,11 @@ async function seedFallbacks(
       .filter((candidate) => counts[candidate] < desired)
       .sort((left, right) => counts[left] - counts[right])[0];
 
-  const seed = crypto.randomUUID();
+  const isRetry = Boolean(retrySeed && requestedDifficulty === difficulty);
+  const seed = isRetry ? retrySeed! : crypto.randomUUID();
   const brief = createGenerationBrief("2099-01-01", difficulty, seed);
   try {
-    const draft = await requestOpenAI(config, brief, [], config.requestTimeoutMs);
+    const draft = await requestOpenAI(config, brief, isRetry ? previousIssues : [], config.requestTimeoutMs);
     const candidate = materializeCandidate(draft, "2099-01-01");
     const validation = validateCandidateAgainstBrief(candidate, brief);
     if (!validation.ok) {
@@ -178,6 +196,7 @@ async function seedFallbacks(
         ready: false,
         generated: false,
         difficulty,
+        retrySeed: seed,
         counts,
         issues: validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`),
       });
@@ -201,6 +220,7 @@ async function seedFallbacks(
       ready: false,
       generated: false,
       difficulty,
+      retrySeed: seed,
       counts,
       error: safeError(error),
     });

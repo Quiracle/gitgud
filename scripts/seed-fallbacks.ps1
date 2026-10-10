@@ -18,6 +18,9 @@ $headers = @{
   "Content-Type" = "application/json"
 }
 $url = "https://$ProjectRef.supabase.co/functions/v1/generate-daily-puzzle"
+$retryDifficulty = $null
+$retrySeed = $null
+$retryIssues = @()
 
 Write-Host "Checking OpenAI configuration and current fallback counts..."
 $preflight = Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body '{"mode":"preflight"}'
@@ -29,16 +32,31 @@ for ($requestNumber = 1; $requestNumber -le $MaxRequests; $requestNumber += 1) {
   if ($preflight.ready) { break }
 
   Write-Host "Fallback generation request $requestNumber of $MaxRequests..."
-  $body = @{ mode = "seed-fallbacks"; perDifficulty = $PerDifficulty } | ConvertTo-Json
+  $requestBody = @{ mode = "seed-fallbacks"; perDifficulty = $PerDifficulty }
+  if ($retrySeed) {
+    $requestBody["difficulty"] = $retryDifficulty
+    $requestBody["retrySeed"] = $retrySeed
+    $requestBody["previousIssues"] = @($retryIssues)
+  }
+  $body = $requestBody | ConvertTo-Json -Depth 4
   $result = Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
 
   if ($result.generated) {
     Write-Host "Stored one $($result.difficulty) fallback. Counts: easy=$($result.counts.easy), medium=$($result.counts.medium), hard=$($result.counts.hard)"
+    $retryDifficulty = $null
+    $retrySeed = $null
+    $retryIssues = @()
   } elseif ($result.error) {
     Write-Warning "Generation did not complete: $($result.error)"
+    $retryDifficulty = $result.difficulty
+    $retrySeed = $result.retrySeed
+    $retryIssues = @()
   } else {
-    Write-Warning "Candidate was rejected by validation; retrying with a new brief."
+    Write-Warning "Candidate was rejected by validation; repairing the same brief on the next request."
     if ($result.issues) { $result.issues | Select-Object -First 3 | ForEach-Object { Write-Warning $_ } }
+    $retryDifficulty = $result.difficulty
+    $retrySeed = $result.retrySeed
+    $retryIssues = @($result.issues)
   }
 
   if ($result.ready) { break }
