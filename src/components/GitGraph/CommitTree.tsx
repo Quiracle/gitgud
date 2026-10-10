@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, type PointerEvent, type RefObject } from "react";
 import { getSnapshot, type Repository } from "../../engine";
 import { branchesAtCommit } from "../../engine/graph";
 import { useElementSize } from "../../hooks/useElementSize";
@@ -20,6 +20,15 @@ interface CommitTreeProps {
   showRefs?: boolean;
   /** Draw nodes and connectors in sequence on mount. */
   animateIn?: boolean;
+  /**
+   * "fit" scales the drawing down to the container. "pan" keeps it at full size in a
+   * scrollable canvas (touch, wheel, or mouse drag) that follows HEAD.
+   */
+  mode?: "fit" | "pan";
+  /** Scale to grow from on mount, for a shared-element entrance. */
+  introScale?: number;
+  /** Reports the fitted scale so another screen can continue from it. */
+  onScale?: (scale: number) => void;
   className?: string;
 }
 
@@ -27,7 +36,16 @@ interface CommitTreeProps {
  * Illustrated commit graph: each card shows the repository snapshot at that commit.
  * The drawing keeps Figma proportions and scales down to fit its container.
  */
-export function CommitTree({ repository, padding = 16, showRefs = true, animateIn = true, className = "" }: CommitTreeProps) {
+export function CommitTree({
+  repository,
+  padding = 16,
+  showRefs = true,
+  animateIn = true,
+  mode = "fit",
+  introScale,
+  onScale,
+  className = "",
+}: CommitTreeProps) {
   const [ref, box] = useElementSize<HTMLDivElement>();
   const layout = useMemo(() => layoutCommitTree(repository), [repository]);
   const looks = useMemo(
@@ -42,9 +60,19 @@ export function CommitTree({ repository, padding = 16, showRefs = true, animateI
   const minCol = Math.min(...layout.nodes.map((node) => node.col));
   const width = (Math.max(...layout.nodes.map((node) => node.col)) - minCol) * colStep + CARD_W;
   const height = (layout.rows - 1) * rowStep + CARD_H + (showRefs ? TAG_H : 0);
-  const scale = box.width
-    ? Math.min(1, (box.width - padding * 2) / width, (box.height - padding * 2) / height)
-    : 0;
+  const pan = mode === "pan";
+  const scale = !box.width
+    ? 0
+    : pan
+      ? 1
+      : Math.min(1, (box.width - padding * 2) / width, (box.height - padding * 2) / height);
+  // In pan mode the scroll area is at least the viewport, with the drawing centred in it.
+  const areaW = pan ? Math.max(box.width, width + padding * 2) : box.width;
+  const areaH = pan ? Math.max(box.height, height + padding * 2) : box.height;
+
+  useEffect(() => {
+    if (scale > 0) onScale?.(scale);
+  }, [scale, onScale]);
 
   const position = new Map(
     layout.nodes.map((node) => {
@@ -55,13 +83,36 @@ export function CommitTree({ repository, padding = 16, showRefs = true, animateI
   );
   const delayFor = (row: number, x: number) => (animateIn ? row * 0.14 + x / 2000 : 0);
 
+  // Keep HEAD in view whenever it moves.
+  const head = position.get(repository.head);
+  const headX = head ? (areaW - width) / 2 + head.x + CARD_W / 2 : 0;
+  const headY = head ? (areaH - height) / 2 + head.y + head.h / 2 : 0;
+  const followed = useRef(false);
+  useEffect(() => {
+    const element = ref.current;
+    if (!pan || !element || !box.width || !head) return;
+    element.scrollTo({
+      left: headX - box.width / 2,
+      top: headY - box.height / 2,
+      behavior: followed.current ? "smooth" : "instant",
+    });
+    followed.current = true;
+  }, [pan, headX, headY, box.width, box.height, head, ref]);
+
+  const drag = usePointerPan(ref);
+
   return (
-    <div ref={ref} className={`relative overflow-hidden ${className}`}>
+    <div
+      ref={ref}
+      className={`relative ${pan ? "no-scrollbar cursor-grab overflow-auto overscroll-contain active:cursor-grabbing" : "overflow-hidden"} ${className}`}
+      {...(pan ? drag : {})}
+    >
       {scale > 0 && (
+        <div className="relative" style={{ width: areaW, height: areaH }}>
         <motion.div
           className="absolute left-1/2 top-1/2"
           style={{ width, height, x: "-50%", y: "-50%" }}
-          initial={false}
+          initial={introScale ? { scale: introScale } : false}
           animate={{ scale }}
           transition={spring.soft}
         >
@@ -107,9 +158,30 @@ export function CommitTree({ repository, padding = 16, showRefs = true, animateI
             })}
           </AnimatePresence>
         </motion.div>
+        </div>
       )}
     </div>
   );
+}
+
+/** Mouse drag-to-pan for desktop; touch and trackpads already scroll natively. */
+function usePointerPan(ref: RefObject<HTMLDivElement>) {
+  const start = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  return {
+    onPointerDown(event: PointerEvent<HTMLDivElement>) {
+      if (event.pointerType !== "mouse" || !ref.current) return;
+      start.current = { x: event.clientX, y: event.clientY, left: ref.current.scrollLeft, top: ref.current.scrollTop };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    onPointerMove(event: PointerEvent<HTMLDivElement>) {
+      if (!start.current || !ref.current) return;
+      ref.current.scrollLeft = start.current.left - (event.clientX - start.current.x);
+      ref.current.scrollTop = start.current.top - (event.clientY - start.current.y);
+    },
+    onPointerUp() {
+      start.current = null;
+    },
+  };
 }
 
 interface CommitCardProps {

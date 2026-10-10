@@ -10,7 +10,10 @@ import flag2 from "../../assets/icons/flag_2.svg";
 import help from "../../assets/icons/help.svg";
 import home from "../../assets/icons/home.svg";
 import importContacts from "../../assets/icons/import_contacts.svg";
+import lightbulb2 from "../../assets/icons/lightbulb_2.svg";
 import remove from "../../assets/icons/remove.svg";
+import restartAlt from "../../assets/icons/restart_alt.svg";
+import share from "../../assets/icons/share.svg";
 
 /** Google Material Symbols, Outlined, weight 300, 24px. */
 const ICONS = {
@@ -25,7 +28,10 @@ const ICONS = {
   help,
   home,
   import_contacts: importContacts,
+  lightbulb_2: lightbulb2,
   remove,
+  restart_alt: restartAlt,
+  share,
 } as const;
 
 export type IconName = keyof typeof ICONS;

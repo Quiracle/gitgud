@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import type { MouseEvent, ReactNode } from "react";
+import { useRef, type MouseEvent, type ReactNode, type RefObject } from "react";
 import { Button } from "../components/Button/Button";
 import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { CommitTree } from "../components/GitGraph/CommitTree";
@@ -7,6 +7,7 @@ import { Icon, type IconName } from "../components/Icon/Icon";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
+import { setCanvasOrigin } from "../lib/canvasTransition";
 import { rise, spring, stagger } from "../lib/motion";
 import { learnBasicsCatalog, type PublicPuzzleDefinition } from "../puzzles";
 import type { LearnBasicsLesson } from "../puzzles/learnBasics/types";
@@ -29,6 +30,20 @@ const STREAK_COUNT = 0;
 /** Figma home frame (node 24:33046). */
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const daily = useDailyPuzzle();
+  const preview = useRef<HTMLDivElement>(null);
+  const treeScale = useRef(1);
+
+  // Hand the preview's position to the puzzle screen so its canvas grows out of it.
+  function solve(path: string) {
+    const rect = preview.current?.getBoundingClientRect();
+    if (rect && daily.status === "ready") {
+      setCanvasOrigin({
+        rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
+        treeScale: treeScale.current,
+      });
+    }
+    onNavigate(path);
+  }
 
   return (
     <div className="min-h-dvh bg-green-50">
@@ -50,7 +65,13 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                   label={STREAK_COUNT > 0 ? `${STREAK_COUNT}-days streak!` : "Start your streak!"}
                 />
               </div>
-              <DailyPreview state={daily} onRetry={() => void daily.reload()} />
+              <DailyPreview
+                state={daily}
+                onRetry={() => void daily.reload()}
+                canvasRef={preview}
+                onScale={(scale) => (treeScale.current = scale)}
+                onOpen={() => solve("/play")}
+              />
             </div>
             <a
               href="/course"
@@ -63,7 +84,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
               </motion.span>
             </a>
           </div>
-          <Button href="/play" onNavigate={onNavigate}>
+          <Button href="/play" onNavigate={solve}>
             <Shimmer />
             <span className="relative">Solve the puzzle!</span>
           </Button>
@@ -135,9 +156,17 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
   );
 }
 
-function DailyPreview({ state, onRetry }: { state: ReturnType<typeof useDailyPuzzle>; onRetry: () => void }) {
+interface DailyPreviewProps {
+  state: ReturnType<typeof useDailyPuzzle>;
+  onRetry: () => void;
+  canvasRef: RefObject<HTMLDivElement>;
+  onScale: (scale: number) => void;
+  onOpen: () => void;
+}
+
+function DailyPreview({ state, onRetry, canvasRef, onScale, onOpen }: DailyPreviewProps) {
   return (
-    <div className="relative aspect-square w-full overflow-hidden rounded bg-green-900">
+    <div ref={canvasRef} className="relative aspect-square w-full overflow-hidden rounded bg-green-900">
       {state.status === "loading" && <PreviewSkeleton />}
       {state.status === "error" && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
@@ -149,7 +178,14 @@ function DailyPreview({ state, onRetry }: { state: ReturnType<typeof useDailyPuz
       )}
       {state.status === "ready" && (
         <>
-          <CommitTree repository={state.puzzle.initialRepository} padding={24} className="absolute inset-0" />
+          <button
+            type="button"
+            onClick={onOpen}
+            aria-label="Open today's puzzle"
+            className="absolute inset-0 cursor-pointer"
+          >
+            <CommitTree repository={state.puzzle.initialRepository} padding={24} onScale={onScale} className="size-full" />
+          </button>
           <motion.div
             className="absolute left-2 top-2"
             initial={{ opacity: 0, x: -12 }}

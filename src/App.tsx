@@ -2,6 +2,7 @@ import { AnimatePresence, MotionConfig, motion } from "motion/react";
 import { useEffect, useState, type ReactNode } from "react";
 import { AppLink } from "./components/AppLink";
 import { BottomNav } from "./components/BottomNav/BottomNav";
+import { peekCanvasOrigin } from "./lib/canvasTransition";
 import { spring } from "./lib/motion";
 import { learnBasicsCatalog } from "./puzzles";
 import { CourseScreen } from "./screens/CourseScreen";
@@ -16,9 +17,14 @@ function normalizePath(path: string): string {
 
 export default function App() {
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
+  // A shared-element hand-off (Home canvas → puzzle) replaces the page fade.
+  const [handOff, setHandOff] = useState(false);
 
   useEffect(() => {
-    const handlePopState = () => setPath(normalizePath(window.location.pathname));
+    const handlePopState = () => {
+      setHandOff(false);
+      setPath(normalizePath(window.location.pathname));
+    };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
@@ -26,18 +32,21 @@ export default function App() {
   function navigate(nextPath: string) {
     const normalized = normalizePath(nextPath);
     if (normalized !== path) window.history.pushState({}, "", normalized);
+    setHandOff(peekCanvasOrigin() !== null);
     setPath(normalized);
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 
   return (
     <MotionConfig reducedMotion="user">
-      <AnimatePresence mode="wait" initial={false}>
+      <AnimatePresence mode="wait" initial={false} custom={handOff}>
         <motion.div
           key={path}
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8, transition: { duration: 0.12 } }}
+          custom={handOff}
+          variants={PAGE}
+          initial="enter"
+          animate="center"
+          exit="leave"
           transition={spring.soft}
         >
           {renderScreen(path, navigate)}
@@ -47,6 +56,13 @@ export default function App() {
     </MotionConfig>
   );
 }
+
+const PAGE = {
+  enter: (handOff: boolean) => (handOff ? { opacity: 1, y: 0 } : { opacity: 0, y: 12 }),
+  center: { opacity: 1, y: 0 },
+  leave: (handOff: boolean) =>
+    handOff ? { opacity: 1, transition: { duration: 0 } } : { opacity: 0, y: -8, transition: { duration: 0.12 } },
+};
 
 /** The puzzle screens own the full viewport for the board and terminal. */
 function showsBottomNav(path: string): boolean {
