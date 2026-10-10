@@ -226,7 +226,14 @@ function Row({ children }: { children: ReactNode }) {
 
 function Card({ id, look, branch, delay }: { id: string; look: ChickenLook; branch?: string; delay?: number }) {
   const card = (
-    <CommitCard id={id} look={look} branches={branch ? [branch] : []} currentBranch="main" focused={branch === "main"} />
+    <CommitCard
+      id={id}
+      look={look}
+      branches={branch ? [branch] : []}
+      currentBranch="main"
+      focused={branch === "main"}
+      colour={branch ? `rgb(var(--colors-branch-${branch === "main" ? 1 : 2}))` : undefined}
+    />
   );
   if (delay === undefined) return card;
   return (

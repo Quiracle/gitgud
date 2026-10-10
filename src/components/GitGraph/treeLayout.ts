@@ -88,11 +88,9 @@ export function layoutCommitTree(repository: Repository): TreeLayout {
  * each tip, main/master first so the trunk stays stable when HEAD moves.
  * Commits no branch reaches are left unassigned.
  */
-function branchLanes(repository: Repository): Map<string, string> {
-  const trunk = (name: string) => (name === "main" || name === "master" ? 0 : 1);
-  const names = Object.keys(repository.branches).sort((a, b) => trunk(a) - trunk(b));
+export function branchLanes(repository: Repository): Map<string, string> {
   const laneOf = new Map<string, string>();
-  for (const name of names) {
+  for (const name of branchOrder(repository)) {
     let id: string | undefined = repository.branches[name];
     while (id && id in repository.commits && !laneOf.has(id)) {
       laneOf.set(id, name);
@@ -100,4 +98,22 @@ function branchLanes(repository: Repository): Map<string, string> {
     }
   }
   return laneOf;
+}
+
+/** Branch names with main/master first, then in the puzzle's own order. */
+export function branchOrder(repository: Repository): string[] {
+  const trunk = (name: string) => (name === "main" || name === "master" ? 0 : 1);
+  return Object.keys(repository.branches).sort((a, b) => trunk(a) - trunk(b));
+}
+
+const BRANCH_COLOURS = 6;
+
+/**
+ * A CSS colour per branch, stable for the whole puzzle: the trunk is always
+ * branch colour 1 and the rest follow the puzzle's branch order, cycling if needed.
+ */
+export function branchColours(repository: Repository): Map<string, string> {
+  return new Map(
+    branchOrder(repository).map((name, index) => [name, `rgb(var(--colors-branch-${(index % BRANCH_COLOURS) + 1}))`]),
+  );
 }
