@@ -143,19 +143,19 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
       </div>
 
       <div className="flex flex-col gap-2">
-        {step < LAST ? (
+        {step === 0 ? (
           <>
-            <Button onClick={() => go(step + 1)}>Next</Button>
-            {step === 0 ? (
-              <Button variant="tertiary" onClick={onClose}>
-                Skip tutorial
-              </Button>
-            ) : (
-              <Button variant="tertiary" onClick={() => go(step - 1)}>
-                Back
-              </Button>
-            )}
+            <NextButton onClick={() => go(step + 1)} />
+            <Button variant="tertiary" onClick={onClose}>
+              Skip tutorial
+            </Button>
           </>
+        ) : step < LAST ? (
+          // Back and Next side by side; Next always on the right.
+          <div className="flex gap-2">
+            <BackButton variant="outline" onClick={() => go(step - 1)} />
+            <NextButton onClick={() => go(step + 1)} />
+          </div>
         ) : (
           <>
             <p className="pb-2 text-paragraph leading-5 text-grey-50">New to Git?</p>
@@ -165,13 +165,29 @@ export function WelcomeTutorial({ open, onClose, onNavigate }: WelcomeTutorialPr
             <Button variant="outline" onClick={onClose}>
               I know Git, let me play
             </Button>
-            <Button variant="tertiary" onClick={() => go(step - 1)}>
-              Back
-            </Button>
+            <BackButton variant="tertiary" onClick={() => go(step - 1)} />
           </>
         )}
       </div>
     </Dialog>
+  );
+}
+
+function NextButton({ onClick }: { onClick: () => void }) {
+  return (
+    <Button className="flex-1 gap-2" onClick={onClick}>
+      Next
+      <Icon name="arrow_forward_ios" size={16} />
+    </Button>
+  );
+}
+
+function BackButton({ variant, onClick }: { variant: "outline" | "tertiary"; onClick: () => void }) {
+  return (
+    <Button variant={variant} className="flex-1 gap-2" onClick={onClick}>
+      <Icon name="arrow_back_ios_new" size={16} />
+      Back
+    </Button>
   );
 }
 
