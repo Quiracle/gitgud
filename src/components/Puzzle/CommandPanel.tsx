@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import type { CommandOutcome } from "../../hooks/usePuzzleSession";
 import { spring } from "../../lib/motion";
 import { Icon } from "../Icon/Icon";
@@ -23,6 +23,8 @@ interface CommandPanelProps {
   docked?: boolean;
   disabled?: boolean;
   disabledPlaceholder?: string;
+  /** Action beside the input, such as Share once the puzzle is solved. */
+  trailing?: ReactNode;
 }
 
 type Flash = "idle" | "error" | "solved";
@@ -37,6 +39,7 @@ export function CommandPanel({
   docked = false,
   disabled = false,
   disabledPlaceholder = "Puzzle solved",
+  trailing,
 }: CommandPanelProps) {
   const [command, setCommand] = useState("");
   const [flash, setFlash] = useState<Flash>("idle");
@@ -122,6 +125,7 @@ export function CommandPanel({
             className="min-w-0 flex-1 bg-transparent p-3 font-secondary text-code text-grey-50 outline-none placeholder:text-grey-400 disabled:cursor-not-allowed"
           />
         </motion.div>
+        {trailing}
         {!docked && !showHistory && <ToggleButton expanded={false} onToggle={onToggle} />}
       </form>
     </div>
