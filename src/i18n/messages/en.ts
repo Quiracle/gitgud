@@ -30,7 +30,6 @@ export const en = {
   "login.dismissError": "Dismiss error",
   "login.legal": "By continuing, you agree to the <terms>Terms of use</terms> and confirm you've read the <privacy>Privacy policy</privacy>.",
 
-  "auth.account": "Account",
   "auth.validating": "Validating your session…",
   "auth.failedTitle": "Sign-in could not be completed",
   "auth.wait": "This should only take a moment. Your guest game remains available if sign-in fails.",

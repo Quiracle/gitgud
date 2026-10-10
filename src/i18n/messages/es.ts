@@ -27,7 +27,6 @@ export const es: Messages = {
   "login.dismissError": "Cerrar el error",
   "login.legal": "Al continuar, aceptas las <terms>Condiciones de uso</terms> y confirmas que has leído la <privacy>Política de privacidad</privacy>.",
 
-  "auth.account": "Cuenta",
   "auth.validating": "Validando tu sesión…",
   "auth.failedTitle": "No se ha podido iniciar sesión",
   "auth.wait": "Solo tardará un momento. Si falla, tu partida como invitado sigue disponible.",

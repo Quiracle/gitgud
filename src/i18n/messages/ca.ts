@@ -27,7 +27,6 @@ export const ca: Messages = {
   "login.dismissError": "Tanca l'error",
   "login.legal": "En continuar, acceptes les <terms>Condicions d'ús</terms> i confirmes que has llegit la <privacy>Política de privacitat</privacy>.",
 
-  "auth.account": "Compte",
   "auth.validating": "Validant la sessió…",
   "auth.failedTitle": "No s'ha pogut iniciar la sessió",
   "auth.wait": "Només trigarà un moment. Si falla, la teva partida com a convidat continua disponible.",
