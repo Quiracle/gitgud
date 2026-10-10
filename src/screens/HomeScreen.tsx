@@ -5,6 +5,7 @@ import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { CommitTree } from "../components/GitGraph/CommitTree";
 import { Icon, type IconName } from "../components/Icon/Icon";
 import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
+import { LanguagePicker } from "../components/LanguagePicker/LanguagePicker";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { WelcomeTutorial } from "../components/Onboarding/WelcomeTutorial";
 import { ShareButton, useResultShare } from "../components/Share/ResultShare";
@@ -71,14 +72,17 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
           <div className="flex flex-col gap-2">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <motion.h1
-                  className="text-3xl text-grey-50"
-                  initial={{ opacity: 0, y: 12 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={spring.soft}
-                >
-                  {t("home.todaysChallenge")}
-                </motion.h1>
+                <div className="flex items-center justify-between gap-4">
+                  <motion.h1
+                    className="text-3xl text-grey-50"
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={spring.soft}
+                  >
+                    {t("home.todaysChallenge")}
+                  </motion.h1>
+                  <LanguagePicker tone="dark" className="shrink-0" />
+                </div>
                 <StreakTrail
                   days={recent}
                   label={streak > 0 ? t("streak.days", { count: streak }) : t("streak.start")}
