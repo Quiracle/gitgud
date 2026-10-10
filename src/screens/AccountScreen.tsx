@@ -1,5 +1,6 @@
 import { animate, motion, useMotionValue, useTransform, type Variants } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
+import { CookieSetting } from "../components/Account/CookieSetting";
 import { LinkedInSetting } from "../components/Account/LinkedInSetting";
 import { LoginDialog } from "../components/Auth/LoginDialog";
 import { Button } from "../components/Button/Button";
@@ -181,6 +182,7 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
               <span className="text-paragraph text-grey-950">{t("common.language")}</span>
               <LanguagePicker />
             </div>
+            <CookieSetting />
             {signedIn && user && (
               <>
               <DisplayNameForm userId={user.id} fallback={user.displayName} />

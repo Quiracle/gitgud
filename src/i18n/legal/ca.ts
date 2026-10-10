@@ -58,7 +58,7 @@ export const ca: LegalDocument = {
             [
               "Estadístiques d'ús de Google Analytics: pàgines visitades, tipus de dispositiu i navegador, ubicació aproximada i un ID aleatori en una galeta",
               "Entendre com es juga a GitGud i millorar-lo",
-              "El teu consentiment (art. 6.1.a), que pots retirar a Configuració de galetes",
+              "El teu consentiment (art. 6.1.a), que pots retirar quan vulguis a la configuració del compte",
               "Fins a 14 mesos",
             ],
             [
@@ -160,7 +160,7 @@ export const ca: LegalDocument = {
         },
         {
           kind: "p",
-          text: "Pots canviar la teva elecció quan vulguis des de Configuració de galetes, al peu de la pàgina, o amb el botó de sota. Si rebutges més tard, aquestes galetes s'esborren.",
+          text: "Pots canviar la teva elecció quan vulguis des de la configuració del compte o amb el botó de sota. Si rebutges més tard, aquestes galetes s'esborren.",
         },
         { kind: "consent" },
       ],
