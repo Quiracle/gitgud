@@ -41,6 +41,27 @@ pnpm exec supabase db push
 
 The migration enables Row Level Security. Browser clients can read only published public definitions. Briefs, validation runs, fallback candidates, and solution commands remain private.
 
+### Configure Google and GitHub login
+
+In **Supabase → Authentication → URL Configuration**:
+
+- Set **Site URL** to the production Vercel URL, for example `https://gitgud.example`.
+- Add `https://YOUR_VERCEL_DOMAIN/auth/callback` to **Redirect URLs**.
+- Add `http://localhost:5173/auth/callback` for local development.
+- If OAuth must work on Vercel previews, add the narrow preview wildcard shown in Supabase's Vercel redirect documentation for your team slug.
+
+Copy the Supabase provider callback shown under **Authentication → Providers**. It has this form:
+
+```text
+https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback
+```
+
+For Google, create a Web OAuth client in Google Auth Platform. Add the Vercel origin as an authorized JavaScript origin and the Supabase provider callback as an authorized redirect URI. Enable Google in Supabase and paste the client ID and secret.
+
+For GitHub, create an OAuth App. Use the production Vercel URL as its homepage and the same Supabase provider callback as its authorization callback. Enable GitHub in Supabase and paste the client ID and secret.
+
+Provider client secrets belong only in the Supabase dashboard. Do not add them to Vercel or any `VITE_` variable. After the migration is applied, each new OAuth user receives a private `profiles` row protected by Row Level Security.
+
 ## 3. Configure and deploy the generator
 
 Create one long random value for `DAILY_GENERATION_SECRET`. It is not a Supabase key and must never have a `VITE_` prefix.

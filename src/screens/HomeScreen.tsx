@@ -1,4 +1,5 @@
 import { AppLink } from "../components/AppLink";
+import { AuthPanel } from "../components/AuthPanel";
 
 export function HomeScreen({ onNavigate }: { onNavigate: (path: string) => void }) {
   return (
@@ -60,6 +61,10 @@ export function HomeScreen({ onNavigate }: { onNavigate: (path: string) => void 
               Open course
             </AppLink>
           </section>
+
+          <div className="md:col-span-2">
+            <AuthPanel />
+          </div>
         </div>
       </main>
     </div>

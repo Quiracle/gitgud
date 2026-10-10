@@ -1,7 +1,8 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createDailyFixture } from "../puzzles/dailyFixture";
 import { parsePublicPuzzleDefinition } from "../puzzles/schema";
 import type { PublicPuzzleDefinition } from "../puzzles/types";
+import { requireSupabaseClient } from "./supabase";
 
 export interface DailyPuzzleSource {
   getByDate(date: string): Promise<PublicPuzzleDefinition>;
@@ -44,12 +45,7 @@ export function createDailyPuzzleSource(): DailyPuzzleSource {
   if (mode === "fixture") return new FixtureDailyPuzzleSource();
   if (mode !== "supabase") throw new Error(`Unknown daily puzzle source '${mode}'.`);
 
-  const url = import.meta.env.VITE_SUPABASE_URL;
-  const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-  if (!url || !key) throw new Error("Supabase URL and publishable key are required for the daily puzzle source.");
-  return new SupabaseDailyPuzzleSource(createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  }));
+  return new SupabaseDailyPuzzleSource(requireSupabaseClient());
 }
 
 export function utcDate(now = new Date()) {

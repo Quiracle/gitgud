@@ -5,6 +5,7 @@ import { CourseScreen } from "./screens/CourseScreen";
 import { HomeScreen } from "./screens/HomeScreen";
 import { PuzzleScreen } from "./screens/PuzzleScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
+import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -27,11 +28,22 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }
 
+  function replace(nextPath: string) {
+    const normalized = normalizePath(nextPath);
+    window.history.replaceState({}, "", normalized);
+    setPath(normalized);
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }
+
   if (path === "/") return <HomeScreen onNavigate={navigate} />;
 
   if (path === "/play") return <DailyPuzzleScreen onNavigate={navigate} />;
 
   if (path === "/course") return <CourseScreen onNavigate={navigate} />;
+
+  if (path === "/auth/callback") {
+    return <AuthCallbackScreen onNavigate={navigate} onReplace={replace} />;
+  }
 
   if (path.startsWith("/course/")) {
     const lessonId = decodeURIComponent(path.slice("/course/".length));
