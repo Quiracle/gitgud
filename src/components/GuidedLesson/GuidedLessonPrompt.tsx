@@ -86,7 +86,7 @@ export function GuidedLessonPrompt({ onGenerated, returnPath, service = guidedLe
           type="submit"
           disabled={generating}
           aria-label={generating ? "Building your puzzle" : "Build my puzzle"}
-          className="grid size-11 shrink-0 place-items-center rounded bg-lime-400 text-green-950 transition-colors duration-200 hover:bg-lime-300 active:bg-lime-500 disabled:cursor-wait"
+          className="grid min-h-11 w-11 shrink-0 place-items-center self-stretch rounded bg-lime-400 text-green-950 transition-colors duration-200 hover:bg-lime-300 active:bg-lime-500 disabled:cursor-wait"
         >
           <AnimatePresence mode="wait" initial={false}>
             {generating ? (
