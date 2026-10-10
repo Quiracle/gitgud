@@ -372,7 +372,8 @@ export function CommitCard({ id, look, branches, currentBranch, focused }: Commi
               className="absolute right-0.5 top-0.5 size-1 rounded bg-lime-400"
               initial={{ scale: 0 }}
               animate={{ scale: [1, 1.8, 1] }}
-              exit={{ scale: 0 }}
+              // The pulse repeats forever, so the exit needs its own finite transition or it never unmounts.
+              exit={{ scale: 0, transition: { duration: 0.15 } }}
               transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
             />
           )}
