@@ -151,10 +151,15 @@ button {
   touch-action: manipulation;
 }
 
-/* Inputs at 16px+ stop iOS Safari zooming on focus. */
-input,
-textarea {
-  font-size: max(16px, 1em);
+/* Inputs at 16px+ stop iOS Safari zooming on focus. On touch screens this must
+   beat text-size utilities such as text-code (15px), hence !important; desktop
+   keeps the designed size. */
+@media (pointer: coarse) {
+  input,
+  textarea,
+  select {
+    font-size: max(16px, 1em) !important;
+  }
 }
 
 /* tabindex="-1" elements (e.g. a dialog panel) only receive focus from script,
