@@ -216,7 +216,7 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
         </p>
         <div className="flex flex-col gap-2">
           <Button onClick={restart}>
-            <Icon name="restart_alt" size={20} className="mr-2" />
+            <Icon name="forward_media" size={20} className="mr-2" />
             Restart
           </Button>
           <Button variant="outline" onClick={closePanel}>
@@ -232,7 +232,7 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
         </p>
         <div className="flex flex-col gap-2">
           <Button onClick={restart}>
-            <Icon name="restart_alt" size={20} className="mr-2" />
+            <Icon name="forward_media" size={20} className="mr-2" />
             Try again
           </Button>
           <Button variant="outline" onClick={() => { session.revealSolution(); setPanel("solution"); }}>

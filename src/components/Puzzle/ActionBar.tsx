@@ -19,7 +19,7 @@ export function ActionBar({ onExit, onRestart, onHelp, onHint, onGiveUp, giveUpD
   return (
     <nav aria-label="Puzzle actions" className={`flex items-center justify-between bg-green-950 px-6 py-1 ${className}`}>
       <Action icon="arrow_back_ios_new" label="Exit" onClick={onExit} />
-      <Action icon="restart_alt" label="Restart" compact onClick={onRestart} />
+      <Action icon="forward_media" label="Restart" compact onClick={onRestart} />
       <Action icon="help" label="Help" compact onClick={onHelp} />
       <Action icon="lightbulb_2" label="Hint" compact onClick={onHint} />
       <Action icon="close" label="Give up" onClick={onGiveUp} disabled={giveUpDisabled} />

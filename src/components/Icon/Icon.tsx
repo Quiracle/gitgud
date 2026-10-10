@@ -7,13 +7,13 @@ import close from "../../assets/icons/close.svg";
 import crown from "../../assets/icons/crown.svg";
 import extension from "../../assets/icons/extension.svg";
 import flag2 from "../../assets/icons/flag_2.svg";
+import forwardMedia from "../../assets/icons/forward_media.svg";
 import help from "../../assets/icons/help.svg";
 import home from "../../assets/icons/home.svg";
 import importContacts from "../../assets/icons/import_contacts.svg";
 import lightbulb2 from "../../assets/icons/lightbulb_2.svg";
 import myLocation from "../../assets/icons/my_location.svg";
 import remove from "../../assets/icons/remove.svg";
-import restartAlt from "../../assets/icons/restart_alt.svg";
 import share from "../../assets/icons/share.svg";
 
 /** Google Material Symbols, Outlined, weight 300, 24px. */
@@ -26,13 +26,13 @@ const ICONS = {
   crown,
   extension,
   flag_2: flag2,
+  forward_media: forwardMedia,
   help,
   home,
   import_contacts: importContacts,
   lightbulb_2: lightbulb2,
   my_location: myLocation,
   remove,
-  restart_alt: restartAlt,
   share,
 } as const;
 
