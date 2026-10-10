@@ -7,12 +7,15 @@ import { CHICKEN_PIXELS, type PixelLayer } from "./chickenPixels";
 
 /** "default" keeps the colours drawn in Figma; a ChickenColor recolours the part. */
 export type ChickenTint = ChickenColor | "default";
-export type ChickenAccessory = "longLegs" | "scarf" | "sunglasses" | "hat";
+export type ChickenPart = "crest" | "longLegs" | "scarf" | "sunglasses" | "hat";
 
+/**
+ * What a snapshot looks like. Every layer is optional: an empty repository is an empty
+ * grey square, and a branch that only adds a scarf shows just the scarf.
+ */
 export interface ChickenLook {
-  body: ChickenTint;
-  crest: ChickenTint;
-  accessories: Partial<Record<ChickenAccessory, ChickenTint>>;
+  chicken: boolean;
+  parts: Partial<Record<ChickenPart, ChickenTint>>;
 }
 
 interface Tone {
@@ -33,8 +36,7 @@ const TINTS: Record<ChickenColor, Tone> = {
 };
 
 /** Colours each part has in the Figma artwork. */
-const DESIGN_TONES: Record<ChickenAccessory | "body" | "crest", Tone> = {
-  body: { base: "#fefce8", shade: "#fefce8", light: "#fefce8" },
+const DESIGN_TONES: Record<ChickenPart, Tone> = {
   crest: TINTS.red,
   hat: TINTS.red,
   scarf: TINTS.red,
@@ -44,21 +46,36 @@ const DESIGN_TONES: Record<ChickenAccessory | "body" | "crest", Tone> = {
 
 const OUTLINE = "#0b0b0b";
 const BACKGROUND = "#fafafa";
-const CHEEK = "#ff4733";
-const FEET = "#fdb874";
+const BODY_COLORS = { o: OUTLINE, b: "#fefce8", k: "#ff4733", f: "#fdb874", g: BACKGROUND };
 
-/** Bottom-to-top paint order. */
-const ACCESSORY_ORDER: ChickenAccessory[] = ["longLegs", "scarf", "sunglasses", "hat"];
+/** Bottom-to-top paint order of the optional parts. */
+const PART_ORDER: ChickenPart[] = ["crest", "longLegs", "scarf", "sunglasses", "hat"];
 
-type Entrance = { variants: Variants; origin: [number, number] };
+const leave = { opacity: 0, transition: { duration: 0.16 } };
 
-/** Each accessory arrives in a way that suits it. Origins are fractions of the layer box. */
-const ENTRANCES: Record<ChickenAccessory, Entrance> = {
+/** Each layer arrives in a way that suits it. Origins are fractions of the layer box. */
+const ENTRANCES: Record<ChickenPart | "chicken", { variants: Variants; origin: [number, number] }> = {
+  chicken: {
+    variants: {
+      hidden: { scale: 0.4, opacity: 0 },
+      show: { scale: 1, opacity: 1, transition: spring.bouncy },
+      gone: { scale: 0.4, ...leave },
+    },
+    origin: [0.5, 1],
+  },
+  crest: {
+    variants: {
+      hidden: { scaleY: 0, opacity: 0 },
+      show: { scaleY: 1, opacity: 1, transition: spring.bouncy },
+      gone: { scaleY: 0, ...leave },
+    },
+    origin: [0.5, 1],
+  },
   hat: {
     variants: {
       hidden: { y: -12, rotate: -14, opacity: 0 },
       show: { y: 0, rotate: 0, opacity: 1, transition: spring.bouncy },
-      gone: { y: -10, rotate: 10, opacity: 0, transition: { duration: 0.18 } },
+      gone: { y: -10, rotate: 10, ...leave },
     },
     origin: [0.5, 1],
   },
@@ -66,7 +83,7 @@ const ENTRANCES: Record<ChickenAccessory, Entrance> = {
     variants: {
       hidden: { y: -5, opacity: 0 },
       show: { y: 0, opacity: 1, transition: spring.bouncy },
-      gone: { y: -5, opacity: 0, transition: { duration: 0.15 } },
+      gone: { y: -5, ...leave },
     },
     origin: [0.5, 0.5],
   },
@@ -74,7 +91,7 @@ const ENTRANCES: Record<ChickenAccessory, Entrance> = {
     variants: {
       hidden: { scaleX: 0.2, opacity: 0 },
       show: { scaleX: 1, opacity: 1, transition: spring.bouncy },
-      gone: { scaleX: 0.2, opacity: 0, transition: { duration: 0.15 } },
+      gone: { scaleX: 0.2, ...leave },
     },
     origin: [0, 0.5],
   },
@@ -82,61 +99,51 @@ const ENTRANCES: Record<ChickenAccessory, Entrance> = {
     variants: {
       hidden: { scaleY: 0.2, opacity: 0 },
       show: { scaleY: 1, opacity: 1, transition: spring.bouncy },
-      gone: { scaleY: 0.2, opacity: 0, transition: { duration: 0.15 } },
+      gone: { scaleY: 0.2, ...leave },
     },
     origin: [0.5, 0],
   },
 };
 
-const DEFAULT_LOOK: ChickenLook = { body: "default", crest: "default", accessories: {} };
+export const EMPTY_LOOK: ChickenLook = { chicken: false, parts: {} };
 
-function tone(part: keyof typeof DESIGN_TONES, tint: ChickenTint): Tone {
+function tone(part: ChickenPart, tint: ChickenTint): Tone {
   return tint === "default" ? DESIGN_TONES[part] : TINTS[tint];
 }
 
+function isAbsent(value: unknown): boolean {
+  return value === undefined || value === null || value === false || value === "none";
+}
+
 function tintOf(value: unknown): ChickenTint | undefined {
-  if (value === undefined || value === null || value === false || value === "none") return undefined;
+  if (isAbsent(value)) return undefined;
   return (CHICKEN_COLORS as readonly string[]).includes(value as string) ? (value as ChickenColor) : "default";
 }
 
 /**
- * Maps a repository snapshot onto the artwork. Unknown or legacy truthy values
- * (`sunglasses: true`) fall back to the Figma colours.
+ * Maps a repository snapshot onto the artwork. The chicken body is shown unless the
+ * state has an explicit `chicken` property that is absent. Legacy truthy values
+ * (`sunglasses: true`) fall back to the Figma colours. Body colour is not themed yet.
  */
 export function chickenLookFromState(state: SemanticState): ChickenLook {
-  const accessories: ChickenLook["accessories"] = {};
-  for (const slot of ACCESSORY_ORDER) {
-    const tint = tintOf(state[slot]);
-    if (tint) accessories[slot] = tint;
+  const parts: ChickenLook["parts"] = {};
+  for (const part of PART_ORDER) {
+    const tint = tintOf(state[part]);
+    if (tint) parts[part] = tint;
   }
-  return {
-    body: tintOf(state.body) ?? "default",
-    crest: tintOf(state.crest) ?? "default",
-    accessories,
-  };
+  return { chicken: !("chicken" in state) || !isAbsent(state.chicken), parts };
 }
 
 interface PixelChickenProps {
-  look?: ChickenLook;
-  /** Rendered edge length in CSS pixels. */
+  look: ChickenLook;
+  /** Rendered edge length in CSS pixels. Use className to override responsively. */
   size?: number;
-  /** Hide the chicken body and show only accessories, as on commit cards that show a change. */
-  accessoriesOnly?: boolean;
-  /** Fade the body behind accessories (Figma "Scarf" commit card). */
-  ghostBody?: boolean;
   className?: string;
   label?: string;
 }
 
-/** Layered pixel-art chicken. Accessory changes animate in place; first paint is static. */
-export function PixelChicken({
-  look = DEFAULT_LOOK,
-  size = 48,
-  accessoriesOnly = false,
-  ghostBody = false,
-  className = "",
-  label,
-}: PixelChickenProps) {
+/** Layered pixel-art chicken on the grey-50 tile. Changes animate; first paint is static. */
+export function PixelChicken({ look, size = 48, className = "", label }: PixelChickenProps) {
   const signature = JSON.stringify(look);
   const controls = useAnimationControls();
   const firstRender = useRef(true);
@@ -154,13 +161,6 @@ export function PixelChicken({
     });
   }, [signature, controls]);
 
-  const body = tone("body", look.body);
-  const crest = tone("crest", look.crest);
-  const baseColors = useMemo(
-    () => ({ o: OUTLINE, b: body.base, c: crest.base, k: CHEEK, f: FEET, g: BACKGROUND }),
-    [body.base, crest.base],
-  );
-
   return (
     <svg
       role="img"
@@ -173,36 +173,43 @@ export function PixelChicken({
     >
       <rect width="32" height="32" fill={BACKGROUND} />
       <motion.g animate={controls} style={{ originX: 0.5, originY: 0.82 }}>
-        {!accessoriesOnly && (
-          <g opacity={ghostBody ? 0.12 : 1}>
-            <Layer layer={CHICKEN_PIXELS.chicken} colors={baseColors} />
-          </g>
-        )}
         <AnimatePresence initial={false}>
-          {ACCESSORY_ORDER.map((slot) => {
-            const tint = look.accessories[slot];
+          {look.chicken && (
+            <AnimatedLayer key="chicken" entrance="chicken" layer={CHICKEN_PIXELS.chicken} colors={BODY_COLORS} />
+          )}
+          {PART_ORDER.map((part) => {
+            const tint = look.parts[part];
             if (!tint) return null;
-            const t = tone(slot, tint);
-            const entrance = ENTRANCES[slot];
+            const t = tone(part, tint);
             return (
-              <motion.g
-                key={slot}
-                variants={entrance.variants}
-                initial="hidden"
-                animate="show"
-                exit="gone"
-                style={{ originX: entrance.origin[0], originY: entrance.origin[1] }}
-              >
-                <Layer
-                  layer={CHICKEN_PIXELS[slot]}
-                  colors={{ o: OUTLINE, p: t.base, s: t.shade, l: t.light, g: BACKGROUND }}
-                />
-              </motion.g>
+              <AnimatedLayer
+                key={part}
+                entrance={part}
+                layer={CHICKEN_PIXELS[part]}
+                colors={{ o: OUTLINE, p: t.base, s: t.shade, l: t.light, g: BACKGROUND }}
+              />
             );
           })}
         </AnimatePresence>
       </motion.g>
     </svg>
+  );
+}
+
+function AnimatedLayer({
+  entrance,
+  layer,
+  colors,
+}: {
+  entrance: keyof typeof ENTRANCES;
+  layer: PixelLayer;
+  colors: Record<string, string>;
+}) {
+  const { variants, origin } = ENTRANCES[entrance];
+  return (
+    <motion.g variants={variants} initial="hidden" animate="show" exit="gone" style={{ originX: origin[0], originY: origin[1] }}>
+      <Layer layer={layer} colors={colors} />
+    </motion.g>
   );
 }
 
@@ -246,10 +253,19 @@ function layerPaths(layer: PixelLayer): Record<string, string> {
   return paths;
 }
 
+const PART_NAMES: Record<ChickenPart, string> = {
+  crest: "crest",
+  longLegs: "long legs",
+  scarf: "scarf",
+  sunglasses: "sunglasses",
+  hat: "hat",
+};
+
 function describe(look: ChickenLook): string {
-  const parts = Object.entries(look.accessories).map(([slot, tint]) =>
-    `${tint === "default" ? "" : `${tint} `}${slot === "longLegs" ? "long legs" : slot}`,
-  );
-  const body = look.body === "default" ? "" : `${look.body} `;
-  return parts.length ? `A ${body}chicken wearing ${parts.join(", ")}` : `A ${body}chicken`;
+  const parts = PART_ORDER.filter((part) => look.parts[part]).map((part) => {
+    const tint = look.parts[part];
+    return `${tint === "default" ? "" : `${tint} `}${PART_NAMES[part]}`;
+  });
+  if (!look.chicken) return parts.length ? `Just ${parts.join(", ")}` : "Empty";
+  return parts.length ? `A chicken with ${parts.join(", ")}` : "A chicken";
 }

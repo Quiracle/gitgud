@@ -1,6 +1,7 @@
 // Generated from the Figma "chicken assets" component set (node 28:96273).
+// The comb is split out of the base chicken so `crest` can add, remove, or recolour it.
 // Each layer is a 32x32 grid; rows start at `top`. Roles:
-// o outline, b body, c crest, k cheek, f feet/beak, g background mask,
+// o outline, b body, k cheek, f feet/beak, g background mask,
 // p primary, s shade, l light. Spaces are transparent.
 
 export interface PixelLayer {
@@ -9,12 +10,17 @@ export interface PixelLayer {
 }
 
 export const CHICKEN_PIXELS = {
-  chicken: {
+  crest: {
     top: 6,
     rows: [
       "                 oooo",
-      "                occcco",
-      "                 occcco",
+      "                oppppo",
+      "                 oppppo",
+    ],
+  },
+  chicken: {
+    top: 9,
+    rows: [
       "                  ooooo",
       "        oo       obbbbbo",
       "       obbo      obbbbbo",
