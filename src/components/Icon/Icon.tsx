@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import accountCircle from "../../assets/icons/account_circle.svg";
+import accountCircleFill from "../../assets/icons/account_circle_fill.svg";
 import add2 from "../../assets/icons/add_2.svg";
 import arrowBackIosNew from "../../assets/icons/arrow_back_ios_new.svg";
 import arrowForwardIos from "../../assets/icons/arrow_forward_ios.svg";
@@ -19,6 +20,7 @@ import share from "../../assets/icons/share.svg";
 /** Google Material Symbols, Outlined, weight 300, 24px. */
 const ICONS = {
   account_circle: accountCircle,
+  account_circle_fill: accountCircleFill,
   add_2: add2,
   arrow_back_ios_new: arrowBackIosNew,
   arrow_forward_ios: arrowForwardIos,

@@ -1,5 +1,6 @@
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import type { MouseEvent } from "react";
+import { useAuth } from "../../context/AuthContext";
 import { spring } from "../../lib/motion";
 import { Icon, type IconName } from "../Icon/Icon";
 
@@ -26,7 +27,13 @@ interface BottomNavProps {
 
 /** Floating tab bar from the Figma home frame (node 24:44222). */
 export function BottomNav({ path, onNavigate }: BottomNavProps) {
-  const activeHref = NAV_ITEMS.find((item) =>
+  // Figma: guests see an outlined "Log in" tab, signed-in players a filled "You" tab.
+  const signedIn = useAuth().status === "authenticated";
+  const items = NAV_ITEMS.map((item): NavItem => {
+    if (item.href !== "/account") return item;
+    return signedIn ? { ...item, icon: "account_circle_fill" } : { ...item, label: "Log in" };
+  });
+  const activeHref = items.find((item) =>
     [item.href, ...(item.matches ?? [])].some((prefix) => path === prefix || path.startsWith(`${prefix}/`)),
   )?.href;
 
@@ -39,7 +46,7 @@ export function BottomNav({ path, onNavigate }: BottomNavProps) {
       className="fixed inset-x-4 bottom-[calc(16px+env(safe-area-inset-bottom))] z-40 mx-auto max-w-[480px]"
     >
       <ul className="flex items-center justify-between rounded border border-lime-400 bg-green-950 p-3 shadow-[0_12px_32px_-12px_rgb(var(--colors-green-950)/0.6)]">
-        {NAV_ITEMS.map((item) => {
+        {items.map((item) => {
           const active = item.href === activeHref;
           const follow = (event: MouseEvent<HTMLAnchorElement>) => {
             if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -72,7 +79,19 @@ export function BottomNav({ path, onNavigate }: BottomNavProps) {
                   animate={active ? { y: [0, -4, 0], rotate: [0, -8, 0] } : { y: 0, rotate: 0 }}
                   transition={{ duration: 0.45, ease: "easeOut" }}
                 >
-                  <Icon name={item.icon} />
+                  {/* Keyed so signing in swaps the icon with a little pop. */}
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.span
+                      key={item.icon}
+                      className="flex"
+                      initial={{ scale: 0.4, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.4, opacity: 0 }}
+                      transition={spring.bouncy}
+                    >
+                      <Icon name={item.icon} />
+                    </motion.span>
+                  </AnimatePresence>
                 </motion.span>
                 <span className="relative whitespace-nowrap text-2xs leading-none">{item.label}</span>
               </motion.a>
