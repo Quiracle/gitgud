@@ -1,5 +1,5 @@
 import { animate, AnimatePresence, motion } from "motion/react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { Button } from "../components/Button/Button";
 import { CommitTree } from "../components/GitGraph/CommitTree";
 import { Icon, type IconName } from "../components/Icon/Icon";
@@ -23,9 +23,11 @@ interface SolveScreenProps {
   onNavigate: (path: string) => void;
   /** Main button in the result popup; defaults to the daily leaderboard. */
   resultAction?: { label: string; icon: IconName; href: string };
+  /** Lesson explainer: opens on a fresh run when `autoOpen`, and from the help button. */
+  intro?: { title: string; body: ReactNode; autoOpen: boolean };
 }
 
-type Panel = "none" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
+type Panel = "none" | "intro" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
@@ -35,6 +37,7 @@ export function SolveScreen({
   exitHref = "/",
   onNavigate,
   resultAction = { label: "See leaderboard", icon: "crown", href: "/leaderboard" },
+  intro,
 }: SolveScreenProps) {
   const session = usePuzzleSession(puzzle);
   const desktop = useMediaQuery("(min-width: 1024px)");
@@ -95,6 +98,15 @@ export function SolveScreen({
 
   const chromeDelay = origin ? 0.42 : 0.15;
   const closePanel = () => setPanel("none");
+  const openHelp = () => setPanel(intro ? "intro" : "help");
+
+  // Explain the lesson once the canvas has settled, unless the run is already under way.
+  useEffect(() => {
+    if (!intro?.autoOpen || solved || session.commandCount > 0) return;
+    const timer = window.setTimeout(() => setPanel((current) => (current === "none" ? "intro" : current)), origin ? 750 : 400);
+    return () => window.clearTimeout(timer);
+    // Only on arrival: later commands or restarts must not reopen it.
+  }, []);
 
   function openHint() {
     if (session.hintsUsed === 0) session.takeHint();
@@ -182,7 +194,7 @@ export function SolveScreen({
               <ActionBar
                 onExit={() => onNavigate(exitHref)}
                 onRestart={askRestart}
-                onHelp={() => setPanel("help")}
+                onHelp={openHelp}
                 onHint={openHint}
                 onGiveUp={openGiveUp}
                 giveUpDisabled={solved}
@@ -199,7 +211,7 @@ export function SolveScreen({
             expanded={expanded}
             docked={docked}
             onToggle={() => setExpanded((value) => !value)}
-            onHelp={() => setPanel("help")}
+            onHelp={openHelp}
             disabled={solved}
             disabledPlaceholder={
               session.locked
@@ -322,6 +334,21 @@ export function SolveScreen({
           <Button onClick={closePanel}>Back to puzzle</Button>
         )}
       </Dialog>
+
+      {intro && (
+        <Dialog open={panel === "intro"} title={intro.title} onClose={closePanel}>
+          {intro.body}
+          <div className="flex flex-col gap-2">
+            <Button onClick={closePanel}>
+              <span>{session.commandCount > 0 || solved ? "Back to puzzle" : "Let's go"}</span>
+              <Icon name="arrow_forward_ios" size={20} className="ml-2" />
+            </Button>
+            <Button variant="tertiary" onClick={() => setPanel("help")}>
+              How to play
+            </Button>
+          </div>
+        </Dialog>
+      )}
 
       <Dialog open={panel === "help"} title="How to play" onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">

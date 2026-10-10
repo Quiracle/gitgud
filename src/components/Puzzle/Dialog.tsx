@@ -47,7 +47,7 @@ export function Dialog({ open, title, onClose, children }: DialogProps) {
             aria-modal="true"
             aria-labelledby={titleId}
             tabIndex={-1}
-            className="relative flex outline-none w-full max-w-[327px] flex-col gap-6 rounded border border-lime-400 bg-green-950 p-6"
+            className="relative flex max-h-[calc(100dvh-48px)] w-full max-w-[327px] flex-col gap-6 overflow-y-auto overscroll-contain rounded border border-lime-400 bg-green-950 p-6 outline-none"
             initial={{ opacity: 0, scale: 0.88, y: 24 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 12, transition: { duration: 0.16 } }}

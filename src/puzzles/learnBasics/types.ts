@@ -15,12 +15,23 @@ export const LEARN_BASICS_LESSON_IDS = [
 
 export type LearnBasicsLessonId = typeof LEARN_BASICS_LESSON_IDS[number];
 
+/** The explainer shown before a lesson starts. */
+export interface LessonIntro {
+  /** What the featured command does, in a sentence or two. */
+  what: string;
+  /** How it works, one short step per entry. */
+  how: string[];
+  /** What the player has to do in this lesson's puzzle. */
+  task: string;
+}
+
 interface LessonSummary {
   id: LearnBasicsLessonId;
   order: number;
   title: string;
   summary: string;
   featuredCommands: string[];
+  intro: LessonIntro;
 }
 
 export interface AvailableLesson extends LessonSummary {
