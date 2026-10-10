@@ -7,6 +7,7 @@ import { Icon, type IconName } from "../components/Icon/Icon";
 import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { WelcomeTutorial } from "../components/Onboarding/WelcomeTutorial";
+import { ShareButton, useResultShare } from "../components/Share/ResultShare";
 import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
 import { PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { StreakTrail } from "../components/Streak/StreakTrail";
@@ -32,9 +33,16 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const daily = useDailyPuzzle();
   const handOff = useCanvasHandOff(onNavigate);
   const { streak, recent } = useProgressInsights();
-  const solvedToday = useMemo(
-    () => daily.status === "ready" && Boolean(openProgressStore().latestCompletion(daily.puzzle.id, daily.puzzle.version)),
+  const todaysResult = useMemo(
+    () => (daily.status === "ready" ? openProgressStore().latestCompletion(daily.puzzle.id, daily.puzzle.version) : undefined),
     [daily],
+  );
+  const solvedToday = Boolean(todaysResult);
+  const sharing = useResultShare(
+    daily.status === "ready" ? daily.puzzle : undefined,
+    todaysResult
+      ? { elapsedMs: todaysResult.elapsedMs, restartCount: todaysResult.restartCount, assisted: Boolean(todaysResult.assisted) }
+      : null,
   );
   const courses = useDragScroll<HTMLUListElement>();
   const [tutorial, setTutorial] = useState(false);
@@ -92,10 +100,13 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
             </div>
             <HowToPlayLink learnHref="/course" onNavigate={onNavigate} onTutorial={() => setTutorial(true)} />
           </div>
-          <Button href="/play" onNavigate={handOff.open}>
-            <Shimmer />
-            <span className="relative">{solvedToday ? "See your result" : "Solve the puzzle!"}</span>
-          </Button>
+          <div className="flex gap-2">
+            <Button href="/play" onNavigate={handOff.open}>
+              <Shimmer />
+              <span className="relative">{solvedToday ? "See your result" : "Solve the puzzle!"}</span>
+            </Button>
+            {sharing.available && <ShareButton onClick={sharing.share} />}
+          </div>
         </div>
       </section>
 
@@ -157,6 +168,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
 
       <SiteFooter />
       <WelcomeTutorial open={tutorial} onClose={closeTutorial} onNavigate={onNavigate} />
+      {sharing.dialog}
     </div>
   );
 }

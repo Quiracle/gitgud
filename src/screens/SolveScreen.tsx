@@ -9,16 +9,14 @@ import { CommandPanel } from "../components/Puzzle/CommandPanel";
 import { Confetti } from "../components/Puzzle/Confetti";
 import { Dialog, StatRow } from "../components/Puzzle/Dialog";
 import { HowToPlaySteps } from "../components/Puzzle/HowToPlay";
+import { ShareButton, useResultShare } from "../components/Share/ResultShare";
 import { InteractiveRebaseDialog } from "../components/RebaseDialog/InteractiveRebaseDialog";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { usePuzzleSession, type SubmissionState } from "../hooks/usePuzzleSession";
 import { useVisualViewport } from "../hooks/useVisualViewport";
 import { clearCanvasOrigin, peekCanvasOrigin } from "../lib/canvasTransition";
 import { formatDuration } from "../lib/format";
-import { canShareFile, copyImage, downloadImage, linkedInShareUrl, shareFileName, shareText, type ShareSummary } from "../lib/share";
-import { renderShareCard } from "../lib/shareCard";
 import { spring } from "../lib/motion";
-import type { SemanticState } from "../engine";
 import type { PublicPuzzleDefinition } from "../puzzles";
 
 interface SolveScreenProps {
@@ -31,10 +29,7 @@ interface SolveScreenProps {
   intro?: { title: string; body: ReactNode; autoOpen: boolean };
 }
 
-type Panel = "none" | "intro" | "goals" | "help" | "hint" | "give-up" | "solution" | "result" | "restart" | "share";
-
-/** Shown in the share card footer, like the site footer. */
-const SITE = "gitgudgame.lol";
+type Panel = "none" | "intro" | "goals" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
 
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
@@ -67,19 +62,12 @@ export function SolveScreen({
   const solved = session.status === "completed";
   const checks = session.validation.checks;
   const goalsMet = solved ? checks.length : checks.filter((check) => check.met).length;
-  const card = useShareCard(
-    solved && puzzle.kind === "daily" && puzzle.publishedOn
-      ? {
-          publishedOn: puzzle.publishedOn,
-          difficulty: puzzle.difficulty,
-          elapsedMs: session.finalElapsedMs ?? 0,
-          restartCount: session.restartCount,
-          assisted: session.assisted,
-        }
+  const sharing = useResultShare(
+    puzzle,
+    solved
+      ? { elapsedMs: session.finalElapsedMs ?? 0, restartCount: session.restartCount, assisted: session.assisted }
       : null,
-    puzzle.target.snapshot,
   );
-  const [shareNote, setShareNote] = useState<string | null>(null);
 
   // Grow the canvas out of the Home preview: clip from the old rectangle to the full
   // canvas while the tree slides into place, then the controls rise in.
@@ -149,28 +137,6 @@ export function SolveScreen({
   function askRestart() {
     if (session.commandCount === 0) restart();
     else setPanel("restart");
-  }
-
-  // Phones get the share sheet straight from the tap (it needs the user's gesture, so the
-  // card is drawn ahead of time). Elsewhere the popup offers copy, download, and LinkedIn.
-  async function share() {
-    if (!card) return;
-    if (canShareFile(card.file)) {
-      try {
-        await navigator.share({ files: [card.file], text: shareText(card.summary, window.location.origin) });
-      } catch {
-        // Closing the share sheet rejects; there is nothing to report.
-      }
-      return;
-    }
-    setShareNote(null);
-    setPanel("share");
-  }
-
-  async function copyCard() {
-    if (!card) return;
-    const copied = await copyImage(card.blob);
-    setShareNote(copied ? "Image copied. Paste it into your LinkedIn post." : "This browser can't copy images. Download it instead.");
   }
 
   function restart() {
@@ -268,6 +234,7 @@ export function SolveScreen({
             onToggle={() => setExpanded((value) => !value)}
             onHelp={openHelp}
             disabled={solved}
+            trailing={sharing.available ? <ShareButton onClick={sharing.share} className="self-stretch" /> : undefined}
             disabledPlaceholder={
               session.locked
                 ? `Solved in ${formatDuration(session.finalElapsedMs ?? 0)}. Come back tomorrow!`
@@ -280,7 +247,7 @@ export function SolveScreen({
       {confetti && <Confetti key={confetti.key} x={confetti.x} y={confetti.y} />}
 
       {/* No close: a solved puzzle is finished, so the popup only leads onward. */}
-      <Dialog open={panel === "result"} title={session.assisted ? "Solved with help" : "Congrats!"}>
+      <Dialog open={panel === "result" && !sharing.open} title={session.assisted ? "Solved with help" : "Congrats!"}>
         <div className="flex flex-col gap-1">
           <StatRow label="Retries:" value={session.restartCount} />
           <StatRow label="Time taken:" value={formatDuration(session.finalElapsedMs ?? session.elapsedMs())} large />
@@ -304,8 +271,8 @@ export function SolveScreen({
             <span>{resultAction.label}</span>
             <Icon name={resultAction.icon} size={20} className="ml-2" />
           </Button>
-          {card && (
-            <Button variant="outline" onClick={share}>
+          {sharing.available && (
+            <Button variant="outline" onClick={sharing.share}>
               <Icon name="share" size={20} className="mr-2" />
               Share result
             </Button>
@@ -316,45 +283,7 @@ export function SolveScreen({
         </div>
       </Dialog>
 
-      <Dialog open={panel === "share"} title="Share result" onClose={() => setPanel("result")}>
-        {card && (
-          <img
-            src={card.url}
-            alt="Your result card: today's chicken, difficulty, time, and retries"
-            className="aspect-square w-full rounded"
-          />
-        )}
-        <div className="flex flex-col gap-2">
-          <Button onClick={copyCard}>
-            <Icon name="content_copy" size={20} className="mr-2" />
-            Copy image
-          </Button>
-          <Button variant="outline" onClick={() => card && downloadImage(card.blob, card.file.name)}>
-            <Icon name="download" size={20} className="mr-2" />
-            Download image
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => window.open(linkedInShareUrl(window.location.origin), "_blank", "noopener,noreferrer")}
-          >
-            <Icon name="open_in_new" size={20} className="mr-2" />
-            Open LinkedIn
-          </Button>
-        </div>
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.p
-            key={shareNote ?? "default"}
-            className="text-xs text-grey-400"
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.18 }}
-            aria-live="polite"
-          >
-            {shareNote ?? "Copy or download the image, then add it to your LinkedIn post."}
-          </motion.p>
-        </AnimatePresence>
-      </Dialog>
+      {sharing.dialog}
 
       <Dialog open={panel === "restart"} title="Restart puzzle?" onClose={closePanel}>
         <p className="text-sm text-grey-300">
@@ -516,43 +445,6 @@ export function SolveScreen({
       />
     </div>
   );
-}
-
-interface ShareCard {
-  summary: ShareSummary;
-  blob: Blob;
-  file: File;
-  /** Object URL for the preview; revoked when the card changes. */
-  url: string;
-}
-
-/** Draws the daily result card once the run is solved, so sharing can start on the tap. */
-function useShareCard(summary: ShareSummary | null, target: SemanticState): ShareCard | null {
-  const [card, setCard] = useState<ShareCard | null>(null);
-  const key = summary && JSON.stringify(summary);
-
-  useEffect(() => {
-    if (!summary) return;
-    let cancelled = false;
-    let url: string | undefined;
-    renderShareCard({ ...summary, look: chickenLookFromState(target), site: SITE })
-      .then((blob) => {
-        if (cancelled) return;
-        url = URL.createObjectURL(blob);
-        setCard({ summary, blob, file: new File([blob], shareFileName(summary.publishedOn), { type: blob.type }), url });
-      })
-      .catch(() => {
-        // No card, no share button: sharing must never get in the way of finishing.
-      });
-    return () => {
-      cancelled = true;
-      if (url) URL.revokeObjectURL(url);
-      setCard(null);
-    };
-    // The summary is rebuilt every render; its contents are what matter.
-  }, [key]);
-
-  return card;
 }
 
 function hintTitle(used: number, total: number) {
