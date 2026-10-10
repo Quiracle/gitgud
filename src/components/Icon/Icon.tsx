@@ -8,7 +8,9 @@ import github from "../../assets/brand/github.png";
 import google from "../../assets/brand/google.svg";
 import check from "../../assets/icons/check.svg";
 import close from "../../assets/icons/close.svg";
+import contentCopy from "../../assets/icons/content_copy.svg";
 import crown from "../../assets/icons/crown.svg";
+import download from "../../assets/icons/download.svg";
 import extension from "../../assets/icons/extension.svg";
 import flag2 from "../../assets/icons/flag_2.svg";
 import forwardMedia from "../../assets/icons/forward_media.svg";
@@ -17,6 +19,7 @@ import home from "../../assets/icons/home.svg";
 import importContacts from "../../assets/icons/import_contacts.svg";
 import lightbulb2 from "../../assets/icons/lightbulb_2.svg";
 import myLocation from "../../assets/icons/my_location.svg";
+import openInNew from "../../assets/icons/open_in_new.svg";
 import remove from "../../assets/icons/remove.svg";
 import share from "../../assets/icons/share.svg";
 
@@ -29,7 +32,9 @@ const ICONS = {
   arrow_forward_ios: arrowForwardIos,
   check,
   close,
+  content_copy: contentCopy,
   crown,
+  download,
   extension,
   flag_2: flag2,
   github,
@@ -40,6 +45,7 @@ const ICONS = {
   import_contacts: importContacts,
   lightbulb_2: lightbulb2,
   my_location: myLocation,
+  open_in_new: openInNew,
   remove,
   share,
 } as const;
