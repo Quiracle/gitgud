@@ -22,13 +22,20 @@ Deno.serve(async (request) => {
       return response({ error: "Unauthorized." }, 401);
     }
 
-    const body = await request.json().catch(() => ({})) as { mode?: string; date?: string; perDifficulty?: number };
+    const body = await request.json().catch(() => ({})) as {
+      mode?: string;
+      date?: string;
+      perDifficulty?: number;
+      difficulty?: Difficulty;
+    };
     const supabase = createClient(config.supabaseUrl, config.serviceRoleKey, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
 
     if (body.mode === "preflight") return await preflight(supabase, config);
-    if (body.mode === "seed-fallbacks") return await seedFallbacks(supabase, config, body.perDifficulty ?? 2);
+    if (body.mode === "seed-fallbacks") {
+      return await seedFallbacks(supabase, config, body.perDifficulty ?? 2, body.difficulty);
+    }
     if (body.mode && body.mode !== "generate") return response({ error: "Unknown mode." }, 400);
 
     const date = body.date ?? tomorrowUtcDate();
@@ -64,10 +71,13 @@ Deno.serve(async (request) => {
     if (run.error) throw run.error;
 
     let previousIssues: string[] = [];
+    const generationDeadline = Date.now() + 45_000;
     for (let attempt = 1; attempt <= 3; attempt += 1) {
+      const remainingMs = generationDeadline - Date.now();
+      if (remainingMs < 5_000) break;
       await supabase.from("daily_generation_runs").update({ attempt_number: attempt }).eq("id", run.data.id);
       try {
-        const draft = await requestOpenAI(config, brief, previousIssues);
+        const draft = await requestOpenAI(config, brief, previousIssues, Math.min(20_000, remainingMs));
         const candidate = materializeCandidate(draft, date);
         const validation = validateCandidateAgainstBrief(candidate, brief);
         if (validation.ok) {
@@ -133,43 +143,79 @@ async function publish(supabase: any, runId: string, candidate: any, status: "va
   return response({ status: "published", id: published.data, difficulty: definition.difficulty, source: status });
 }
 
-async function seedFallbacks(supabase: any, config: ReturnType<typeof readConfig>, desired: number) {
+async function seedFallbacks(
+  supabase: any,
+  config: ReturnType<typeof readConfig>,
+  desired: number,
+  requestedDifficulty?: Difficulty,
+) {
   if (!Number.isInteger(desired) || desired < 2 || desired > 10) return response({ error: "perDifficulty must be between 2 and 10." }, 400);
-  const result: Record<string, number> = {};
+  if (requestedDifficulty && !difficulties.includes(requestedDifficulty)) {
+    return response({ error: "difficulty must be easy, medium, or hard." }, 400);
+  }
+
+  const counts = await fallbackCounts(supabase);
+  const ready = difficulties.every((difficulty) => counts[difficulty] >= desired);
+  if (ready) return response({ ready: true, generated: false, counts });
+
+  const difficulty = requestedDifficulty && counts[requestedDifficulty] < desired
+    ? requestedDifficulty
+    : difficulties
+      .filter((candidate) => counts[candidate] < desired)
+      .sort((left, right) => counts[left] - counts[right])[0];
+
+  const seed = crypto.randomUUID();
+  const brief = createGenerationBrief("2099-01-01", difficulty, seed);
+  try {
+    const draft = await requestOpenAI(config, brief, [], 25_000);
+    const candidate = materializeCandidate(draft, "2099-01-01");
+    const validation = validateCandidateAgainstBrief(candidate, brief);
+    if (!validation.ok) {
+      return response({
+        ready: false,
+        generated: false,
+        difficulty,
+        counts,
+        issues: validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`),
+      });
+    }
+    const inserted = await supabase.from("daily_fallback_pool").insert({
+      difficulty,
+      candidate,
+      source: "ai",
+      validated: true,
+    });
+    if (inserted.error) throw inserted.error;
+    counts[difficulty] += 1;
+    return response({
+      ready: difficulties.every((candidateDifficulty) => counts[candidateDifficulty] >= desired),
+      generated: true,
+      difficulty,
+      counts,
+    });
+  } catch (error) {
+    return response({
+      ready: false,
+      generated: false,
+      difficulty,
+      counts,
+      error: safeError(error),
+    });
+  }
+}
+
+async function fallbackCounts(supabase: any): Promise<Record<Difficulty, number>> {
+  const result = { easy: 0, medium: 0, hard: 0 };
   for (const difficulty of difficulties) {
     const current = await supabase.from("daily_fallback_pool").select("id", { count: "exact", head: true }).eq("difficulty", difficulty).eq("validated", true);
     if (current.error) throw current.error;
-    let count = current.count ?? 0;
-    let failures = 0;
-    while (count < desired && failures < 6) {
-      const seed = crypto.randomUUID();
-      const brief = createGenerationBrief("2099-01-01", difficulty, seed);
-      try {
-        const draft = await requestOpenAI(config, brief, []);
-        const candidate = materializeCandidate(draft, "2099-01-01");
-        const validation = validateCandidateAgainstBrief(candidate, brief);
-        if (!validation.ok) { failures += 1; continue; }
-        const inserted = await supabase.from("daily_fallback_pool").insert({ difficulty, candidate, source: "ai", validated: true });
-        if (inserted.error) throw inserted.error;
-        count += 1;
-      } catch (error) {
-        console.error(`Fallback seed ${difficulty} failed: ${safeError(error)}`);
-        failures += 1;
-      }
-    }
-    result[difficulty] = count;
+    result[difficulty] = current.count ?? 0;
   }
-  const ready = difficulties.every((difficulty) => result[difficulty] >= desired);
-  return response({ ready, counts: result }, ready ? 200 : 503);
+  return result;
 }
 
 async function preflight(supabase: any, config: ReturnType<typeof readConfig>) {
-  const counts: Record<string, number> = {};
-  for (const difficulty of difficulties) {
-    const query = await supabase.from("daily_fallback_pool").select("id", { count: "exact", head: true }).eq("difficulty", difficulty).eq("validated", true);
-    if (query.error) throw query.error;
-    counts[difficulty] = query.count ?? 0;
-  }
+  const counts = await fallbackCounts(supabase);
   let providerCompatible = false;
   let providerError: string | undefined;
   try {
@@ -200,11 +246,16 @@ async function verifyProviderConfiguration(config: ReturnType<typeof readConfig>
   if (!request.ok) throw new Error(`OpenAI ${request.status}: ${payload?.error?.message ?? "preflight failed"}`);
 }
 
-async function requestOpenAI(config: ReturnType<typeof readConfig>, brief: Record<string, unknown>, previousIssues: string[]) {
+async function requestOpenAI(
+  config: ReturnType<typeof readConfig>,
+  brief: Record<string, unknown>,
+  previousIssues: string[],
+  timeoutMs = 25_000,
+) {
   const request = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: { authorization: `Bearer ${config.openAiKey}`, "content-type": "application/json" },
-    signal: AbortSignal.timeout(45_000),
+    signal: AbortSignal.timeout(timeoutMs),
     body: JSON.stringify(createPuzzleRequestBody(config, generationPrompt(brief, previousIssues))),
   });
   const payload = await request.json();

@@ -63,24 +63,22 @@ The generator sends `temperature: 1.8` and deliberately omits `top_p`. If the co
 
 ## 4. Create the AI fallback pool
 
-Do this before enabling the schedule. It makes several OpenAI calls and stores at least two validated AI puzzles for each difficulty.
+Do this before enabling the schedule. Each Edge Function request generates at most one candidate so it stays below the hosted gateway timeout. The resumable helper repeats those short requests until it has stored at least two validated AI puzzles for each difficulty.
 
 ```powershell
 $projectRef = "YOUR_PROJECT_REF"
 $generationSecret = "YOUR_LONG_RANDOM_SECRET"
-$headers = @{ "x-generation-secret" = $generationSecret; "Content-Type" = "application/json" }
-$url = "https://$projectRef.supabase.co/functions/v1/generate-daily-puzzle"
-
-Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body '{"mode":"seed-fallbacks","perDifficulty":2}'
-Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body '{"mode":"preflight"}'
+& .\scripts\seed-fallbacks.ps1 -ProjectRef $projectRef -GenerationSecret $generationSecret -PerDifficulty 2
 ```
 
-Do not continue until preflight returns `ready: true`, `temperature: 1.8`, and at least two fallbacks for easy, medium, and hard.
+The helper preserves every successful fallback and can safely be run again if the network or a candidate fails. Do not continue until it returns `ready: true` and at least two fallbacks for easy, medium, and hard.
 
 Generate today's puzzle manually as a smoke test:
 
 ```powershell
 $todayUtc = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
+$headers = @{ "x-generation-secret" = $generationSecret; "Content-Type" = "application/json" }
+$url = "https://$projectRef.supabase.co/functions/v1/generate-daily-puzzle"
 $body = @{ mode = "generate"; date = $todayUtc } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
 ```
