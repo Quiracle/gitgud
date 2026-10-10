@@ -1,6 +1,6 @@
 import type { MouseEvent, ReactNode } from "react";
 
-type Variant = "primary" | "outline";
+type Variant = "primary" | "outline" | "tertiary";
 
 interface ButtonProps {
   children: ReactNode;
@@ -17,6 +17,7 @@ interface ButtonProps {
 const VARIANTS: Record<Variant, string> = {
   primary: "bg-lime-400 text-green-950 hover:bg-lime-300 active:bg-lime-500",
   outline: "border border-lime-400 bg-green-950 text-lime-400 hover:bg-lime-400/10 active:bg-lime-400/20",
+  tertiary: "text-lime-400 underline decoration-from-font underline-offset-2 hover:bg-lime-400/10 active:bg-lime-400/20",
 };
 
 export function Button({

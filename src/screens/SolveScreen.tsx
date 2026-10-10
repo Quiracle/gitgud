@@ -229,16 +229,22 @@ export function SolveScreen({
 
       {confetti && <Confetti key={confetti.key} x={confetti.x} y={confetti.y} />}
 
-      <Dialog open={panel === "result"} title={session.assisted ? "Solved with help" : "Congrats!"} onClose={closePanel}>
+      {/* No close: a solved puzzle is finished, so the popup only leads onward. */}
+      <Dialog open={panel === "result"} title={session.assisted ? "Solved with help" : "Congrats!"}>
         <div className="flex flex-col gap-1">
           <StatRow label="Retries:" value={session.restartCount} />
           <StatRow label="Time taken:" value={formatDuration(session.finalElapsedMs ?? session.elapsedMs())} large />
           {session.assisted && <StatRow label="Points:" value="0 (solution revealed)" />}
         </div>
-        <Button onClick={() => onNavigate(resultAction.href)}>
-          <span>{resultAction.label}</span>
-          <Icon name={resultAction.icon} size={20} className="ml-2" />
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button onClick={() => onNavigate(resultAction.href)}>
+            <span>{resultAction.label}</span>
+            <Icon name={resultAction.icon} size={20} className="ml-2" />
+          </Button>
+          <Button variant="tertiary" onClick={() => onNavigate("/")}>
+            Back home
+          </Button>
+        </div>
       </Dialog>
 
       <Dialog open={panel === "restart"} title="Restart puzzle?" onClose={closePanel}>
