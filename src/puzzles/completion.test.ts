@@ -33,6 +33,6 @@ describe("puzzle completion requirements", () => {
         { type: "log", all: false },
         { type: "log", all: true },
       ],
-    )).toEqual({ solved: true, unmet: [] });
+    )).toMatchObject({ solved: true, unmet: [] });
   });
 });

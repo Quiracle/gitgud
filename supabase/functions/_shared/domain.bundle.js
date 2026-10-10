@@ -14,6 +14,7 @@ var CHICKEN_COLORS = [
   "purple",
   "gold"
 ];
+var CHICKEN_BODY_VALUES = ["none", "cream", ...CHICKEN_COLORS];
 var EMPTY_CHICKEN_STATE = {
   sunglasses: "none",
   hat: "none",
@@ -23,9 +24,11 @@ var EMPTY_CHICKEN_STATE = {
 };
 var allowedValues = ["none", ...CHICKEN_COLORS];
 var CHICKEN_V2_SEMANTIC_POLICY = {
-  properties: Object.fromEntries(
-    CHICKEN_ACCESSORY_SLOTS.map((slot) => [slot, allowedValues])
-  ),
+  properties: {
+    ...Object.fromEntries(CHICKEN_ACCESSORY_SLOTS.map((slot) => [slot, allowedValues])),
+    body: CHICKEN_BODY_VALUES
+  },
+  // `body` is optional: absent means the default cream chicken.
   requiredProperties: CHICKEN_ACCESSORY_SLOTS
 };
 
@@ -271,7 +274,9 @@ function applyChanges(snapshot, changes) {
   for (const change of changes) {
     if (!semanticEqual(result[change.property], change.from)) {
       throw new GitSimulationError(
-        `Semantic conflict on \`${change.property}\`: expected ${formatValue(change.from)}, found ${formatValue(result[change.property])}.`
+        `Merge conflict on \`${change.property}\`: this change expects ${formatValue(change.from)}, but here it is ${formatValue(result[change.property])}.
+
+Conflict resolution is not supported in this version.`
       );
     }
     result[change.property] = structuredClone(change.to);
@@ -661,20 +666,21 @@ var usage = {
 function parseGitCommand(input) {
   const [commandLine = "", ...todoLines] = input.trim().split(/\r?\n/);
   const tokens = commandLine.trim().split(/\s+/).filter(Boolean);
+  const gitToken = tokens[0]?.toLowerCase();
+  const command = tokens[1]?.toLowerCase();
   const todoSource = todoLines.map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("#"));
-  if (todoSource.length > 0 && !(tokens[1] === "rebase" && isInteractiveFlag(tokens[2]))) {
+  if (todoSource.length > 0 && !(command === "rebase" && isInteractiveFlag(tokens[2]))) {
     return { ok: false, error: "Enter one Git command at a time." };
   }
   if (tokens.length === 0) {
     return { ok: false, error: "Type a Git command to continue." };
   }
-  if (tokens[0] !== "git") {
+  if (gitToken !== "git") {
     return {
       ok: false,
       error: "Only simulated Git commands are supported. Try `git log`."
     };
   }
-  const command = tokens[1];
   if (!command) {
     return {
       ok: false,
@@ -686,7 +692,7 @@ function parseGitCommand(input) {
       if (tokens.length === 2) {
         return { ok: true, action: { type: "log", all: false } };
       }
-      if (tokens.length === 3 && tokens[2] === "--all") {
+      if (tokens.length === 3 && tokens[2].toLowerCase() === "--all") {
         return { ok: true, action: { type: "log", all: true } };
       }
       return {
@@ -706,7 +712,7 @@ function parseGitCommand(input) {
           action: { type: "merge", branch: tokens[2], ffOnly: false }
         };
       }
-      if (tokens.length === 4 && tokens[2] === "--ff-only" && !tokens[3].startsWith("-")) {
+      if (tokens.length === 4 && tokens[2].toLowerCase() === "--ff-only" && !tokens[3].startsWith("-")) {
         return {
           ok: true,
           action: { type: "merge", branch: tokens[3], ffOnly: true }
@@ -739,7 +745,7 @@ function parseGitCommand(input) {
           action: { type: "interactive-rebase", onto: tokens[3], todo: todo.todo }
         };
       }
-      if (tokens[2] === "--continue" || tokens[2] === "--abort" || tokens[2] === "--skip") {
+      if (tokens[2]?.toLowerCase() === "--continue" || tokens[2]?.toLowerCase() === "--abort" || tokens[2]?.toLowerCase() === "--skip") {
         return {
           ok: false,
           error: "Rebases never stop for conflicts in this simulator, so there is nothing to continue or abort."
@@ -769,13 +775,15 @@ function parseGitCommand(input) {
   }
 }
 function isInteractiveFlag(token) {
-  return token === "-i" || token === "--interactive";
+  const normalized = token?.toLowerCase();
+  return normalized === "-i" || normalized === "--interactive";
 }
 function parseRebaseTodo(lines) {
   const todo = [];
   for (const line of lines) {
     const [verb, commit] = line.split(/\s+/);
-    const action = verb === "pick" || verb === "p" ? "pick" : verb === "squash" || verb === "s" ? "squash" : void 0;
+    const normalizedVerb = verb.toLowerCase();
+    const action = normalizedVerb === "pick" || normalizedVerb === "p" ? "pick" : normalizedVerb === "squash" || normalizedVerb === "s" ? "squash" : void 0;
     if (!action) {
       return {
         ok: false,
@@ -836,27 +844,32 @@ function executeAction(repository, action) {
 // src/engine/validation.ts
 function validateRepository(repository, target) {
   const unmet = [];
+  const checks = [];
   const targetHead = Object.hasOwn(repository.branches, target.branch) ? repository.branches[target.branch] : void 0;
+  const matchesSnapshot = targetHead !== void 0 && semanticEqual(getSnapshot(repository, targetHead), target.snapshot);
   if (targetHead === void 0) {
     unmet.push(`The required branch '${target.branch}' does not exist.`);
-  } else {
-    const actual = getSnapshot(repository, targetHead);
-    if (!semanticEqual(actual, target.snapshot)) {
-      unmet.push(
-        `Branch '${target.branch}' does not contain the target repository state.`
-      );
-    }
+  } else if (!matchesSnapshot) {
+    unmet.push(
+      `Branch '${target.branch}' does not contain the target repository state.`
+    );
   }
-  if (repository.currentBranch !== target.branch) {
+  checks.push({ id: "snapshot", label: `${target.branch} matches the goal`, met: matchesSnapshot });
+  const onTarget = repository.currentBranch === target.branch;
+  if (!onTarget) {
     unmet.push(`HEAD must finish on branch '${target.branch}'.`);
   }
+  checks.push({ id: "head", label: `Finish on ${target.branch}`, met: onTarget });
   for (const [branch, expectedHead] of Object.entries(target.branchHeads ?? {})) {
-    if (!Object.hasOwn(repository.branches, branch) || repository.branches[branch] !== expectedHead) {
+    const met = Object.hasOwn(repository.branches, branch) && repository.branches[branch] === expectedHead;
+    if (!met) {
       unmet.push(`Branch '${branch}' does not point to the required commit.`);
     }
+    checks.push({ id: `branch:${branch}`, label: `Leave ${branch} at ${expectedHead}`, met });
   }
   if (target.requiredProvenance?.length) {
     const reachable = getReachableCommits(repository);
+    const squashes = [];
     for (const requirement of target.requiredProvenance) {
       const found = reachable.some(
         (commit) => commit.provenance?.type === requirement.type && commit.provenance.sourceCommits?.includes(requirement.sourceCommit)
@@ -866,9 +879,38 @@ function validateRepository(repository, target) {
           `History must include a ${requirement.type} of '${requirement.sourceCommit}'.`
         );
       }
+      if (requirement.type === "squash") squashes.push({ sourceCommit: requirement.sourceCommit, met: found });
+      else checks.push({ id: `${requirement.type}:${requirement.sourceCommit}`, label: provenanceLabel(requirement), met: found });
+    }
+    if (squashes.length) {
+      const sources = squashes.map((squash) => squash.sourceCommit);
+      checks.push({
+        id: `squash:${sources.join(",")}`,
+        label: `Squash ${joinWords(sources)} into one commit`,
+        met: squashes.every((squash) => squash.met)
+      });
     }
   }
-  return { solved: unmet.length === 0, unmet };
+  return { solved: unmet.length === 0, unmet, checks };
+}
+function provenanceLabel({ type, sourceCommit }) {
+  switch (type) {
+    case "revert":
+      return `Undo ${sourceCommit} with git revert`;
+    case "merge":
+      return `Bring in ${sourceCommit} with a merge commit`;
+    case "cherry-pick":
+      return `Cherry-pick ${sourceCommit}`;
+    case "rebase":
+      return `Rebase ${sourceCommit} onto newer work (don't merge it)`;
+    case "squash":
+      return `Squash ${sourceCommit} into a combined commit`;
+    case "original":
+      return `Keep ${sourceCommit} in the history`;
+  }
+}
+function joinWords(words) {
+  return words.length <= 1 ? words.join("") : `${words.slice(0, -1).join(", ")} and ${words[words.length - 1]}`;
 }
 
 // src/puzzles/policy.ts
@@ -1291,12 +1333,15 @@ function validatePuzzleCompletion(repository, target, executed, requirements = [
   const base = validateRepository(repository, target);
   const actions = executed.map((entry) => "action" in entry ? entry.action : entry);
   const unmet = [...base.unmet];
-  requirements.forEach((requirement) => {
-    if (!actions.some((action) => matchesActionRequirement(action, requirement))) {
+  const checks = [...base.checks];
+  requirements.forEach((requirement, index) => {
+    const met = actions.some((action) => matchesActionRequirement(action, requirement));
+    if (!met) {
       unmet.push(`A required action has not been executed: ${formatRequirement(requirement)}.`);
     }
+    checks.push({ id: `action:${index}`, label: `Run ${formatRequirement(requirement)}`, met });
   });
-  return { solved: unmet.length === 0, unmet };
+  return { solved: unmet.length === 0, unmet, checks };
 }
 function matchesActionRequirement(action, requirement) {
   if (action.type !== requirement.type) return false;

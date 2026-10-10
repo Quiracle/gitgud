@@ -76,6 +76,25 @@ describe("2026-10-10 daily: Demo day", () => {
     expect(play([]).validation?.solved).toBe(false);
   });
 
+  it("lists the open history goals when the chicken already matches", () => {
+    const run = play([
+      "git revert m12", "git merge glam", "git merge lanyard", "git cherry-pick x42", "git merge stilts",
+    ]);
+    expect(run.error).toBeUndefined();
+    const checks = run.validation?.checks ?? [];
+    expect(checks.find((check) => check.id === "snapshot")?.met).toBe(true);
+    expect(checks.filter((check) => !check.met).map((check) => check.label)).toEqual([
+      "Rebase l71 onto newer work (don't merge it)",
+      "Squash t61 and t63 into one commit",
+    ]);
+  });
+
+  it("explains why the final stilts commit can't be cherry-picked on its own", () => {
+    const run = play(["git cherry-pick t63"]);
+    expect(run.error).toContain("Merge conflict on `longLegs`");
+    expect(run.error).toContain("Conflict resolution is not supported in this version.");
+  });
+
   it("blocks merging the whole lab branch with a conflict", () => {
     const run = play(["git merge lab"]);
     expect(run.error).toMatch(/conflict/i);

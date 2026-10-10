@@ -17,14 +17,17 @@ export function validatePuzzleCompletion(
   const base = validateRepository(repository, target);
   const actions = executed.map((entry) => "action" in entry ? entry.action : entry);
   const unmet = [...base.unmet];
+  const checks = [...base.checks];
 
-  requirements.forEach((requirement) => {
-    if (!actions.some((action) => matchesActionRequirement(action, requirement))) {
+  requirements.forEach((requirement, index) => {
+    const met = actions.some((action) => matchesActionRequirement(action, requirement));
+    if (!met) {
       unmet.push(`A required action has not been executed: ${formatRequirement(requirement)}.`);
     }
+    checks.push({ id: `action:${index}`, label: `Run ${formatRequirement(requirement)}`, met });
   });
 
-  return { solved: unmet.length === 0, unmet };
+  return { solved: unmet.length === 0, unmet, checks };
 }
 
 export function matchesActionRequirement(

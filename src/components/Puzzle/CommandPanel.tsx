@@ -9,7 +9,7 @@ export interface TerminalEntry {
   id: number;
   command?: string;
   lines: string[];
-  tone?: "normal" | "error" | "success";
+  tone?: "normal" | "error" | "success" | "info";
 }
 
 interface CommandPanelProps {
@@ -141,7 +141,9 @@ function ToggleButton({ expanded, onToggle }: { expanded: boolean; onToggle?: ()
 }
 
 function lineTone(tone: TerminalEntry["tone"]) {
-  return tone === "error" ? "text-red-400" : tone === "success" ? "text-lime-400" : "text-grey-400";
+  if (tone === "error") return "text-red-400";
+  if (tone === "success") return "text-lime-400";
+  return tone === "info" ? "text-yellow-300" : "text-grey-400";
 }
 
 /** The newest line of output, sliding up as it changes. */
