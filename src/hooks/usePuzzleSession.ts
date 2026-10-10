@@ -188,11 +188,11 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
   const runCommand = useCallback(
     (command: string): CommandOutcome => {
       if (locked) return { ok: false, mutated: false, solved: true };
+      // Every puzzle accepts every simulated command; victory is judged on the final state.
       const parsed = parseGitCommand(command);
-      const allowed = !parsed.ok || puzzle.allowedCommands.includes(parsed.action.type);
 
       // An interactive rebase with commits to edit opens the todo dialog first.
-      if (allowed && parsed.ok && parsed.action.type === "interactive-rebase" && !parsed.action.todo) {
+      if (parsed.ok && parsed.action.type === "interactive-rebase" && !parsed.action.todo) {
         const plan = planInteractiveRebase(repository, parsed.action.onto);
         if (plan.ok && plan.todo.length > 0) {
           setPendingRebase({ onto: plan.onto, todo: plan.todo });
@@ -200,13 +200,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition) {
         }
       }
 
-      const result = allowed
-        ? executeCommand(repository, command)
-        : {
-            ok: false as const,
-            repository,
-            output: [`This puzzle doesn't use \`git ${command.split(/\s+/)[1] ?? "command"}\`.`, `Try: ${puzzle.allowedCommands.join(", ")}.`],
-          };
+      const result = executeCommand(repository, command);
       const nextActions = result.ok ? [...actions, result.action] : actions;
       const next = result.ok
         ? validatePuzzleCompletion(result.repository, puzzle.target, nextActions, puzzle.actionRequirements)
@@ -354,7 +348,7 @@ function restoreRun(puzzle: PublicPuzzleDefinition, attempt: StoredAttempt) {
   const actions: GitAction[] = [];
   for (const command of attempt.runCommands) {
     const parsed = parseGitCommand(command);
-    if (!parsed.ok || !puzzle.allowedCommands.includes(parsed.action.type)) continue;
+    if (!parsed.ok) continue;
     const result = executeCommand(repository, command);
     repository = result.repository;
     if (result.ok) actions.push(result.action);
