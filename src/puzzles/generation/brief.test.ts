@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CHICKEN_ACCESSORY_SLOTS } from "../chickenTheme";
+import { CHICKEN_ACCESSORY_SLOTS, validateChickenVisualState } from "../chickenTheme";
 import { createGenerationBrief, GENERATION_PROFILES } from "./brief";
 import { validateCandidateAgainstBrief } from "./validateBrief";
 import type { GenerationBrief } from "./types";
@@ -24,6 +24,7 @@ describe("daily generation briefs", () => {
         const accessoryCount = CHICKEN_ACCESSORY_SLOTS.filter((slot) => brief.targetState[slot] !== "none").length;
         expect(accessoryCount).toBeGreaterThanOrEqual(profile.accessories[0]);
         expect(accessoryCount).toBeLessThanOrEqual(profile.accessories[1]);
+        expect(validateChickenVisualState(brief.targetState)).toBeUndefined();
         const concepts = new Set(brief.requiredConcepts);
         if (brief.graphArchetype === "fast-forward") expect(concepts.has("merge") || concepts.has("ff-only")).toBe(true);
         if (brief.graphArchetype === "divergent-merge") expect(concepts).toEqual(new Set(["switch", "merge"]));
@@ -82,6 +83,21 @@ describe("brief-specific validation", () => {
     const result = validateCandidateAgainstBrief(candidate, changedBrief);
     expect(result.ok).toBe(false);
     expect(result.issues.some((issue) => issue.code === "brief.target-state")).toBe(true);
+  });
+
+  it("rejects a generated target that asks for an invisible crest", () => {
+    const ambiguous = structuredClone(candidate) as Record<string, any>;
+    ambiguous.target.snapshot = { sunglasses: "none", hat: "blue", scarf: "none", crest: "red", longLegs: "none" };
+    ambiguous.initialRepository.commits.c3.changes = [
+      { type: "set", property: "hat", from: "none", to: "blue" },
+      { type: "set", property: "crest", from: "none", to: "red" },
+    ];
+    const ambiguousBrief: GenerationBrief = { ...brief, targetState: ambiguous.target.snapshot };
+
+    const result = validateCandidateAgainstBrief(ambiguous, ambiguousBrief);
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues.some((issue) => issue.code === "semantic.incompatible-visual-state")).toBe(true);
   });
 
   it("rejects a repository that does not match the requested graph archetype", () => {

@@ -62,6 +62,8 @@ export function validatePuzzleCandidate(
   // be applicable to its first-parent snapshot, including merge commits.
   validateHistoricalChangePreconditions(candidate.initialRepository, issues);
   if (issues.length > 0) return { ok: false, issues };
+  validateHistoricalVisualStates(candidate.initialRepository, config.semantic, issues);
+  if (issues.length > 0) return { ok: false, issues };
 
   // Structural validation above makes the established engine safe to use as the sole source
   // of Git behavior and victory rules.
@@ -74,7 +76,7 @@ export function validatePuzzleCandidate(
   if (initialValidation.solved) {
     add(issues, "target.initially-solved", "The initial repository already satisfies the target.", "$.initialRepository");
   } else {
-    replaySolution(candidate, issues);
+    replaySolution(candidate, config.semantic, issues);
   }
 
   if (issues.length > 0) return { ok: false, issues };
@@ -99,6 +101,17 @@ function validateHistoricalChangePreconditions(repository: Repository, issues: V
     } catch (error) {
       const message = error instanceof Error ? error.message : "Commit changes do not apply to its first parent.";
       add(issues, "repository.incorrect-change-from", message, `$.initialRepository.commits.${id}.changes`);
+    }
+  }
+}
+
+/** Reject hidden or otherwise invalid theme combinations anywhere in the starting graph. */
+function validateHistoricalVisualStates(repository: Repository, policy: SemanticPolicy, issues: ValidationIssue[]) {
+  for (const id of Object.keys(repository.commits)) {
+    try {
+      validatePolicyState(getSnapshot(repository, id), policy, `$.initialRepository.commits.${id}.snapshot`, issues);
+    } catch {
+      // Structural and semantic-precondition validation reports the underlying graph error.
     }
   }
 }
@@ -202,6 +215,12 @@ function validateSnapshot(snapshot: Record<string, unknown>, policy: SemanticPol
   for (const property of required) {
     if (!Object.hasOwn(snapshot, property)) add(issues, "semantic.incomplete-state", `The complete semantic state must include '${property}'.`, path);
   }
+  validatePolicyState(snapshot, policy, path, issues);
+}
+
+function validatePolicyState(snapshot: Record<string, unknown>, policy: SemanticPolicy, path: string, issues: ValidationIssue[]) {
+  const reason = policy.validateState?.(snapshot);
+  if (reason) add(issues, "semantic.incompatible-visual-state", reason, path);
 }
 
 function validateValue(value: unknown, property: string, policy: SemanticPolicy, limits: PuzzleLimits, path: string, issues: ValidationIssue[]) {
@@ -251,7 +270,7 @@ function validateDifficulty(candidate: PuzzleCandidate, limits: PuzzleLimits, po
   });
 }
 
-function replaySolution(candidate: PuzzleCandidate, issues: ValidationIssue[]) {
+function replaySolution(candidate: PuzzleCandidate, policy: SemanticPolicy, issues: ValidationIssue[]) {
   let repository = cloneRepository(candidate.initialRepository);
   const actions: GitAction[] = [];
   candidate.solutionCommands.forEach((command, index) => {
@@ -273,6 +292,7 @@ function replaySolution(candidate: PuzzleCandidate, issues: ValidationIssue[]) {
     }
     repository = result.repository;
     actions.push(result.action);
+    validatePolicyState(getSnapshot(repository, repository.head), policy, `$.solutionCommands[${index}]`, issues);
   });
   if (issues.some((item) => item.path.startsWith("$.solutionCommands"))) return;
   const validation = validatePuzzleCompletion(

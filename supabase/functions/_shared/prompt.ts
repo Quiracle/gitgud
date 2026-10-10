@@ -203,6 +203,11 @@ Merge-commit reverts are unsupported.
 
 Every chicken accessory is a state variable.
 
+HAT AND CREST ARE MUTUALLY EXCLUSIVE. A hat visually covers the crest, so no
+commit snapshot, target snapshot, or intermediate proof-solution snapshot may
+contain both a non-none hat and a non-none crest. Treat them as one headwear
+slot: choose either a hat, a crest, or neither.
+
 A commit change has:
 
 property

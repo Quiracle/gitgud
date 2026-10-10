@@ -48,7 +48,12 @@ describe("AI-guided practice", () => {
   });
 
   it("turns a validated candidate into private, unranked practice without the solution", () => {
-    const { puzzle, solutionCommands } = toGuidedPuzzle(demoDay as unknown as PuzzleCandidate, "abc-123");
+    const source = structuredClone(demoDay) as Record<string, any>;
+    // The dated demo is immutable legacy content; new guided material cannot
+    // contain both headwear options, so turn its crest commit into a no-op fixture.
+    source.target.snapshot.crest = "none";
+    source.initialRepository.commits.c52.changes = [{ type: "set", property: "crest", from: "none", to: "none" }];
+    const { puzzle, solutionCommands } = toGuidedPuzzle(source as PuzzleCandidate, "abc-123");
     expect(puzzle).toMatchObject({ id: "guided-abc-123", slug: "guided-abc-123", kind: "generated", version: 1 });
     expect(puzzle).not.toHaveProperty("publishedOn");
     expect(puzzle).not.toHaveProperty("solutionCommands");

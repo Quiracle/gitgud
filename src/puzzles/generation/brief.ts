@@ -1,5 +1,4 @@
 import {
-  CHICKEN_ACCESSORY_SLOTS,
   CHICKEN_COLORS,
   EMPTY_CHICKEN_STATE,
   type ChickenState,
@@ -54,7 +53,7 @@ export const GENERATION_PROFILES: Record<PuzzleDifficulty, DifficultyProfile> = 
     archetypes: ["divergent-merge", "curate-and-undo"],
   },
   hard: {
-    branches: [3, 4], commits: [8, 14], accessories: [3, 5], concepts: [2, 3],
+    branches: [3, 4], commits: [8, 14], accessories: [3, 4], concepts: [2, 3],
     solution: [3, 7], hints: [1, 1],
     archetypes: ["curate-and-undo", "multi-branch-curation"],
   },
@@ -108,11 +107,21 @@ export function createGenerationBrief(
 
 function chooseTargetState(random: () => number, count: number): ChickenState {
   const state = { ...EMPTY_CHICKEN_STATE };
-  for (const slot of sample(random, CHICKEN_ACCESSORY_SLOTS, count)) {
+  // Hat and crest occupy the same visible headwear space. Pick one of them at
+  // most, so every requested accessory has a visible representation.
+  for (const group of sample(random, ACCESSORY_GROUPS, count)) {
+    const slot = pick(random, group);
     state[slot] = pick(random, CHICKEN_COLORS);
   }
   return state;
 }
+
+const ACCESSORY_GROUPS = [
+  ["hat", "crest"],
+  ["sunglasses"],
+  ["scarf"],
+  ["longLegs"],
+] as const;
 
 function commandsFor(concepts: GitConcept[]): SupportedCommand[] {
   const commands = new Set<SupportedCommand>(["log", "switch"]);

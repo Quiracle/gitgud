@@ -22,10 +22,14 @@ function play(commands: string[]) {
 }
 
 describe("2026-10-10 daily: Demo day", () => {
-  it("passes the same publication validator as AI-generated dailies", () => {
+  it("is retained as an immutable legacy daily, despite its now-disallowed hidden crest", () => {
     const result = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-    expect(result.ok ? [] : result.issues).toEqual([]);
-    if (result.ok) expect(result.value.puzzle).not.toHaveProperty("solutionCommands");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      code: "semantic.incompatible-visual-state",
+      path: "$.target.snapshot",
+    }));
   });
 
   it.each([

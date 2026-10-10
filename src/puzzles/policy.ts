@@ -1,3 +1,4 @@
+import type { SemanticState } from "../engine";
 import type { JsonValue, PuzzleDifficulty } from "./types";
 
 /** Limits are deliberately data, so browser and server validation use the same bounds. */
@@ -63,6 +64,8 @@ export interface SemanticPolicy {
   properties: Record<string, readonly JsonValue[]>;
   /** Defaults to every configured property, ensuring snapshots are complete illustrations. */
   requiredProperties?: readonly string[];
+  /** Optional theme-specific visual rule applied to every publishable snapshot. */
+  validateState?: (state: SemanticState) => string | undefined;
 }
 
 export interface DifficultyConstraint {
