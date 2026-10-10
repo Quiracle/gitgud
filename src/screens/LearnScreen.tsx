@@ -44,8 +44,10 @@ export function LearnScreen({ onNavigate }: LearnScreenProps) {
               animate={{ opacity: 1, y: 0 }}
               transition={{ ...spring.soft, delay: 0.06 }}
             >
-              {/* No practice route yet: wire `onGenerated` to the generated puzzle's screen. */}
-              <GuidedLessonPrompt returnPath="/course" onGenerated={() => undefined} />
+              <GuidedLessonPrompt
+                returnPath="/course"
+                onGenerated={(lesson) => onNavigate(`/course/practice/${encodeURIComponent(lesson.id)}`)}
+              />
             </motion.div>
           </div>
 

@@ -60,10 +60,17 @@ export const GENERATION_PROFILES: Record<PuzzleDifficulty, DifficultyProfile> = 
   },
 };
 
+/** Guided practice pins the archetype to the learner's topic and asks for more hints. */
+export interface GenerationBriefOverrides {
+  graphArchetype?: GraphArchetype;
+  hintCount?: number;
+}
+
 export function createGenerationBrief(
   date: string,
   difficulty: PuzzleDifficulty,
   seed: string,
+  overrides: GenerationBriefOverrides = {},
 ): GenerationBrief {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error("Daily puzzle date must use YYYY-MM-DD.");
   if (!seed.trim()) throw new Error("A non-empty generation seed is required.");
@@ -73,7 +80,9 @@ export function createGenerationBrief(
   const branchCount = integer(random, ...profile.branches);
   const commitCount = integer(random, ...profile.commits);
   const targetState = chooseTargetState(random, integer(random, ...profile.accessories));
-  const graphArchetype = pick(random, profile.archetypes);
+  // Always draw, so an override never shifts the random choices that follow.
+  const randomArchetype = pick(random, profile.archetypes);
+  const graphArchetype = overrides.graphArchetype ?? randomArchetype;
   const compatibleOptions = ARCHETYPE_CONCEPT_OPTIONS[graphArchetype].filter(
     (option) => option.length >= profile.concepts[0] && option.length <= profile.concepts[1],
   );
@@ -92,7 +101,7 @@ export function createGenerationBrief(
     requiredConcepts,
     allowedCommands: commandsFor(requiredConcepts),
     solutionLength: { min: profile.solution[0], max: profile.solution[1] },
-    hintCount: integer(random, ...profile.hints),
+    hintCount: overrides.hintCount ?? integer(random, ...profile.hints),
     storyTheme: pick(random, STORY_THEMES),
   };
 }
