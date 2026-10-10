@@ -135,6 +135,22 @@ Design for phones first. Assume the on-screen keyboard can occupy roughly the bo
 
 ---
 
+## Localization
+
+Every new or changed user-facing feature must ship in all three supported languages in the same change:
+
+- English (`en`).
+- Catalan (`ca`).
+- Spanish (`es`).
+
+Use the existing `src/i18n` catalogs and helpers instead of hard-coding interface copy in React components, hooks, services, or error states. New translation keys must be present in every locale, preserve the same placeholders and markup tags, and pass the locale-parity tests.
+
+This requirement includes navigation, dialogs, buttons, validation and network errors, accessibility labels, result and sharing text, goals, hints, lesson text, and other player-visible copy. Puzzle-specific localized prose should use the appropriate puzzle localization layer without duplicating or changing repository identity, targets, or mechanics.
+
+Git commands, flags, branch names, commit IDs, and other literal Git identifiers stay unchanged unless the surrounding explanatory prose is translated.
+
+---
+
 ## Stack
 
 Use:
