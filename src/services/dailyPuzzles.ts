@@ -19,18 +19,29 @@ export class FixtureDailyPuzzleSource implements DailyPuzzleSource {
 export class SupabaseDailyPuzzleSource implements DailyPuzzleSource {
   constructor(private readonly client: SupabaseClient) {}
 
+  /**
+   * Always asks for the date's current version first, so a corrected republication reaches
+   * everyone on their next load. The local copy only covers an unreachable server.
+   */
   async getByDate(date: string): Promise<PublicPuzzleDefinition> {
-    const cached = readCache(date);
-    if (cached) return cached;
+    let response;
+    try {
+      response = await this.client
+        .from("daily_puzzles")
+        .select("definition")
+        .eq("published_on", date)
+        .eq("is_current", true)
+        .maybeSingle();
+    } catch (reason) {
+      response = { data: null, error: { message: reason instanceof Error ? reason.message : "network error" } };
+    }
+    const { data, error } = response;
 
-    const { data, error } = await this.client
-      .from("daily_puzzles")
-      .select("definition")
-      .eq("published_on", date)
-      .eq("is_current", true)
-      .maybeSingle();
-
-    if (error) throw new Error(`Daily puzzle service is unavailable: ${error.message}`);
+    if (error) {
+      const cached = readCache(date);
+      if (cached) return cached;
+      throw new Error(`Daily puzzle service is unavailable: ${error.message}`);
+    }
     if (!data) throw new Error("Today's puzzle has not been published yet. Please try again shortly.");
 
     const parsed = parsePublicPuzzleDefinition(data.definition);
