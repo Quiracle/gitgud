@@ -12,6 +12,7 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
+  { label: "Home", href: "/", icon: "home" },
   { label: "Learn", href: "/course", icon: "import_contacts" },
   { label: "Solve", href: "/play", icon: "extension", matches: ["/archive"] },
   { label: "Leaderboard", href: "/leaderboard", icon: "crown" },

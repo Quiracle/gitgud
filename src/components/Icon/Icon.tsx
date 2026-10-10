@@ -6,6 +6,7 @@ import crown from "../../assets/icons/crown.svg";
 import extension from "../../assets/icons/extension.svg";
 import flag2 from "../../assets/icons/flag_2.svg";
 import help from "../../assets/icons/help.svg";
+import home from "../../assets/icons/home.svg";
 import importContacts from "../../assets/icons/import_contacts.svg";
 
 const ICONS = {
@@ -16,6 +17,7 @@ const ICONS = {
   extension,
   flag_2: flag2,
   help,
+  home,
   import_contacts: importContacts,
 } as const;
 
