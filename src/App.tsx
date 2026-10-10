@@ -5,9 +5,9 @@ import { BottomNav } from "./components/BottomNav/BottomNav";
 import { peekCanvasOrigin } from "./lib/canvasTransition";
 import { spring } from "./lib/motion";
 import { learnBasicsCatalog } from "./puzzles";
-import { CourseScreen } from "./screens/CourseScreen";
+import { LearnScreen } from "./screens/LearnScreen";
+import { LessonScreen } from "./screens/LessonScreen";
 import { HomeScreen } from "./screens/HomeScreen";
-import { PuzzleScreen } from "./screens/PuzzleScreen";
 import { DailyPuzzleScreen } from "./screens/DailyPuzzleScreen";
 import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
 import { AuthPanel } from "./components/AuthPanel";
@@ -88,7 +88,7 @@ function renderScreen(
 
   if (path === "/play") return <DailyPuzzleScreen onNavigate={navigate} />;
 
-  if (path === "/course") return <CourseScreen onNavigate={navigate} />;
+  if (path === "/course") return <LearnScreen onNavigate={navigate} />;
 
   if (path === "/auth/callback") {
     return <AuthCallbackScreen onNavigate={navigate} onReplace={replace} />;
@@ -114,15 +114,7 @@ function renderScreen(
     const lesson = learnBasicsCatalog.find((candidate) => candidate.id === lessonId);
     if (lesson?.status === "available") {
       return (
-        <PuzzleScreen
-          key={lesson.id}
-          puzzle={lesson.puzzle}
-          eyebrow={`Learn Basics · Lesson ${lesson.order}`}
-          backHref="/course"
-          backLabel="Course"
-          accent="violet"
-          onNavigate={navigate}
-        />
+        <LessonScreen key={lesson.id} lesson={lesson} onNavigate={navigate} />
       );
     }
   }

@@ -3,7 +3,14 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import type { CommandOutcome } from "../../hooks/usePuzzleSession";
 import { spring } from "../../lib/motion";
 import { Icon } from "../Icon/Icon";
-import type { TerminalEntry } from "../Terminal/Terminal";
+
+/** One submitted command (or system message) and its output in the run transcript. */
+export interface TerminalEntry {
+  id: number;
+  command?: string;
+  lines: string[];
+  tone?: "normal" | "error" | "success";
+}
 
 interface CommandPanelProps {
   entries: TerminalEntry[];

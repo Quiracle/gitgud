@@ -1,14 +1,15 @@
 import { motion } from "motion/react";
-import { useRef, type MouseEvent, type ReactNode, type RefObject } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { Button } from "../components/Button/Button";
 import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { CommitTree } from "../components/GitGraph/CommitTree";
 import { Icon, type IconName } from "../components/Icon/Icon";
+import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
+import { HowToPlayLink, PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
 import { useDragScroll } from "../hooks/useDragScroll";
-import { setCanvasOrigin } from "../lib/canvasTransition";
 import { rise, spring, stagger } from "../lib/motion";
 import { learnBasicsCatalog, type PublicPuzzleDefinition } from "../puzzles";
 import type { LearnBasicsLesson } from "../puzzles/learnBasics/types";
@@ -16,10 +17,6 @@ import type { LearnBasicsLesson } from "../puzzles/learnBasics/types";
 interface HomeScreenProps {
   onNavigate: (path: string) => void;
 }
-
-/** Grey card from Figma; hover darkens the fill only, so the card never changes size. */
-const CARD_SURFACE =
-  "rounded border border-grey-300 bg-grey-300 transition-colors duration-200 hover:border-card-hover hover:bg-card-hover";
 
 /** Lessons that introduce the headline concepts, shown under "Recommended for you". */
 const RECOMMENDED_LESSONS = ["basics-05-three-way-merge", "basics-06-cherry-pick", "basics-08-rebase"];
@@ -31,21 +28,9 @@ const STREAK_COUNT = 0;
 /** Figma home frame (node 24:33046). */
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
   const daily = useDailyPuzzle();
-  const preview = useRef<HTMLDivElement>(null);
-  const treeScale = useRef(1);
+  const handOff = useCanvasHandOff(onNavigate);
   const courses = useDragScroll<HTMLUListElement>();
 
-  // Hand the preview's position to the puzzle screen so its canvas grows out of it.
-  function solve(path: string) {
-    const rect = preview.current?.getBoundingClientRect();
-    if (rect && daily.status === "ready") {
-      setCanvasOrigin({
-        rect: { top: rect.top, left: rect.left, width: rect.width, height: rect.height },
-        treeScale: treeScale.current,
-      });
-    }
-    onNavigate(path);
-  }
 
   return (
     <div className="min-h-dvh bg-green-50">
@@ -67,26 +52,28 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                   label={STREAK_COUNT > 0 ? `${STREAK_COUNT}-days streak!` : "Start your streak!"}
                 />
               </div>
-              <DailyPreview
-                state={daily}
-                onRetry={() => void daily.reload()}
-                canvasRef={preview}
-                onScale={(scale) => (treeScale.current = scale)}
-                onOpen={() => solve("/play")}
+              <PuzzlePreview
+                canvasRef={handOff.canvasRef}
+                puzzle={daily.status === "ready" ? daily.puzzle : undefined}
+                onScale={handOff.onScale}
+                onOpen={() => handOff.open("/play")}
+                openLabel="Open today's puzzle"
+                showDifficulty
+                fallback={
+                  daily.status === "error" ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
+                      <p className="text-sm text-grey-200">{daily.message}</p>
+                      <Button variant="outline" className="w-auto px-5" onClick={() => void daily.reload()}>
+                        Try again
+                      </Button>
+                    </div>
+                  ) : undefined
+                }
               />
             </div>
-            <a
-              href="/course"
-              onClick={(event) => follow(event, "/course", onNavigate)}
-              className="group flex min-h-11 items-center gap-2 self-end text-sm text-grey-50"
-            >
-              <span className="underline decoration-from-font underline-offset-2">How to play</span>
-              <motion.span whileHover={{ rotate: 20 }} transition={spring.snappy} className="flex">
-                <Icon name="help" size={16} />
-              </motion.span>
-            </a>
+            <HowToPlayLink href="/course" onNavigate={onNavigate} />
           </div>
-          <Button href="/play" onNavigate={solve}>
+          <Button href="/play" onNavigate={handOff.open}>
             <Shimmer />
             <span className="relative">Solve the puzzle!</span>
           </Button>
@@ -149,99 +136,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
         </div>
       </section>
 
-      <footer className="border-t border-grey-500 px-6 pb-[var(--nav-clearance)] pt-4">
-        <div className="mx-auto flex max-w-md items-start justify-between">
-          <p className="text-paragraph text-grey-950">Gitgudgame.lol</p>
-          <p className="text-xs text-grey-600">Privacy policy</p>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-interface DailyPreviewProps {
-  state: ReturnType<typeof useDailyPuzzle>;
-  onRetry: () => void;
-  canvasRef: RefObject<HTMLDivElement>;
-  onScale: (scale: number) => void;
-  onOpen: () => void;
-}
-
-function DailyPreview({ state, onRetry, canvasRef, onScale, onOpen }: DailyPreviewProps) {
-  return (
-    <div ref={canvasRef} className="relative aspect-square w-full overflow-hidden rounded bg-green-900">
-      {state.status === "loading" && <PreviewSkeleton />}
-      {state.status === "error" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-8 text-center">
-          <p className="text-sm text-grey-200">{state.message}</p>
-          <Button variant="outline" className="w-auto px-5" onClick={onRetry}>
-            Try again
-          </Button>
-        </div>
-      )}
-      {state.status === "ready" && (
-        <>
-          <button
-            type="button"
-            onClick={onOpen}
-            aria-label="Open today's puzzle"
-            className="absolute inset-0 cursor-pointer"
-          >
-            <CommitTree repository={state.puzzle.initialRepository} padding={24} onScale={onScale} className="size-full" />
-          </button>
-          <motion.div
-            className="absolute left-2 top-2"
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ ...spring.soft, delay: 0.3 }}
-          >
-            <DifficultyBadge difficulty={state.puzzle.difficulty} />
-          </motion.div>
-          <GoalCard puzzle={state.puzzle} />
-        </>
-      )}
-    </div>
-  );
-}
-
-/** Figma goal card (node 24:33070). */
-function GoalCard({ puzzle }: { puzzle: PublicPuzzleDefinition }) {
-  return (
-    <motion.div
-      className="absolute right-2 top-2 flex flex-col rounded border border-grey-300 bg-grey-50 p-2 shadow-[0_8px_24px_-12px_rgb(0_0_0/0.6)]"
-      initial={{ opacity: 0, y: -24, rotate: 8 }}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={{ ...spring.bouncy, delay: 0.45 }}
-    >
-      <motion.div
-        animate={{ y: [0, -3, 0] }}
-        transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut", delay: 1.2 }}
-      >
-        <div className="flex items-center gap-1 text-grey-950">
-          <Icon name="flag_2" size={16} />
-          <span className="text-paragraph leading-5">Goal</span>
-        </div>
-        <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
-      </motion.div>
-    </motion.div>
-  );
-}
-
-function PreviewSkeleton() {
-  return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center gap-10" aria-label="Loading today's puzzle">
-      {[1, 2].map((row) => (
-        <div key={row} className="flex gap-16">
-          {Array.from({ length: row }, (_, index) => (
-            <motion.div
-              key={index}
-              className="h-[85px] w-[66px] rounded border border-grey-700"
-              animate={{ opacity: [0.35, 0.8, 0.35] }}
-              transition={{ duration: 1.4, repeat: Infinity, delay: (row + index) * 0.15 }}
-            />
-          ))}
-        </div>
-      ))}
+      <SiteFooter />
     </div>
   );
 }

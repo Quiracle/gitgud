@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { TerminalEntry } from "../components/Terminal/Terminal";
+import type { TerminalEntry } from "../components/Puzzle/CommandPanel";
 import {
   executeCommand,
   formatInteractiveRebaseCommand,

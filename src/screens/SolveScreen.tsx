@@ -2,7 +2,7 @@ import { animate, AnimatePresence, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Button } from "../components/Button/Button";
 import { CommitTree } from "../components/GitGraph/CommitTree";
-import { Icon } from "../components/Icon/Icon";
+import { Icon, type IconName } from "../components/Icon/Icon";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { ActionBar } from "../components/Puzzle/ActionBar";
 import { CommandPanel } from "../components/Puzzle/CommandPanel";
@@ -17,10 +17,21 @@ import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
 import type { PublicPuzzleDefinition } from "../puzzles";
 
+export interface SolvedRun {
+  elapsedMs: number;
+  restartCount: number;
+  hintsUsed: number;
+  assisted: boolean;
+}
+
 interface SolveScreenProps {
   puzzle: PublicPuzzleDefinition;
   exitHref?: string;
   onNavigate: (path: string) => void;
+  /** Called once when the puzzle is solved, before the result popup opens. */
+  onSolved?: (run: SolvedRun) => void;
+  /** Main button in the result popup; defaults to the daily leaderboard. */
+  resultAction?: { label: string; icon: IconName; href: string };
 }
 
 type Panel = "none" | "help" | "hint" | "give-up" | "solution" | "result" | "restart";
@@ -28,7 +39,13 @@ type Panel = "none" | "help" | "hint" | "give-up" | "solution" | "result" | "res
 const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 
 /** Figma "daily puzzle" frame (node 24:44279); desktop docks the terminal to the right. */
-export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenProps) {
+export function SolveScreen({
+  puzzle,
+  exitHref = "/",
+  onNavigate,
+  onSolved,
+  resultAction = { label: "See leaderboard", icon: "crown", href: "/leaderboard" },
+}: SolveScreenProps) {
   const session = usePuzzleSession(puzzle);
   const desktop = useMediaQuery("(min-width: 1024px)");
   // Tablets and narrow desktop windows: terminal stays at the bottom but shows history.
@@ -73,8 +90,18 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
   }, [origin]);
 
   // Celebrate, then show the result.
+  const reported = useRef(false);
   useEffect(() => {
     if (!solved) return;
+    if (!reported.current) {
+      reported.current = true;
+      onSolved?.({
+        elapsedMs: session.finalElapsedMs ?? session.elapsedMs(),
+        restartCount: session.restartCount,
+        hintsUsed: session.hintsUsed,
+        assisted: session.assisted,
+      });
+    }
     const g = goal.current?.getBoundingClientRect();
     setConfetti({ x: g ? g.left + g.width / 2 : window.innerWidth / 2, y: g ? g.top + g.height / 2 : 120, key: Date.now() });
     const open = window.setTimeout(() => setPanel("result"), 900);
@@ -83,6 +110,8 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
       window.clearTimeout(open);
       window.clearTimeout(clear);
     };
+    // Report and celebrate once per solve.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [solved]);
 
   const chromeDelay = origin ? 0.42 : 0.15;
@@ -105,6 +134,7 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
   }
 
   function restart() {
+    reported.current = false;
     session.restart();
     setExpanded(false);
     closePanel();
@@ -204,9 +234,9 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
           <StatRow label="Time taken:" value={formatDuration(session.finalElapsedMs ?? session.elapsedMs())} large />
           {session.assisted && <StatRow label="Points:" value="0 (solution revealed)" />}
         </div>
-        <Button onClick={() => onNavigate("/leaderboard")}>
-          <span>See leaderboard</span>
-          <Icon name="crown" size={20} className="ml-2" />
+        <Button onClick={() => onNavigate(resultAction.href)}>
+          <span>{resultAction.label}</span>
+          <Icon name={resultAction.icon} size={20} className="ml-2" />
         </Button>
       </Dialog>
 
