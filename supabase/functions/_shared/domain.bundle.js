@@ -434,6 +434,161 @@ Conflict resolution is not supported in this version.`
   return merged;
 }
 
+// src/engine/commands/rebase.ts
+function rebaseBranch(source, onto) {
+  const upstreamHead = resolveUpstream(source, onto);
+  if (isAncestor(source, upstreamHead, source.head)) {
+    return {
+      repository: source,
+      output: [`Current branch ${source.currentBranch} is up to date.`],
+      mutated: false
+    };
+  }
+  if (isAncestor(source, source.head, upstreamHead)) {
+    return fastForward(source, upstreamHead);
+  }
+  const commits = commitsToReplay(source, upstreamHead);
+  return replay(source, upstreamHead, commits.map((commit) => [commit]));
+}
+function interactiveRebase(source, onto, todo) {
+  const upstreamHead = resolveUpstream(source, onto);
+  const commits = commitsToReplay(source, upstreamHead);
+  if (commits.length === 0) {
+    if (source.head !== upstreamHead && isAncestor(source, source.head, upstreamHead)) {
+      return fastForward(source, upstreamHead);
+    }
+    return {
+      repository: source,
+      output: [`Current branch ${source.currentBranch} is up to date.`],
+      mutated: false
+    };
+  }
+  const plan = todo ?? commits.map((commit) => ({ action: "pick", commit: commit.id }));
+  return replay(source, upstreamHead, groupTodo(commits, plan));
+}
+function resolveUpstream(repository, onto) {
+  if (!Object.hasOwn(repository.branches, onto)) {
+    throw new GitSimulationError(`Unknown branch: ${onto}`);
+  }
+  return repository.branches[onto];
+}
+function commitsToReplay(repository, upstreamHead) {
+  const upstream = getAncestorDistances(repository, upstreamHead);
+  const ordered = [];
+  const visited = /* @__PURE__ */ new Set();
+  const visit = (id) => {
+    if (visited.has(id) || upstream.has(id)) return;
+    visited.add(id);
+    const commit = getCommit(repository, id);
+    if (commit.parents.length === 0) {
+      throw new GitSimulationError("The branches do not share a common ancestor.");
+    }
+    commit.parents.forEach(visit);
+    if (commit.parents.length === 1) ordered.push(commit);
+  };
+  visit(repository.head);
+  return ordered;
+}
+function groupTodo(commits, todo) {
+  const expected = commits.map((commit) => commit.id);
+  const listed = todo.map((item) => item.commit);
+  if (!semanticEqual(expected, listed)) {
+    throw new GitSimulationError(
+      `The rebase todo list must keep these commits in order: ${expected.join(", ")}.
+Reordering and dropping commits are not supported in this version.`
+    );
+  }
+  if (todo[0]?.action !== "pick") {
+    throw new GitSimulationError(
+      "Cannot squash without a previous commit. The first todo entry must be pick."
+    );
+  }
+  const groups = [];
+  todo.forEach((item, index) => {
+    if (item.action === "pick") groups.push([commits[index]]);
+    else groups[groups.length - 1].push(commits[index]);
+  });
+  return groups;
+}
+function fastForward(source, upstreamHead) {
+  const repository = cloneRepository(source);
+  repository.head = upstreamHead;
+  repository.branches[repository.currentBranch] = upstreamHead;
+  return {
+    repository,
+    output: [
+      `Fast-forwarded ${source.currentBranch} to ${upstreamHead}.`,
+      successLine(source)
+    ],
+    mutated: true
+  };
+}
+function replay(source, upstreamHead, groups) {
+  let repository = cloneRepository(source);
+  repository.head = upstreamHead;
+  repository.branches[repository.currentBranch] = upstreamHead;
+  const output = [];
+  for (const group of groups) {
+    const [first] = group;
+    if (group.length === 1 && first.parents[0] === repository.head) {
+      repository.head = first.id;
+      repository.branches[repository.currentBranch] = first.id;
+      continue;
+    }
+    const before = getSnapshot(repository);
+    if (group.length === 1 && isAlreadyApplied(before, first.changes)) {
+      output.push(`Dropped ${first.id}: its changes are already upstream.`);
+      continue;
+    }
+    let after = before;
+    for (const commit of group) after = applyOrConflict(after, commit);
+    const squashed = group.length > 1;
+    const changes = squashed ? diffSnapshots(before, after) : structuredClone(first.changes);
+    const provenance = squashed ? { type: "squash", sourceCommits: group.map((commit) => commit.id) } : { type: "rebase", sourceCommits: [first.id] };
+    const message = group.map((commit) => commit.message).join("; ");
+    const appended = appendGeneratedCommit(
+      repository,
+      message,
+      [repository.head],
+      changes,
+      provenance
+    );
+    repository = appended.repository;
+    output.push(
+      squashed ? `Squashed ${group.map((commit) => commit.id).join(", ")} into ${appended.commit.id}: ${message}` : `Replayed ${first.id} as ${appended.commit.id}: ${message}`
+    );
+  }
+  if (repository.head === source.head) {
+    return {
+      repository: source,
+      output: [`Current branch ${source.currentBranch} is up to date.`],
+      mutated: false
+    };
+  }
+  output.push(successLine(source));
+  return { repository, output, mutated: true };
+}
+function applyOrConflict(state, commit) {
+  const result = structuredClone(state);
+  for (const change of commit.changes) {
+    if (!semanticEqual(result[change.property], change.from)) {
+      throw new GitSimulationError(
+        `Merge conflict on \`${change.property}\` while replaying ${commit.id}.
+
+Conflict resolution is not supported in this version.`
+      );
+    }
+    result[change.property] = structuredClone(change.to);
+  }
+  return result;
+}
+function isAlreadyApplied(state, changes) {
+  return changes.length > 0 && changes.every((change) => semanticEqual(state[change.property], change.to));
+}
+function successLine(source) {
+  return `Successfully rebased and updated refs/heads/${source.currentBranch}.`;
+}
+
 // src/engine/commands/revert.ts
 function revertCommit(source, commitId) {
   const reverted = getCommit(source, commitId);
@@ -492,16 +647,24 @@ var SUPPORTED_ACTION_TYPES = [
   "log",
   "merge",
   "cherry-pick",
-  "revert"
+  "revert",
+  "rebase",
+  "interactive-rebase"
 ];
 var usage = {
   switch: "Usage: git switch <branch>",
   merge: "Usage: git merge [--ff-only] <branch>",
   cherryPick: "Usage: git cherry-pick <commit>",
-  revert: "Usage: git revert <commit>"
+  revert: "Usage: git revert <commit>",
+  rebase: "Usage: git rebase <branch> or git rebase -i <branch>"
 };
 function parseGitCommand(input) {
-  const tokens = input.trim().split(/\s+/).filter(Boolean);
+  const [commandLine = "", ...todoLines] = input.trim().split(/\r?\n/);
+  const tokens = commandLine.trim().split(/\s+/).filter(Boolean);
+  const todoSource = todoLines.map((line) => line.trim()).filter((line) => line.length > 0 && !line.startsWith("#"));
+  if (todoSource.length > 0 && !(tokens[1] === "rebase" && isInteractiveFlag(tokens[2]))) {
+    return { ok: false, error: "Enter one Git command at a time." };
+  }
   if (tokens.length === 0) {
     return { ok: false, error: "Type a Git command to continue." };
   }
@@ -561,6 +724,29 @@ function parseGitCommand(input) {
         return { ok: false, error: usage.revert };
       }
       return { ok: true, action: { type: "revert", commit: tokens[2] } };
+    case "rebase": {
+      if (tokens.length === 3 && !tokens[2].startsWith("-")) {
+        return { ok: true, action: { type: "rebase", onto: tokens[2] } };
+      }
+      if (tokens.length === 4 && isInteractiveFlag(tokens[2]) && !tokens[3].startsWith("-")) {
+        if (todoSource.length === 0) {
+          return { ok: true, action: { type: "interactive-rebase", onto: tokens[3] } };
+        }
+        const todo = parseRebaseTodo(todoSource);
+        if (!todo.ok) return todo;
+        return {
+          ok: true,
+          action: { type: "interactive-rebase", onto: tokens[3], todo: todo.todo }
+        };
+      }
+      if (tokens[2] === "--continue" || tokens[2] === "--abort" || tokens[2] === "--skip") {
+        return {
+          ok: false,
+          error: "Rebases never stop for conflicts in this simulator, so there is nothing to continue or abort."
+        };
+      }
+      return { ok: false, error: usage.rebase };
+    }
     case "add":
     case "commit":
     case "push":
@@ -581,6 +767,27 @@ function parseGitCommand(input) {
         error: `Unknown Git command: ${command}. Try \`git log\` to inspect the repository.`
       };
   }
+}
+function isInteractiveFlag(token) {
+  return token === "-i" || token === "--interactive";
+}
+function parseRebaseTodo(lines) {
+  const todo = [];
+  for (const line of lines) {
+    const [verb, commit] = line.split(/\s+/);
+    const action = verb === "pick" || verb === "p" ? "pick" : verb === "squash" || verb === "s" ? "squash" : void 0;
+    if (!action) {
+      return {
+        ok: false,
+        error: `Unsupported rebase todo command: ${verb}. Only pick and squash are available.`
+      };
+    }
+    if (!commit) {
+      return { ok: false, error: `Missing commit after \`${verb}\` in the rebase todo list.` };
+    }
+    todo.push({ action, commit });
+  }
+  return { ok: true, todo };
 }
 
 // src/engine/execute.ts
@@ -619,6 +826,10 @@ function executeAction(repository, action) {
       return cherryPick(repository, action.commit);
     case "revert":
       return revertCommit(repository, action.commit);
+    case "rebase":
+      return rebaseBranch(repository, action.onto);
+    case "interactive-rebase":
+      return interactiveRebase(repository, action.onto, action.todo);
   }
 }
 
@@ -911,6 +1122,15 @@ function parseActionRequirements(value, path, issues) {
         }
         return;
       }
+      case "rebase":
+      case "interactive-rebase": {
+        rejectUnknownKeys(source, ["type", "onto"], itemPath, issues);
+        const onto = optionalString(source.onto, `${itemPath}.onto`, issues);
+        if (onto !== void 0 || source.onto === void 0) {
+          requirements.push({ type, ...onto === void 0 ? {} : { onto } });
+        }
+        return;
+      }
     }
   });
   return requirements;
@@ -1090,6 +1310,9 @@ function matchesActionRequirement(action, requirement) {
     case "cherry-pick":
     case "revert":
       return requirement.type === action.type && (requirement.commit === void 0 || action.commit === requirement.commit);
+    case "rebase":
+    case "interactive-rebase":
+      return requirement.type === action.type && (requirement.onto === void 0 || action.onto === requirement.onto);
   }
 }
 function formatRequirement(requirement) {
@@ -1104,6 +1327,10 @@ function formatRequirement(requirement) {
       return requirement.commit ? `git cherry-pick ${requirement.commit}` : "git cherry-pick";
     case "revert":
       return requirement.commit ? `git revert ${requirement.commit}` : "git revert";
+    case "rebase":
+      return requirement.onto ? `git rebase ${requirement.onto}` : "git rebase <branch>";
+    case "interactive-rebase":
+      return requirement.onto ? `git rebase -i ${requirement.onto}` : "git rebase -i <branch>";
   }
 }
 
