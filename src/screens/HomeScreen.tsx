@@ -6,7 +6,8 @@ import { CommitTree } from "../components/GitGraph/CommitTree";
 import { Icon, type IconName } from "../components/Icon/Icon";
 import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
-import { HowToPlayLink, PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
+import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
+import { PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
 import { useDragScroll } from "../hooks/useDragScroll";
@@ -75,7 +76,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                 }
               />
             </div>
-            <HowToPlayLink href="/course" onNavigate={onNavigate} />
+            <HowToPlayLink learnHref="/course" onNavigate={onNavigate} />
           </div>
           <Button href="/play" onNavigate={handOff.open}>
             <Shimmer />

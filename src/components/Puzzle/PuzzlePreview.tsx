@@ -113,23 +113,3 @@ function PreviewSkeleton() {
     </div>
   );
 }
-
-/** "How to play ⓘ" link from the Figma heroes. */
-export function HowToPlayLink({ href, onNavigate }: { href: string; onNavigate: (path: string) => void }) {
-  return (
-    <a
-      href={href}
-      onClick={(event) => {
-        if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-        event.preventDefault();
-        onNavigate(href);
-      }}
-      className="group flex min-h-11 items-center gap-2 self-end text-sm text-grey-50"
-    >
-      <span className="underline decoration-from-font underline-offset-2">How to play</span>
-      <motion.span whileHover={{ rotate: 20 }} transition={spring.snappy} className="flex">
-        <Icon name="help" size={16} />
-      </motion.span>
-    </a>
-  );
-}

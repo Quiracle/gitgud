@@ -8,6 +8,7 @@ import { ActionBar } from "../components/Puzzle/ActionBar";
 import { CommandPanel } from "../components/Puzzle/CommandPanel";
 import { Confetti } from "../components/Puzzle/Confetti";
 import { Dialog, StatRow } from "../components/Puzzle/Dialog";
+import { HowToPlaySteps } from "../components/Puzzle/HowToPlay";
 import { InteractiveRebaseDialog } from "../components/RebaseDialog/InteractiveRebaseDialog";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { usePuzzleSession, type SubmissionState } from "../hooks/usePuzzleSession";
@@ -363,11 +364,7 @@ export function SolveScreen({
               ))}
             </ul>
           )}
-          <ul className="flex flex-col gap-1 text-grey-300">
-            <li>Each card is a commit and shows the chicken at that point.</li>
-            <li>Tags are branches. The lime outline is HEAD, where you are.</li>
-            <li>Type Git commands until your branch matches the goal.</li>
-          </ul>
+          <HowToPlaySteps />
           <div className="flex flex-wrap gap-1">
             {puzzle.allowedCommands.map((command) => (
               <span key={command} className="rounded bg-green-900 px-2 py-1 font-secondary text-xs text-lime-400">

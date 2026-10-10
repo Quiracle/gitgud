@@ -4,7 +4,8 @@ import { Button } from "../components/Button/Button";
 import { Icon } from "../components/Icon/Icon";
 import { chickenLookFromState, PixelChicken } from "../components/Illustration/PixelChicken";
 import { CARD_SURFACE, SiteFooter } from "../components/Layout/SiteFooter";
-import { HowToPlayLink, PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
+import { HowToPlayLink } from "../components/Puzzle/HowToPlay";
+import { PuzzlePreview, useCanvasHandOff } from "../components/Puzzle/PuzzlePreview";
 import { useLessonProgress } from "../hooks/useLessonProgress";
 import { spring } from "../lib/motion";
 import { learnBasicsCatalog } from "../puzzles";
@@ -61,7 +62,7 @@ export function LearnScreen({ onNavigate }: LearnScreenProps) {
                 openLabel={featured ? `Open lesson: ${featured.title}` : "Open today's puzzle"}
               />
             </div>
-            <HowToPlayLink href={`/course/${available[0]?.id ?? ""}`} onNavigate={onNavigate} />
+            <HowToPlayLink onNavigate={onNavigate} />
           </div>
           {next ? (
             <Button href={`/course/${next.id}`} onNavigate={handOff.open}>
