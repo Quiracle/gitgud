@@ -13,7 +13,7 @@ interface ActionBarProps {
 /** Figma puzzle action bar (node 36:120556). */
 export function ActionBar({ onExit, onHelp, onHint, onGiveUp, giveUpDisabled, className = "" }: ActionBarProps) {
   return (
-    <nav aria-label="Puzzle actions" className={`flex items-center justify-between bg-green-950 px-6 py-1 ${className}`}>
+    <nav aria-label="Puzzle actions" className={`flex items-center justify-between bg-green-950 px-6 py-1 sm:justify-start sm:gap-10 lg:justify-between lg:gap-0 ${className}`}>
       <Action icon="arrow_back_ios_new" onClick={onExit}>Exit</Action>
       <Action icon="help" onClick={onHelp}>Help</Action>
       <Action icon="lightbulb_2" onClick={onHint}>Hint</Action>

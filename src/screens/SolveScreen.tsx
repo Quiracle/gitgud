@@ -31,6 +31,9 @@ const EASE_OUT = [0.22, 1, 0.36, 1] as const;
 export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenProps) {
   const session = usePuzzleSession(puzzle);
   const desktop = useMediaQuery("(min-width: 1024px)");
+  // Tablets and narrow desktop windows: terminal stays at the bottom but shows history.
+  const roomy = useMediaQuery("(min-width: 640px)");
+  const docked = desktop || roomy;
   const viewport = useVisualViewport();
   const [origin] = useState(peekCanvasOrigin);
   const [expanded, setExpanded] = useState(false);
@@ -138,18 +141,23 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
       </motion.div>
 
       <motion.div
-        className="relative flex flex-col lg:h-full lg:min-h-0 lg:border-l lg:border-grey-800"
+        className="relative flex flex-col sm:border-t sm:border-grey-800 lg:h-full lg:min-h-0 lg:border-l lg:border-t-0"
         initial={{ opacity: 0, y: 32 }}
         animate={{
           opacity: 1,
           y: 0,
-          // Mobile: the terminal grows over the canvas to show the full history.
-          ...(desktop ? {} : { height: expanded ? viewport.height : "auto" }),
+          // Phones: the terminal grows over the canvas to show the full history.
+          // Wider screens below desktop give it a fixed, generous share of the height.
+          ...(desktop
+            ? {}
+            : roomy
+              ? { height: Math.round(Math.min(Math.max(viewport.height * 0.42, 260), 480)) }
+              : { height: expanded ? viewport.height : "auto" }),
         }}
         transition={{ ...spring.soft, delay: chromeDelay, height: spring.soft }}
       >
         <AnimatePresence initial={false}>
-          {(desktop || !expanded) && (
+          {(docked || !expanded) && (
             <motion.div
               key="actions"
               initial={{ height: 0, opacity: 0 }}
@@ -168,12 +176,12 @@ export function SolveScreen({ puzzle, exitHref = "/", onNavigate }: SolveScreenP
             </motion.div>
           )}
         </AnimatePresence>
-        <div className={desktop || expanded ? "min-h-0 flex-1" : ""}>
+        <div className={docked || expanded ? "min-h-0 flex-1" : ""}>
           <CommandPanel
             entries={session.entries}
             onCommand={session.runCommand}
             expanded={expanded}
-            docked={desktop}
+            docked={docked}
             onToggle={() => setExpanded((value) => !value)}
             onHelp={() => setPanel("help")}
             disabled={solved}
