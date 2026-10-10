@@ -51,4 +51,30 @@ describe("parseGitCommand", () => {
       error: "This simulator supports `git log` and `git log --all`.",
     });
   });
+
+  it("accepts capitalized Git syntax from mobile keyboards", () => {
+    expect(parseGitCommand("Git Log --ALL")).toEqual({
+      ok: true,
+      action: { type: "log", all: true },
+    });
+    expect(parseGitCommand("GIT MERGE --FF-ONLY style")).toEqual({
+      ok: true,
+      action: { type: "merge", branch: "style", ffOnly: true },
+    });
+    expect(parseGitCommand("Git Cherry-Pick s14")).toEqual({
+      ok: true,
+      action: { type: "cherry-pick", commit: "s14" },
+    });
+  });
+
+  it("preserves branch and commit casing while normalizing Git syntax", () => {
+    expect(parseGitCommand("Git Switch Feature/ChickenHat")).toEqual({
+      ok: true,
+      action: { type: "switch", branch: "Feature/ChickenHat" },
+    });
+    expect(parseGitCommand("Git Revert B22")).toEqual({
+      ok: true,
+      action: { type: "revert", commit: "B22" },
+    });
+  });
 });

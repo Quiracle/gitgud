@@ -27,11 +27,13 @@ const usage = {
 export function parseGitCommand(input: string): ParseResult {
   const [commandLine = "", ...todoLines] = input.trim().split(/\r?\n/);
   const tokens = commandLine.trim().split(/\s+/).filter(Boolean);
+  const gitToken = tokens[0]?.toLowerCase();
+  const command = tokens[1]?.toLowerCase();
   const todoSource = todoLines
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !line.startsWith("#"));
 
-  if (todoSource.length > 0 && !(tokens[1] === "rebase" && isInteractiveFlag(tokens[2]))) {
+  if (todoSource.length > 0 && !(command === "rebase" && isInteractiveFlag(tokens[2]))) {
     return { ok: false, error: "Enter one Git command at a time." };
   }
 
@@ -39,14 +41,13 @@ export function parseGitCommand(input: string): ParseResult {
     return { ok: false, error: "Type a Git command to continue." };
   }
 
-  if (tokens[0] !== "git") {
+  if (gitToken !== "git") {
     return {
       ok: false,
       error: "Only simulated Git commands are supported. Try `git log`.",
     };
   }
 
-  const command = tokens[1];
   if (!command) {
     return {
       ok: false,
@@ -59,7 +60,7 @@ export function parseGitCommand(input: string): ParseResult {
       if (tokens.length === 2) {
         return { ok: true, action: { type: "log", all: false } };
       }
-      if (tokens.length === 3 && tokens[2] === "--all") {
+      if (tokens.length === 3 && tokens[2].toLowerCase() === "--all") {
         return { ok: true, action: { type: "log", all: true } };
       }
       return {
@@ -82,7 +83,11 @@ export function parseGitCommand(input: string): ParseResult {
         };
       }
 
-      if (tokens.length === 4 && tokens[2] === "--ff-only" && !tokens[3].startsWith("-")) {
+      if (
+        tokens.length === 4 &&
+        tokens[2].toLowerCase() === "--ff-only" &&
+        !tokens[3].startsWith("-")
+      ) {
         return {
           ok: true,
           action: { type: "merge", branch: tokens[3], ffOnly: true },
@@ -121,7 +126,11 @@ export function parseGitCommand(input: string): ParseResult {
         };
       }
 
-      if (tokens[2] === "--continue" || tokens[2] === "--abort" || tokens[2] === "--skip") {
+      if (
+        tokens[2]?.toLowerCase() === "--continue" ||
+        tokens[2]?.toLowerCase() === "--abort" ||
+        tokens[2]?.toLowerCase() === "--skip"
+      ) {
         return {
           ok: false,
           error: "Rebases never stop for conflicts in this simulator, so there is nothing to continue or abort.",
@@ -166,7 +175,8 @@ export function formatInteractiveRebaseCommand(
 }
 
 function isInteractiveFlag(token: string | undefined): boolean {
-  return token === "-i" || token === "--interactive";
+  const normalized = token?.toLowerCase();
+  return normalized === "-i" || normalized === "--interactive";
 }
 
 function parseRebaseTodo(
@@ -176,10 +186,11 @@ function parseRebaseTodo(
 
   for (const line of lines) {
     const [verb, commit] = line.split(/\s+/);
+    const normalizedVerb = verb.toLowerCase();
     const action =
-      verb === "pick" || verb === "p"
+      normalizedVerb === "pick" || normalizedVerb === "p"
         ? "pick"
-        : verb === "squash" || verb === "s"
+        : normalizedVerb === "squash" || normalizedVerb === "s"
           ? "squash"
           : undefined;
 

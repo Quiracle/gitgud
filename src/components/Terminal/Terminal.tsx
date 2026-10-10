@@ -82,7 +82,9 @@ export function Terminal({
             value={command}
             onChange={(event) => setCommand(event.target.value)}
             disabled={disabled}
+            autoCapitalize="none"
             autoComplete="off"
+            autoCorrect="off"
             spellCheck={false}
             onFocus={(event) => {
               if (window.matchMedia("(max-width: 640px)").matches) {
