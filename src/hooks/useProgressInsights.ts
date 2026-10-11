@@ -14,8 +14,8 @@ import { listSyncedDailySolves } from "../services/syncedProgress";
 import { calculateStats } from "../storage/progress";
 import { openProgressStore, PROGRESS_CHANGED } from "../storage/browserProgress";
 
-/** Days shown in the daily solve-time chart. */
-export const CHART_DAYS = 10;
+/** Days of history the solve-time chart can show; it shows as many as fit its width. */
+export const CHART_DAYS = 30;
 
 /**
  * Streak, recent days, solve times, stats, and achievements from this browser's saved progress.

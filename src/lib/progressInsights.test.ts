@@ -61,13 +61,14 @@ describe("daily streaks", () => {
 });
 
 describe("daily solve-time chart", () => {
-  it("keeps the best unassisted time per daily date, oldest first", () => {
+  it("keeps the best unassisted daily time per day played, oldest first", () => {
     const days = recentDailyTimes(
       [
         solve("daily-2026-10-09", "2026-10-09T08:00:00Z", { elapsedMs: 90_000 }),
-        solve("daily-2026-10-09", "2026-10-10T08:00:00Z", { elapsedMs: 60_000 }), // a faster replay
+        solve("daily-2026-10-09", "2026-10-09T20:00:00Z", { elapsedMs: 60_000 }), // a faster retry
         solve("daily-2026-10-10", "2026-10-10T08:00:00Z", { elapsedMs: 5_000, assisted: true }),
-        solve("daily-2026-10-11-v2", "2026-10-11T08:00:00Z", { elapsedMs: 30_000 }),
+        solve("daily-2026-10-10-v4", "2026-10-11T08:00:00Z", { elapsedMs: 40_000 }), // yesterday's, played today
+        solve("daily-2026-10-11", "2026-10-11T09:00:00Z", { elapsedMs: 30_000 }),
         solve("lesson-switch", "2026-10-11T09:00:00Z", { elapsedMs: 1_000 }),
       ],
       "2026-10-11",

@@ -44,13 +44,15 @@ export interface DailyTime {
   elapsedMs?: number;
 }
 
-/** Best solve time of each official daily over the last `count` days, oldest first, ending today. */
+/**
+ * Best daily solve time on each of the last `count` UTC days, oldest first, ending today. A
+ * solve lands on the day it was played, so an archive replay shows up today, not on its date.
+ */
 export function recentDailyTimes(completions: readonly CompletionRecord[], today: string, count: number): DailyTime[] {
   const best = new Map<string, number>();
   for (const completion of completions) {
     if (completion.kind !== "daily" || completion.assisted) continue;
-    const date = /^daily-(\d{4}-\d{2}-\d{2})(?:-v\d+)?$/.exec(completion.puzzleId)?.[1];
-    if (!date) continue;
+    const date = completion.completedAt.slice(0, 10);
     best.set(date, Math.min(best.get(date) ?? Infinity, completion.elapsedMs));
   }
   return Array.from({ length: count }, (_, index) => {
