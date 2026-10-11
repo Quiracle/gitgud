@@ -186,6 +186,7 @@ export const en = {
   "profile.save": "Save",
   "profile.saving": "Saving…",
   "profile.saved": "Saved. Your new name shows on the leaderboard.",
+  "profile.info": "About the leaderboard name",
   "profile.help": "Shown on the leaderboard instead of your full name.",
   "profile.saveFailed": "Couldn't save your name. Please try again.",
   "profile.empty": "Pick a name with at least one character.",
