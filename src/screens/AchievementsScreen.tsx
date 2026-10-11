@@ -25,23 +25,23 @@ export function AchievementsScreen({ onNavigate }: AchievementsScreenProps) {
   return (
     <div className="min-h-dvh bg-green-50">
       <section className="bg-green-950 px-6 pb-6 pt-[calc(24px+env(safe-area-inset-top))]">
-        <div className="mx-auto flex max-w-md flex-col gap-4">
+        <div className="mx-auto flex max-w-md items-center gap-1">
           <button
             type="button"
             onClick={back}
             aria-label={t("legal.back")}
-            className="-ml-3 flex size-11 items-center justify-center rounded text-grey-50 transition-colors hover:bg-grey-50/10"
+            className="-ml-3 flex size-11 shrink-0 items-center justify-center rounded text-grey-50 transition-colors hover:bg-grey-50/10"
           >
             <Icon name="arrow_back_ios_new" size={20} />
           </button>
           <motion.div
-            className="flex items-baseline justify-between gap-4"
+            className="flex min-w-0 flex-1 items-baseline justify-between gap-4"
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={spring.soft}
           >
-            <h1 className="text-3xl text-grey-50">{t("account.achievements")}</h1>
-            <span className="text-xs text-grey-300">
+            <h1 className="min-w-0 text-3xl text-grey-50">{t("account.achievements")}</h1>
+            <span className="shrink-0 text-xs text-grey-300">
               {unlocked} / {achievements.length}
             </span>
           </motion.div>
