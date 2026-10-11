@@ -35,6 +35,40 @@ export function recentDays(dates: ReadonlySet<string>, today: string, count: num
   return Array.from({ length: count }, (_, index) => dates.has(shiftDay(today, index - count + 1)));
 }
 
+export interface DailyTime {
+  date: string;
+  /** Best unassisted solve of that date's daily; undefined when unsolved. */
+  elapsedMs?: number;
+}
+
+/** Best solve time of each official daily over the last `count` days, oldest first, ending today. */
+export function recentDailyTimes(completions: readonly CompletionRecord[], today: string, count: number): DailyTime[] {
+  const best = new Map<string, number>();
+  for (const completion of completions) {
+    if (completion.kind !== "daily" || completion.assisted) continue;
+    const date = /^daily-(\d{4}-\d{2}-\d{2})(?:-v\d+)?$/.exec(completion.puzzleId)?.[1];
+    if (!date) continue;
+    best.set(date, Math.min(best.get(date) ?? Infinity, completion.elapsedMs));
+  }
+  return Array.from({ length: count }, (_, index) => {
+    const date = shiftDay(today, index - count + 1);
+    return { date, elapsedMs: best.get(date) };
+  });
+}
+
+const CHART_STEPS_MS = [15, 30, 60, 120, 300, 600, 900, 1800, 3600].map((seconds) => seconds * 1000);
+
+/** The smallest round time per square that fits the slowest solve within `rows` squares. */
+export function chartStep(times: readonly number[], rows: number): number {
+  const slowest = Math.max(0, ...times);
+  return CHART_STEPS_MS.find((step) => slowest <= step * rows) ?? CHART_STEPS_MS.at(-1)!;
+}
+
+/** Squares for one solve: rounded to the step, at least one, never above the chart. */
+export function chartSquares(elapsedMs: number, step: number, rows: number): number {
+  return Math.min(rows, Math.max(1, Math.round(elapsedMs / step)));
+}
+
 export type AchievementId = "first-solve" | "clean-history" | "daily-regular" | "on-a-roll" | "week-streak" | "basics-graduate";
 
 export interface Achievement {

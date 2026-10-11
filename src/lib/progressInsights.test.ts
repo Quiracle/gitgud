@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { CompletionRecord } from "../storage/progress";
-import { achievements, currentStreak, dailySolveDates, recentDays } from "./progressInsights";
+import {
+  achievements,
+  chartSquares,
+  chartStep,
+  currentStreak,
+  dailySolveDates,
+  recentDailyTimes,
+  recentDays,
+} from "./progressInsights";
 
 function solve(puzzleId: string, completedAt: string, extra: Partial<CompletionRecord> = {}): CompletionRecord {
   return {
@@ -46,6 +54,41 @@ describe("daily streaks", () => {
 
   it("lists recent days oldest first", () => {
     expect(recentDays(dailySolveDates(completions), "2026-10-10", 4)).toEqual([true, true, true, false]);
+  });
+});
+
+describe("daily solve-time chart", () => {
+  it("keeps the best unassisted time per daily date, oldest first", () => {
+    const days = recentDailyTimes(
+      [
+        solve("daily-2026-10-09", "2026-10-09T08:00:00Z", { elapsedMs: 90_000 }),
+        solve("daily-2026-10-09", "2026-10-10T08:00:00Z", { elapsedMs: 60_000 }), // a faster replay
+        solve("daily-2026-10-10", "2026-10-10T08:00:00Z", { elapsedMs: 5_000, assisted: true }),
+        solve("daily-2026-10-11-v2", "2026-10-11T08:00:00Z", { elapsedMs: 30_000 }),
+        solve("lesson-switch", "2026-10-11T09:00:00Z", { elapsedMs: 1_000 }),
+      ],
+      "2026-10-11",
+      3,
+    );
+    expect(days).toEqual([
+      { date: "2026-10-09", elapsedMs: 60_000 },
+      { date: "2026-10-10", elapsedMs: undefined },
+      { date: "2026-10-11", elapsedMs: 30_000 },
+    ]);
+  });
+
+  it("picks a round step that fits the slowest solve", () => {
+    expect(chartStep([], 8)).toBe(15_000);
+    expect(chartStep([100_000], 8)).toBe(15_000);
+    expect(chartStep([200_000, 30_000], 8)).toBe(30_000);
+    expect(chartStep([7 * 60_000], 8)).toBe(60_000);
+    expect(chartStep([20 * 3_600_000], 8)).toBe(3_600_000);
+  });
+
+  it("rounds each solve to whole squares within the chart", () => {
+    expect(chartSquares(2_000, 60_000, 8)).toBe(1);
+    expect(chartSquares(150_000, 60_000, 8)).toBe(3);
+    expect(chartSquares(20 * 60_000, 60_000, 8)).toBe(8);
   });
 });
 

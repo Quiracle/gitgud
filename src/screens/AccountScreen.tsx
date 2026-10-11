@@ -1,4 +1,4 @@
-import { animate, motion, useMotionValue, useTransform, type Variants } from "motion/react";
+import { motion, type Variants } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
 import { CookieSetting } from "../components/Account/CookieSetting";
 import { LinkedInSetting } from "../components/Account/LinkedInSetting";
@@ -8,14 +8,13 @@ import { Icon } from "../components/Icon/Icon";
 import { PixelChicken, type ChickenLook } from "../components/Illustration/PixelChicken";
 import { LanguagePicker } from "../components/LanguagePicker/LanguagePicker";
 import { SiteFooter } from "../components/Layout/SiteFooter";
+import { SolveTimeChart } from "../components/Stats/SolveTimeChart";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useAuth } from "../context/AuthContext";
 import { useProgressInsights } from "../hooks/useProgressInsights";
 import { useI18n } from "../i18n/I18nProvider";
-import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
 import type { AchievementId } from "../lib/progressInsights";
-import { getSyncedDailyStats, type SyncedDailyStats } from "../services/leaderboard";
 import { DISPLAY_NAME_MAX, getDisplayName, updateDisplayName } from "../services/profile";
 
 interface AccountScreenProps {
@@ -38,22 +37,11 @@ const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitH
 
 /** Account: profile, streak, stats, achievements, and settings. */
 export function AccountScreen({ onNavigate }: AccountScreenProps) {
-  const { t, formatNumber } = useI18n();
+  const { t } = useI18n();
   const { status, user, signOut } = useAuth();
   const signedIn = status === "authenticated" && Boolean(user);
   const insights = useProgressInsights();
   const [loginOpen, setLoginOpen] = useState(false);
-  const [synced, setSynced] = useState<SyncedDailyStats>();
-
-  useEffect(() => {
-    if (!signedIn) return setSynced(undefined);
-    getSyncedDailyStats().then(setSynced).catch(() => setSynced(undefined));
-  }, [signedIn]);
-
-  // Local progress plus what the server knows about ranked dailies on other devices.
-  const local = insights.stats;
-  const dailies = Math.max(local.completedDailies, synced?.completedDailies ?? 0);
-  const bestTimes = [local.bestElapsedMs, synced?.bestElapsedMs].filter((value): value is number => value !== undefined);
   const unlocked = insights.achievements.filter((item) => item.unlocked).length;
 
   return (
@@ -105,28 +93,18 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
       <section className="px-6 py-6">
         <div className="mx-auto flex max-w-md flex-col gap-8">
           <div className="flex flex-col gap-4">
-            <SectionTitle>{t("account.stats")}</SectionTitle>
-            <motion.div
-              className="grid grid-cols-2 gap-2"
-              variants={{ show: { transition: { staggerChildren: 0.06 } } }}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-            >
-              <StatTile label={t("account.puzzlesSolved")} value={local.completedPuzzles} format={(n) => formatNumber(Math.round(n))} />
-              <StatTile label={t("account.dailySolves")} value={dailies} format={(n) => formatNumber(Math.round(n))} />
-              <StatTile
-                label={t("account.lessonsDone")}
-                value={local.completedLessons}
-                suffix={` / ${formatNumber(insights.lessonsTotal)}`}
-                format={(n) => formatNumber(Math.round(n))}
-              />
-              <StatTile
-                label={t("account.bestTime")}
-                value={bestTimes.length ? Math.min(...bestTimes) : undefined}
-                format={(ms) => formatDuration(ms)}
-              />
-            </motion.div>
+            {/* The whole title row opens the full stats; -my-2 keeps the 44px target from adding height. */}
+            <h2>
+              <button
+                type="button"
+                onClick={() => onNavigate("/account/stats")}
+                className="-my-2 flex min-h-11 w-full items-center justify-between gap-3 text-xl leading-[25px] text-green-950 transition-colors hover:text-green-700"
+              >
+                {t("account.stats")}
+                <Icon name="arrow_forward_ios" size={20} />
+              </button>
+            </h2>
+            <SolveTimeChart days={insights.dailyTimes} />
           </div>
 
           <div className="flex flex-col gap-4">
@@ -219,34 +197,6 @@ const cardVariants: Variants = {
 
 function SectionTitle({ children }: { children: string }) {
   return <h2 className="text-xl leading-[25px] text-green-950">{children}</h2>;
-}
-
-interface StatTileProps {
-  label: string;
-  value?: number;
-  suffix?: string;
-  format?: (value: number) => string;
-}
-
-/** A stat that counts up when it scrolls into view. */
-function StatTile({ label, value, suffix = "", format = (n) => Math.round(n).toString() }: StatTileProps) {
-  const count = useMotionValue(0);
-  const text = useTransform(count, (latest) => format(latest));
-  useEffect(() => {
-    if (value === undefined) return;
-    const control = animate(count, value, { duration: 0.9, ease: [0.22, 1, 0.36, 1] });
-    return () => control.stop();
-  }, [count, value]);
-
-  return (
-    <motion.div variants={cardVariants} className="flex flex-col gap-1 rounded border border-grey-300 bg-grey-300 p-3">
-      <p className="text-2xl leading-8 text-grey-950">
-        {value === undefined ? "—" : <motion.span>{text}</motion.span>}
-        {value !== undefined && suffix && <span className="text-paragraph text-grey-700">{suffix}</span>}
-      </p>
-      <p className="text-xs leading-[15px] text-grey-700">{label}</p>
-    </motion.div>
-  );
 }
 
 /** Public leaderboard name, so players needn't show their full OAuth name. */
