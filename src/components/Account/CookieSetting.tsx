@@ -15,7 +15,7 @@ export function CookieSetting() {
           {t(analytics === undefined ? "account.cookies.unset" : analytics ? "account.cookies.accepted" : "account.cookies.rejected")}
         </p>
       </div>
-      <Button variant="outline" fullWidth={false} onClick={openCookieSettings}>
+      <Button variant="outlineLight" fullWidth={false} onClick={openCookieSettings}>
         {t("account.cookies.change")}
       </Button>
     </div>

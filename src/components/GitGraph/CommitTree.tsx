@@ -1,6 +1,11 @@
 import { animate, AnimatePresence, motion, useMotionValue, type MotionValue } from "motion/react";
 import { useEffect, useMemo, useRef, type PointerEvent, type ReactNode, type RefObject } from "react";
-import { getSnapshot, type Repository } from "../../engine";
+import {
+  getSnapshot,
+  pickBranchReference,
+  type CommandReferenceKind,
+  type Repository,
+} from "../../engine";
 import { branchesAtCommit } from "../../engine/graph";
 import { useElementSize } from "../../hooks/useElementSize";
 import { useI18n } from "../../i18n/I18nProvider";
@@ -44,6 +49,9 @@ interface CommitTreeProps {
   introScale?: number;
   /** Reports the fitted scale so another screen can continue from it. */
   onScale?: (scale: number) => void;
+  /** Makes only cards that can satisfy the current command argument selectable. */
+  referenceKind?: CommandReferenceKind | null;
+  onSelectReference?: (commitId: string, branches: string[]) => void;
   className?: string;
 }
 
@@ -56,8 +64,11 @@ export function CommitTree({
   mode = "fit",
   introScale,
   onScale,
+  referenceKind,
+  onSelectReference,
   className = "",
 }: CommitTreeProps) {
+  const { t } = useI18n();
   const [ref, box] = useElementSize<HTMLDivElement>();
   const layout = useMemo(() => layoutCommitTree(repository), [repository]);
   const looks = useMemo(
@@ -141,6 +152,14 @@ export function CommitTree({
       <AnimatePresence initial={animateIn}>
         {layout.nodes.map((node) => {
           const at = position.get(node.id)!;
+          const branches = tagsOf(node.id);
+          const branch = pickBranchReference(branches, repository.currentBranch);
+          const selectable = referenceKind === "commit" || (referenceKind === "branch" && branch !== null);
+          const selectionLabel = referenceKind === "commit"
+            ? t("graph.selectCommit", { commit: node.id })
+            : branch
+              ? t("graph.selectBranch", { branch })
+              : undefined;
           return (
             <motion.div
               key={node.id}
@@ -153,10 +172,14 @@ export function CommitTree({
               <CommitCard
                 id={node.id}
                 look={looks[node.id]}
-                branches={tagsOf(node.id)}
+                branches={branches}
                 currentBranch={repository.currentBranch}
                 colour={colourOfCommit(node.id)}
                 colourOf={colourOfBranch}
+                onSelect={selectable && onSelectReference
+                  ? () => onSelectReference(node.id, branches)
+                  : undefined}
+                selectionLabel={selectable ? selectionLabel : undefined}
               />
             </motion.div>
           );
@@ -393,6 +416,9 @@ export interface CommitCardProps {
   colour?: string;
   /** Tag colour for each branch name. */
   colourOf?: (branch: string) => string;
+  /** Present only while this card is a valid argument for the current command. */
+  onSelect?: () => void;
+  selectionLabel?: string;
 }
 
 /** Trunk lime, anything else the second branch colour: for cards drawn outside a graph. */
@@ -408,13 +434,15 @@ export function CommitCard({
   head = false,
   colour = UNOWNED,
   colourOf = defaultColourOf,
+  onSelect,
+  selectionLabel,
 }: CommitCardProps) {
   const ordered = [...branches].sort((a, b) => Number(b === currentBranch) - Number(a === currentBranch));
 
-  return (
+  const card = (
     <div className="relative" style={{ width: CARD_W }}>
       <div
-        className="flex flex-col overflow-hidden rounded border bg-green-900"
+        className={`flex flex-col overflow-hidden rounded border bg-green-900 transition ${onSelect ? "group-hover:brightness-125 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-lime-400" : ""}`}
         style={{ borderColor: colour, transition: "border-color 300ms" }}
       >
         <AnimatePresence initial={false}>
@@ -462,6 +490,19 @@ export function CommitCard({
         )}
       </AnimatePresence>
     </div>
+  );
+
+  if (!onSelect) return card;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-label={selectionLabel}
+      title={selectionLabel}
+      className="group block cursor-pointer rounded text-left"
+    >
+      {card}
+    </button>
   );
 }
 

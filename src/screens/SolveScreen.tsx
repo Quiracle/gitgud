@@ -17,7 +17,11 @@ import { useVisualViewport } from "../hooks/useVisualViewport";
 import { clearCanvasOrigin, peekCanvasOrigin } from "../lib/canvasTransition";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
-import { SUPPORTED_ACTION_TYPES } from "../engine";
+import {
+  fillCommandFromCard,
+  getCommandReferenceKind,
+  SUPPORTED_ACTION_TYPES,
+} from "../engine";
 import { goalLabel } from "../i18n/goals";
 import { useI18n } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/translate";
@@ -64,6 +68,8 @@ export function SolveScreen({
   }, []);
   const [origin] = useState(peekCanvasOrigin);
   const [expanded, setExpanded] = useState(false);
+  const [commandDraft, setCommandDraft] = useState("");
+  const [commandFocusRequest, setCommandFocusRequest] = useState(0);
   const [panel, setPanel] = useState<Panel>("none");
   const [confetti, setConfetti] = useState<{ x: number; y: number; key: number } | null>(null);
 
@@ -71,6 +77,7 @@ export function SolveScreen({
   const tree = useRef<HTMLDivElement>(null);
   const goal = useRef<HTMLButtonElement>(null);
   const solved = session.status === "completed";
+  const referenceKind = solved ? null : getCommandReferenceKind(commandDraft);
   const checks = session.validation.checks;
   const goalsMet = solved ? checks.length : checks.filter((check) => check.met).length;
   const sharing = useResultShare(
@@ -152,8 +159,20 @@ export function SolveScreen({
 
   function restart() {
     session.restart();
+    setCommandDraft("");
     setExpanded(false);
     closePanel();
+  }
+
+  function selectReference(commitId: string, branches: string[]) {
+    const next = fillCommandFromCard(
+      commandDraft,
+      { commitId, branches },
+      session.repository.currentBranch,
+    );
+    if (!next) return;
+    setCommandDraft(next);
+    setCommandFocusRequest((request) => request + 1);
   }
 
   return (
@@ -174,6 +193,8 @@ export function SolveScreen({
             mode="pan"
             introScale={origin?.treeScale}
             animateIn={!origin}
+            referenceKind={referenceKind}
+            onSelectReference={selectReference}
             className="size-full"
           />
         </div>
@@ -240,6 +261,9 @@ export function SolveScreen({
           <CommandPanel
             entries={session.entries}
             onCommand={session.runCommand}
+            command={commandDraft}
+            onCommandChange={setCommandDraft}
+            focusRequest={commandFocusRequest}
             expanded={expanded}
             docked={docked}
             onToggle={() => setExpanded((value) => !value)}

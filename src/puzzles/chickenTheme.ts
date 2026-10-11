@@ -50,7 +50,16 @@ export const CHICKEN_V2_SEMANTIC_POLICY: SemanticPolicy = {
   },
   // `body` is optional: absent means the default cream chicken.
   requiredProperties: CHICKEN_ACCESSORY_SLOTS,
+  validateState: validateChickenVisualState,
 };
+
+/** A hat covers the crest pixel layer, so both values would create an invisible requirement. */
+export function validateChickenVisualState(state: SemanticState): string | undefined {
+  if (state.hat !== "none" && state.crest !== "none") {
+    return "Hat and crest cannot be used together because the hat hides the crest.";
+  }
+  return undefined;
+}
 
 export interface ChickenAssetDefinition {
   slot: ChickenAccessorySlot;

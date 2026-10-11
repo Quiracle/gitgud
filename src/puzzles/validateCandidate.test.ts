@@ -359,3 +359,31 @@ describe("chicken body property", () => {
     expect(result.ok).toBe(false);
   });
 });
+
+describe("chicken visual compatibility", () => {
+  it("rejects a proof that briefly creates hidden headwear before removing it", async () => {
+    const { createDailyFixture } = await import("./dailyFixture");
+    const { CHICKEN_V2_SEMANTIC_POLICY } = await import("./chickenTheme");
+    const hiddenProof = structuredClone(createDailyFixture("2026-10-11")) as Record<string, any>;
+    const repository = hiddenProof.initialRepository;
+    repository.commits.m20.changes = [{ type: "set", property: "hat", from: "none", to: "blue" }];
+    repository.commits.s20.changes = [{ type: "set", property: "crest", from: "none", to: "red" }];
+    repository.commits.s21 = {
+      id: "s21", parents: ["s20"], message: "Add a scarf", changes: [
+        { type: "set", property: "scarf", from: "none", to: "turquoise" },
+      ], provenance: { type: "original" },
+    };
+    repository.branches.style = "s21";
+    hiddenProof.target.snapshot = { ...repository.initialState, hat: "blue", scarf: "turquoise" };
+    hiddenProof.solutionCommands = ["git cherry-pick s20", "git revert g1", "git cherry-pick s21"];
+    hiddenProof.allowedCommands = ["log", "switch", "cherry-pick", "revert"];
+
+    const result = validatePuzzleCandidate(hiddenProof, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.issues).toContainEqual(expect.objectContaining({
+      code: "semantic.incompatible-visual-state",
+      path: "$.solutionCommands[0]",
+    }));
+  });
+});

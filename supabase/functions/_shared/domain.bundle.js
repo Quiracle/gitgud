@@ -29,8 +29,15 @@ var CHICKEN_V2_SEMANTIC_POLICY = {
     body: CHICKEN_BODY_VALUES
   },
   // `body` is optional: absent means the default cream chicken.
-  requiredProperties: CHICKEN_ACCESSORY_SLOTS
+  requiredProperties: CHICKEN_ACCESSORY_SLOTS,
+  validateState: validateChickenVisualState
 };
+function validateChickenVisualState(state) {
+  if (state.hat !== "none" && state.crest !== "none") {
+    return "Hat and crest cannot be used together because the hat hides the crest.";
+  }
+  return void 0;
+}
 
 // src/puzzles/generation/types.ts
 var GENERATION_BRIEF_VERSION = 2;
@@ -76,7 +83,7 @@ var GENERATION_PROFILES = {
   hard: {
     branches: [3, 4],
     commits: [8, 14],
-    accessories: [3, 5],
+    accessories: [3, 4],
     concepts: [2, 3],
     solution: [3, 7],
     hints: [1, 1],
@@ -116,11 +123,18 @@ function createGenerationBrief(date, difficulty, seed, overrides = {}) {
 }
 function chooseTargetState(random, count) {
   const state = { ...EMPTY_CHICKEN_STATE };
-  for (const slot of sample(random, CHICKEN_ACCESSORY_SLOTS, count)) {
+  for (const group of sample(random, ACCESSORY_GROUPS, count)) {
+    const slot = pick(random, group);
     state[slot] = pick(random, CHICKEN_COLORS);
   }
   return state;
 }
+var ACCESSORY_GROUPS = [
+  ["hat", "crest"],
+  ["sunglasses"],
+  ["scarf"],
+  ["longLegs"]
+];
 function commandsFor(concepts) {
   const commands2 = /* @__PURE__ */ new Set(["log", "switch"]);
   concepts.forEach((concept) => {
@@ -1415,6 +1429,8 @@ function validatePuzzleCandidate(input, config) {
   if (issues.length > 0) return { ok: false, issues };
   validateHistoricalChangePreconditions(candidate.initialRepository, issues);
   if (issues.length > 0) return { ok: false, issues };
+  validateHistoricalVisualStates(candidate.initialRepository, config.semantic, issues);
+  if (issues.length > 0) return { ok: false, issues };
   const initialValidation = validatePuzzleCompletion(
     candidate.initialRepository,
     candidate.target,
@@ -1424,7 +1440,7 @@ function validatePuzzleCandidate(input, config) {
   if (initialValidation.solved) {
     add(issues, "target.initially-solved", "The initial repository already satisfies the target.", "$.initialRepository");
   } else {
-    replaySolution(candidate, issues);
+    replaySolution(candidate, config.semantic, issues);
   }
   if (issues.length > 0) return { ok: false, issues };
   const { solutionCommands, ...puzzle } = candidate;
@@ -1444,6 +1460,14 @@ function validateHistoricalChangePreconditions(repository, issues) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "Commit changes do not apply to its first parent.";
       add(issues, "repository.incorrect-change-from", message, `$.initialRepository.commits.${id}.changes`);
+    }
+  }
+}
+function validateHistoricalVisualStates(repository, policy, issues) {
+  for (const id of Object.keys(repository.commits)) {
+    try {
+      validatePolicyState(getSnapshot(repository, id), policy, `$.initialRepository.commits.${id}.snapshot`, issues);
+    } catch {
     }
   }
 }
@@ -1538,6 +1562,11 @@ function validateSnapshot(snapshot, policy, limits, path, issues) {
   for (const property of required) {
     if (!Object.hasOwn(snapshot, property)) add(issues, "semantic.incomplete-state", `The complete semantic state must include '${property}'.`, path);
   }
+  validatePolicyState(snapshot, policy, path, issues);
+}
+function validatePolicyState(snapshot, policy, path, issues) {
+  const reason = policy.validateState?.(snapshot);
+  if (reason) add(issues, "semantic.incompatible-visual-state", reason, path);
 }
 function validateValue(value, property, policy, limits, path, issues) {
   if (!isJson(value, limits.maxSemanticValueDepth)) {
@@ -1581,7 +1610,7 @@ function validateDifficulty(candidate, limits, policy, issues) {
     if (max !== void 0 && value > max) add(issues, "difficulty.above-maximum", `${candidate.difficulty} puzzles allow at most ${max} ${label}.`, path);
   });
 }
-function replaySolution(candidate, issues) {
+function replaySolution(candidate, policy, issues) {
   let repository = cloneRepository(candidate.initialRepository);
   const actions = [];
   candidate.solutionCommands.forEach((command, index) => {
@@ -1603,6 +1632,7 @@ function replaySolution(candidate, issues) {
     }
     repository = result.repository;
     actions.push(result.action);
+    validatePolicyState(getSnapshot(repository, repository.head), policy, `$.solutionCommands[${index}]`, issues);
   });
   if (issues.some((item) => item.path.startsWith("$.solutionCommands"))) return;
   const validation = validatePuzzleCompletion(
