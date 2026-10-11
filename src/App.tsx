@@ -18,6 +18,7 @@ import { LinkedInCallbackScreen } from "./screens/LinkedInCallbackScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { AccountScreen } from "./screens/AccountScreen";
 import { StatsScreen } from "./screens/StatsScreen";
+import { AchievementsScreen } from "./screens/AchievementsScreen";
 import { LegalScreen } from "./screens/LegalScreen";
 import { NotFoundScreen } from "./screens/NotFoundScreen";
 
@@ -120,6 +121,8 @@ function renderScreen(
   if (path === "/account") return <AccountScreen onNavigate={navigate} />;
 
   if (path === "/account/stats") return <StatsScreen onNavigate={navigate} />;
+
+  if (path === "/account/achievements") return <AchievementsScreen onNavigate={navigate} />;
 
   if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
 

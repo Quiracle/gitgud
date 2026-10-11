@@ -1,5 +1,6 @@
-import { motion, type Variants } from "motion/react";
+import { motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
+import { AchievementList } from "../components/Account/AchievementList";
 import { CookieSetting } from "../components/Account/CookieSetting";
 import { LinkedInSetting } from "../components/Account/LinkedInSetting";
 import { LoginDialog } from "../components/Auth/LoginDialog";
@@ -14,7 +15,7 @@ import { useAuth } from "../context/AuthContext";
 import { useProgressInsights } from "../hooks/useProgressInsights";
 import { useI18n } from "../i18n/I18nProvider";
 import { spring } from "../lib/motion";
-import type { AchievementId } from "../lib/progressInsights";
+import { featuredAchievements } from "../lib/progressInsights";
 import { DISPLAY_NAME_MAX, getDisplayName, updateDisplayName } from "../services/profile";
 
 interface AccountScreenProps {
@@ -23,15 +24,8 @@ interface AccountScreenProps {
 
 const look = (parts: ChickenLook["parts"]): ChickenLook => ({ chicken: true, body: "default", parts: { crest: "default", ...parts } });
 
-/** Each achievement gets a chicken dressed for the occasion. */
-const ACHIEVEMENT_LOOKS: Record<AchievementId, ChickenLook> = {
-  "first-solve": look({}),
-  "clean-history": look({ scarf: "turquoise" }),
-  "daily-regular": look({ hat: "red" }),
-  "on-a-roll": look({ sunglasses: "black" }),
-  "week-streak": look({ hat: "gold", scarf: "red" }),
-  "basics-graduate": look({ longLegs: "default", sunglasses: "black" }),
-};
+/** Account shows the latest unlocks; the rest live on the achievements screen. */
+const FEATURED_ACHIEVEMENTS = 6;
 
 const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitHub" };
 
@@ -108,50 +102,20 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="flex items-baseline justify-between">
-              <SectionTitle>{t("account.achievements")}</SectionTitle>
-              <span className="text-xs text-grey-700">
-                {unlocked} / {insights.achievements.length}
-              </span>
-            </div>
-            <motion.ul
-              className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-              variants={{ show: { transition: { staggerChildren: 0.06 } } }}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-            >
-              {insights.achievements.map((item) => (
-                <motion.li
-                  key={item.id}
-                  variants={cardVariants}
-                  className={`flex items-center gap-3 rounded border p-2 ${
-                    item.unlocked ? "border-lime-500 bg-lime-100" : "border-grey-300 bg-grey-300"
-                  }`}
-                >
-                  <div className={item.unlocked ? "" : "opacity-40 grayscale"}>
-                    <PixelChicken look={ACHIEVEMENT_LOOKS[item.id]} size={48} className="rounded" />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <p className="text-paragraph leading-5 text-grey-950">{t(`achievement.${item.id}.title`)}</p>
-                    <p className="text-xs leading-[15px] text-grey-700">{t(`achievement.${item.id}.description`)}</p>
-                  </div>
-                  <span className="sr-only">{item.unlocked ? t("account.unlocked") : t("account.locked")}</span>
-                  {item.unlocked && (
-                    <motion.span
-                      className="flex size-6 shrink-0 items-center justify-center rounded bg-lime-400 text-green-950"
-                      initial={{ scale: 0, rotate: -90 }}
-                      whileInView={{ scale: 1, rotate: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ ...spring.bouncy, delay: 0.3 }}
-                      aria-hidden
-                    >
-                      <Icon name="flag_2" size={14} />
-                    </motion.span>
-                  )}
-                </motion.li>
-              ))}
-            </motion.ul>
+            <h2>
+              <button
+                type="button"
+                onClick={() => onNavigate("/account/achievements")}
+                className="-my-2 flex min-h-11 w-full items-center gap-3 text-xl leading-[25px] text-green-950 transition-colors hover:text-green-700"
+              >
+                <span className="flex-1 text-left">{t("account.achievements")}</span>
+                <span className="text-xs text-grey-700">
+                  {unlocked} / {insights.achievements.length}
+                </span>
+                <Icon name="arrow_forward_ios" size={20} />
+              </button>
+            </h2>
+            <AchievementList items={featuredAchievements(insights.achievements, FEATURED_ACHIEVEMENTS)} />
           </div>
 
           <div className="flex flex-col gap-4">
@@ -189,11 +153,6 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
     </div>
   );
 }
-
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: spring.soft },
-};
 
 function SectionTitle({ children }: { children: string }) {
   return <h2 className="text-xl leading-[25px] text-green-950">{children}</h2>;
