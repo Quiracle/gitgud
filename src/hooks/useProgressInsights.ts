@@ -19,7 +19,8 @@ export const CHART_DAYS = 30;
 
 /**
  * Streak, recent days, solve times, stats, and achievements from this browser's saved progress.
- * A signed-in player's streak also counts dailies solved on their other devices.
+ * A signed-in player's streak, solve-time graph, and achievements also count dailies solved on
+ * their other devices.
  */
 export function useProgressInsights(days = 7) {
   const { status, user } = useAuth();
@@ -56,7 +57,7 @@ export function useProgressInsights(days = 7) {
     return {
       streak: currentStreak(dates, today),
       recent: recentDays(dates, today, days),
-      dailyTimes: recentDailyTimes(completions, today, CHART_DAYS),
+      dailyTimes: recentDailyTimes([...completions, ...syncedSolves], today, CHART_DAYS),
       stats: calculateStats(completions),
       lessonsTotal: lessonIds.length,
       achievements: achievements(completions, { lessonIds, syncedSolves }),

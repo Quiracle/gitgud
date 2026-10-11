@@ -53,14 +53,14 @@ export async function getSyncedDailyCompletion(
 const SYNCED_SOLVES_LIMIT = 1000;
 
 /**
- * Every daily the signed-in player has completed, on any device. Streaks read each attempt's own
+ * Every daily the signed-in player has completed, on any device, with its solve time. Streaks read each attempt's own
  * completion time: progress.completed_at follows the best score, so a replay could move it.
  */
 export async function listSyncedDailySolves(): Promise<DailySolve[]> {
   const client = requireSupabaseClient();
   const { data, error } = await client
     .from("attempts")
-    .select("puzzle_id,completed_at")
+    .select("puzzle_id,completed_at,elapsed_ms,assisted")
     .eq("status", "completed")
     .like("puzzle_id", "daily-%")
     .order("completed_at", { ascending: false })
@@ -73,12 +73,23 @@ export function parseSyncedDailySolves(rows: unknown): DailySolve[] {
   if (!Array.isArray(rows)) return [];
   return rows.flatMap((row) => {
     if (!row || typeof row !== "object") return [];
-    const { puzzle_id: puzzleId, completed_at: completedAt } = row as Record<string, unknown>;
+    const { puzzle_id: puzzleId, completed_at: completedAt, elapsed_ms: elapsedMs, assisted } = row as Record<
+      string,
+      unknown
+    >;
     if (typeof puzzleId !== "string" || typeof completedAt !== "string") return [];
     // Postgres timestamps can carry an offset; streaks compare UTC calendar dates.
     const time = Date.parse(completedAt);
     if (Number.isNaN(time)) return [];
-    return [{ kind: "daily" as const, puzzleId, completedAt: new Date(time).toISOString() }];
+    return [
+      {
+        kind: "daily" as const,
+        puzzleId,
+        completedAt: new Date(time).toISOString(),
+        ...(typeof elapsedMs === "number" && elapsedMs >= 0 ? { elapsedMs } : {}),
+        ...(assisted === true ? { assisted: true } : {}),
+      },
+    ];
   });
 }
 

@@ -81,6 +81,16 @@ describe("daily solve-time chart", () => {
     ]);
   });
 
+  it("includes timed solves synced from other devices", () => {
+    const phone = { kind: "daily" as const, puzzleId: "daily-2026-10-11", completedAt: "2026-10-11T07:00:00.000Z", elapsedMs: 45_000 };
+    const untimed = { kind: "daily" as const, puzzleId: "daily-2026-10-10", completedAt: "2026-10-10T07:00:00.000Z" };
+    expect(recentDailyTimes([solve("daily-2026-10-09", "2026-10-09T08:00:00Z"), phone, untimed], "2026-10-11", 3)).toEqual([
+      { date: "2026-10-09", elapsedMs: 1_000 },
+      { date: "2026-10-10", elapsedMs: undefined },
+      { date: "2026-10-11", elapsedMs: 45_000 },
+    ]);
+  });
+
   it("picks a round step that fits the slowest solve", () => {
     expect(chartStep([], 8)).toBe(15_000);
     expect(chartStep([100_000], 8)).toBe(15_000);

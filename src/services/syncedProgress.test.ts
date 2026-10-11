@@ -31,12 +31,16 @@ describe("parseSyncedDailySolves", () => {
   it("keeps well-formed rows and normalises their completion time to UTC", () => {
     expect(
       parseSyncedDailySolves([
-        { puzzle_id: "daily-2026-10-11", completed_at: "2026-10-11T00:30:00+02:00" },
+        { puzzle_id: "daily-2026-10-11", completed_at: "2026-10-11T00:30:00+02:00", elapsed_ms: 42_000, assisted: true },
+        { puzzle_id: "daily-2026-10-10", completed_at: "2026-10-10T08:00:00Z", elapsed_ms: "fast" },
         { puzzle_id: "daily-2026-10-11", completed_at: "not a date" },
         { puzzle_id: 7, completed_at: "2026-10-11T08:00:00Z" },
         null,
       ]),
-    ).toEqual([{ kind: "daily", puzzleId: "daily-2026-10-11", completedAt: "2026-10-10T22:30:00.000Z" }]);
+    ).toEqual([
+      { kind: "daily", puzzleId: "daily-2026-10-11", completedAt: "2026-10-10T22:30:00.000Z", elapsedMs: 42_000, assisted: true },
+      { kind: "daily", puzzleId: "daily-2026-10-10", completedAt: "2026-10-10T08:00:00.000Z" },
+    ]);
   });
 
   it("treats a missing result as no solves", () => {

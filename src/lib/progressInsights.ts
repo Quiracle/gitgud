@@ -1,7 +1,8 @@
 import type { CompletionRecord } from "../storage/progress";
 
-/** The parts of a solve that streaks need; synced solves from other devices carry only these. */
-export type DailySolve = Pick<CompletionRecord, "kind" | "puzzleId" | "completedAt">;
+/** The parts of a solve that streaks and the solve-time graph need; synced solves carry only these. */
+export type DailySolve = Pick<CompletionRecord, "kind" | "puzzleId" | "completedAt"> &
+  Partial<Pick<CompletionRecord, "elapsedMs" | "assisted">>;
 
 /** UTC date (YYYY-MM-DD) of each official daily solved on its own day. */
 export function dailySolveDates(completions: readonly DailySolve[]): Set<string> {
@@ -48,10 +49,10 @@ export interface DailyTime {
  * Best daily solve time on each of the last `count` UTC days, oldest first, ending today. A
  * solve lands on the day it was played, so an archive replay shows up today, not on its date.
  */
-export function recentDailyTimes(completions: readonly CompletionRecord[], today: string, count: number): DailyTime[] {
+export function recentDailyTimes(solves: readonly DailySolve[], today: string, count: number): DailyTime[] {
   const best = new Map<string, number>();
-  for (const completion of completions) {
-    if (completion.kind !== "daily" || completion.assisted) continue;
+  for (const completion of solves) {
+    if (completion.kind !== "daily" || completion.assisted || completion.elapsedMs === undefined) continue;
     const date = completion.completedAt.slice(0, 10);
     best.set(date, Math.min(best.get(date) ?? Infinity, completion.elapsedMs));
   }
@@ -117,9 +118,8 @@ function lessonsDone(solves: readonly Solve[]): Set<string> {
 }
 
 function rules(lessonIds: readonly string[]): Record<AchievementId, Rule> {
-  // Run details exist only for this browser's solves, and never count with a revealed solution.
-  const own = (item: Solve, check: (record: CompletionRecord) => boolean) =>
-    item.elapsedMs !== undefined && !item.assisted && check(item as CompletionRecord);
+  // Run details may be missing from synced solves, and never count with a revealed solution.
+  const own = (item: Solve, check: (record: Partial<CompletionRecord>) => boolean) => !item.assisted && check(item);
   return {
     "first-solve": (list) => list.length > 0,
     "clean-history": (list) => list.some((item) => item.restartCount === 0),
@@ -129,9 +129,10 @@ function rules(lessonIds: readonly string[]): Record<AchievementId, Rule> {
       const done = lessonsDone(list);
       return lessonIds.length > 0 && lessonIds.every((id) => done.has(id));
     },
-    "quick-draw": (list) => list.some((item) => own(item, (run) => run.elapsedMs < 30_000)),
-    "minimalist": (list) => list.some((item) => own(item, (run) => run.kind === "daily" && run.commandCount <= 3)),
-    "never-give-up": (list) => list.some((item) => own(item, (run) => run.restartCount >= 3)),
+    "quick-draw": (list) => list.some((item) => own(item, (run) => run.elapsedMs !== undefined && run.elapsedMs < 30_000)),
+    "minimalist": (list) =>
+      list.some((item) => own(item, (run) => run.kind === "daily" && run.commandCount !== undefined && run.commandCount <= 3)),
+    "never-give-up": (list) => list.some((item) => own(item, (run) => run.restartCount !== undefined && run.restartCount >= 3)),
     "time-traveler": (list) =>
       list.some((item) => {
         const date = /^daily-(\d{4}-\d{2}-\d{2})/.exec(item.puzzleId)?.[1];
