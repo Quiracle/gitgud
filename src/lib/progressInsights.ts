@@ -38,41 +38,150 @@ export function recentDays(dates: ReadonlySet<string>, today: string, count: num
   return Array.from({ length: count }, (_, index) => dates.has(shiftDay(today, index - count + 1)));
 }
 
-export type AchievementId = "first-solve" | "clean-history" | "daily-regular" | "on-a-roll" | "week-streak" | "basics-graduate";
+export interface DailyTime {
+  date: string;
+  /** Best unassisted solve of that date's daily; undefined when unsolved. */
+  elapsedMs?: number;
+}
+
+/** Best solve time of each official daily over the last `count` days, oldest first, ending today. */
+export function recentDailyTimes(completions: readonly CompletionRecord[], today: string, count: number): DailyTime[] {
+  const best = new Map<string, number>();
+  for (const completion of completions) {
+    if (completion.kind !== "daily" || completion.assisted) continue;
+    const date = /^daily-(\d{4}-\d{2}-\d{2})(?:-v\d+)?$/.exec(completion.puzzleId)?.[1];
+    if (!date) continue;
+    best.set(date, Math.min(best.get(date) ?? Infinity, completion.elapsedMs));
+  }
+  return Array.from({ length: count }, (_, index) => {
+    const date = shiftDay(today, index - count + 1);
+    return { date, elapsedMs: best.get(date) };
+  });
+}
+
+const CHART_STEPS_MS = [15, 30, 60, 120, 300, 600, 900, 1800, 3600].map((seconds) => seconds * 1000);
+
+/** The smallest round time per square that fits the slowest solve within `rows` squares. */
+export function chartStep(times: readonly number[], rows: number): number {
+  const slowest = Math.max(0, ...times);
+  return CHART_STEPS_MS.find((step) => slowest <= step * rows) ?? CHART_STEPS_MS.at(-1)!;
+}
+
+/** Squares for one solve: rounded to the step, at least one, never above the chart. */
+export function chartSquares(elapsedMs: number, step: number, rows: number): number {
+  return Math.min(rows, Math.max(1, Math.round(elapsedMs / step)));
+}
+
+/** Catalog order, roughly easiest first. Ids are stable: progress and copy are keyed by them. */
+export const ACHIEVEMENT_IDS = [
+  "first-solve",
+  "clean-history",
+  "daily-regular",
+  "halfway-there",
+  "basics-graduate",
+  "quick-draw",
+  "minimalist",
+  "never-give-up",
+  "time-traveler",
+  "curious-mind",
+  "on-a-roll",
+  "week-streak",
+  "daily-devotee",
+  "quarter-century",
+  "month-streak",
+] as const;
+
+export type AchievementId = (typeof ACHIEVEMENT_IDS)[number];
 
 export interface Achievement {
   id: AchievementId;
-  title: string;
-  description: string;
   unlocked: boolean;
+  /** When the solve that earned it was completed. */
+  unlockedAt?: string;
 }
 
-/** Deterministic achievements from saved progress, so recomputing never duplicates them. */
+/** A saved solve; ones synced from other devices carry only the daily-solve fields. */
+type Solve = DailySolve & Partial<Omit<CompletionRecord, keyof DailySolve>>;
+
+type Rule = (solves: readonly Solve[]) => boolean;
+
+/** Daily puzzles solved, counted once each; revealed solutions excluded. */
+function distinctDailies(solves: readonly Solve[]): number {
+  return new Set(solves.filter((item) => item.kind === "daily" && !item.assisted).map((item) => item.puzzleId)).size;
+}
+
+function lessonsDone(solves: readonly Solve[]): Set<string> {
+  return new Set(solves.filter((item) => item.kind === "lesson").map((item) => item.puzzleId));
+}
+
+function rules(lessonIds: readonly string[]): Record<AchievementId, Rule> {
+  // Run details exist only for this browser's solves, and never count with a revealed solution.
+  const own = (item: Solve, check: (record: CompletionRecord) => boolean) =>
+    item.elapsedMs !== undefined && !item.assisted && check(item as CompletionRecord);
+  return {
+    "first-solve": (list) => list.length > 0,
+    "clean-history": (list) => list.some((item) => item.restartCount === 0),
+    "daily-regular": (list) => dailySolveDates(list).size > 0,
+    "halfway-there": (list) => lessonsDone(list).size >= 5,
+    "basics-graduate": (list) => {
+      const done = lessonsDone(list);
+      return lessonIds.length > 0 && lessonIds.every((id) => done.has(id));
+    },
+    "quick-draw": (list) => list.some((item) => own(item, (run) => run.elapsedMs < 30_000)),
+    "minimalist": (list) => list.some((item) => own(item, (run) => run.kind === "daily" && run.commandCount <= 3)),
+    "never-give-up": (list) => list.some((item) => own(item, (run) => run.restartCount >= 3)),
+    "time-traveler": (list) =>
+      list.some((item) => {
+        const date = /^daily-(\d{4}-\d{2}-\d{2})/.exec(item.puzzleId)?.[1];
+        return !item.assisted && item.kind === "daily" && date !== undefined && item.completedAt.slice(0, 10) > date;
+      }),
+    "curious-mind": (list) => list.some((item) => item.kind === "generated"),
+    "on-a-roll": (list) => longestStreak(dailySolveDates(list)) >= 3,
+    "week-streak": (list) => longestStreak(dailySolveDates(list)) >= 7,
+    "daily-devotee": (list) => distinctDailies(list) >= 10,
+    "quarter-century": (list) => new Set(list.map((item) => item.puzzleId)).size >= 25,
+    "month-streak": (list) => longestStreak(dailySolveDates(list)) >= 30,
+  };
+}
+
+/**
+ * Deterministic achievements from saved progress, so recomputing never duplicates them.
+ * Every rule only ever turns true as solves are added, so the unlock moment is the first
+ * solve (in completion order) after which it holds.
+ */
 export function achievements(
   completions: readonly CompletionRecord[],
   options: { lessonIds: readonly string[]; syncedSolves?: readonly DailySolve[] },
 ): Achievement[] {
-  const syncedSolves = options.syncedSolves ?? [];
-  const dates = dailySolveDates([...completions, ...syncedSolves]);
-  const lessonsDone = new Set(completions.filter((item) => item.kind === "lesson").map((item) => item.puzzleId));
-  const bestStreak = longestStreak(dates);
-  const list: Omit<Achievement, "unlocked">[] = [
-    { id: "first-solve", title: "First commit", description: "Solve any puzzle." },
-    { id: "clean-history", title: "Clean history", description: "Solve a puzzle without restarting." },
-    { id: "daily-regular", title: "Daily regular", description: "Solve a daily on its day." },
-    { id: "on-a-roll", title: "On a roll", description: "Reach a 3-day streak." },
-    { id: "week-streak", title: "Week-long streak", description: "Reach a 7-day streak." },
-    { id: "basics-graduate", title: "Basics graduate", description: "Finish every Learn Basics lesson." },
-  ];
-  const unlocked: Record<AchievementId, boolean> = {
-    "first-solve": completions.length > 0 || syncedSolves.length > 0,
-    "clean-history": completions.some((item) => item.restartCount === 0),
-    "daily-regular": dates.size > 0,
-    "on-a-roll": bestStreak >= 3,
-    "week-streak": bestStreak >= 7,
-    "basics-graduate": options.lessonIds.length > 0 && options.lessonIds.every((id) => lessonsDone.has(id)),
-  };
-  return list.map((item) => ({ ...item, unlocked: unlocked[item.id] }));
+  // Dailies solved on the player's other devices count too.
+  const solves: Solve[] = [...completions, ...(options.syncedSolves ?? [])];
+  const sorted = solves.sort((a, b) => Date.parse(a.completedAt) - Date.parse(b.completedAt));
+  const table = rules(options.lessonIds);
+  return ACHIEVEMENT_IDS.map((id) => {
+    const index = unlockIndex(sorted, table[id]);
+    return index < 0 ? { id, unlocked: false } : { id, unlocked: true, unlockedAt: sorted[index].completedAt };
+  });
+}
+
+/** Binary search for the shortest prefix of solves that satisfies a monotonic rule. */
+function unlockIndex(sorted: readonly Solve[], rule: Rule): number {
+  if (!rule(sorted)) return -1;
+  let low = 0;
+  let high = sorted.length - 1;
+  while (low < high) {
+    const middle = (low + high) >> 1;
+    if (rule(sorted.slice(0, middle + 1))) high = middle;
+    else low = middle + 1;
+  }
+  return low;
+}
+
+/** Most recently unlocked first, topped up with locked ones in catalog order. */
+export function featuredAchievements(list: readonly Achievement[], count: number): Achievement[] {
+  const unlocked = list
+    .filter((item) => item.unlocked)
+    .sort((a, b) => (b.unlockedAt ?? "").localeCompare(a.unlockedAt ?? ""));
+  return [...unlocked, ...list.filter((item) => !item.unlocked)].slice(0, count);
 }
 
 function longestStreak(dates: ReadonlySet<string>): number {

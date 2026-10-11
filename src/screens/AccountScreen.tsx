@@ -1,5 +1,6 @@
-import { animate, motion, useMotionValue, useTransform, type Variants } from "motion/react";
+import { motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
+import { AchievementList } from "../components/Account/AchievementList";
 import { CookieSetting } from "../components/Account/CookieSetting";
 import { LinkedInSetting } from "../components/Account/LinkedInSetting";
 import { LoginDialog } from "../components/Auth/LoginDialog";
@@ -8,14 +9,13 @@ import { Icon } from "../components/Icon/Icon";
 import { PixelChicken, type ChickenLook } from "../components/Illustration/PixelChicken";
 import { LanguagePicker } from "../components/LanguagePicker/LanguagePicker";
 import { SiteFooter } from "../components/Layout/SiteFooter";
+import { SolveTimeChart } from "../components/Stats/SolveTimeChart";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useAuth } from "../context/AuthContext";
 import { useProgressInsights } from "../hooks/useProgressInsights";
 import { useI18n } from "../i18n/I18nProvider";
-import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
-import type { AchievementId } from "../lib/progressInsights";
-import { getSyncedDailyStats, type SyncedDailyStats } from "../services/leaderboard";
+import { featuredAchievements } from "../lib/progressInsights";
 import { DISPLAY_NAME_MAX, getDisplayName, updateDisplayName } from "../services/profile";
 
 interface AccountScreenProps {
@@ -24,36 +24,18 @@ interface AccountScreenProps {
 
 const look = (parts: ChickenLook["parts"]): ChickenLook => ({ chicken: true, body: "default", parts: { crest: "default", ...parts } });
 
-/** Each achievement gets a chicken dressed for the occasion. */
-const ACHIEVEMENT_LOOKS: Record<AchievementId, ChickenLook> = {
-  "first-solve": look({}),
-  "clean-history": look({ scarf: "turquoise" }),
-  "daily-regular": look({ hat: "red" }),
-  "on-a-roll": look({ sunglasses: "black" }),
-  "week-streak": look({ hat: "gold", scarf: "red" }),
-  "basics-graduate": look({ longLegs: "default", sunglasses: "black" }),
-};
+/** Account shows the latest unlocks; the rest live on the achievements screen. */
+const FEATURED_ACHIEVEMENTS = 6;
 
 const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitHub" };
 
 /** Account: profile, streak, stats, achievements, and settings. */
 export function AccountScreen({ onNavigate }: AccountScreenProps) {
-  const { t, formatNumber } = useI18n();
+  const { t } = useI18n();
   const { status, user, signOut } = useAuth();
   const signedIn = status === "authenticated" && Boolean(user);
   const insights = useProgressInsights();
   const [loginOpen, setLoginOpen] = useState(false);
-  const [synced, setSynced] = useState<SyncedDailyStats>();
-
-  useEffect(() => {
-    if (!signedIn) return setSynced(undefined);
-    getSyncedDailyStats().then(setSynced).catch(() => setSynced(undefined));
-  }, [signedIn]);
-
-  // Local progress plus what the server knows about ranked dailies on other devices.
-  const local = insights.stats;
-  const dailies = Math.max(local.completedDailies, synced?.completedDailies ?? 0);
-  const bestTimes = [local.bestElapsedMs, synced?.bestElapsedMs].filter((value): value is number => value !== undefined);
   const unlocked = insights.achievements.filter((item) => item.unlocked).length;
 
   return (
@@ -105,75 +87,35 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
       <section className="px-6 py-6">
         <div className="mx-auto flex max-w-md flex-col gap-8">
           <div className="flex flex-col gap-4">
-            <SectionTitle>{t("account.stats")}</SectionTitle>
-            <motion.div
-              className="grid grid-cols-2 gap-2"
-              variants={{ show: { transition: { staggerChildren: 0.06 } } }}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-            >
-              <StatTile label={t("account.puzzlesSolved")} value={local.completedPuzzles} format={(n) => formatNumber(Math.round(n))} />
-              <StatTile label={t("account.dailySolves")} value={dailies} format={(n) => formatNumber(Math.round(n))} />
-              <StatTile
-                label={t("account.lessonsDone")}
-                value={local.completedLessons}
-                suffix={` / ${formatNumber(insights.lessonsTotal)}`}
-                format={(n) => formatNumber(Math.round(n))}
-              />
-              <StatTile
-                label={t("account.bestTime")}
-                value={bestTimes.length ? Math.min(...bestTimes) : undefined}
-                format={(ms) => formatDuration(ms)}
-              />
-            </motion.div>
+            {/* The whole title row opens the full stats; -my-2 keeps the 44px target from adding height. */}
+            <h2>
+              <button
+                type="button"
+                onClick={() => onNavigate("/account/stats")}
+                className="-my-2 flex min-h-11 w-full items-center justify-between gap-3 text-xl leading-[25px] text-green-950 transition-colors hover:text-green-700"
+              >
+                {t("account.stats")}
+                <Icon name="arrow_forward_ios" size={20} />
+              </button>
+            </h2>
+            <SolveTimeChart days={insights.dailyTimes} />
           </div>
 
           <div className="flex flex-col gap-4">
-            <div className="flex items-baseline justify-between">
-              <SectionTitle>{t("account.achievements")}</SectionTitle>
-              <span className="text-xs text-grey-700">
-                {unlocked} / {insights.achievements.length}
-              </span>
-            </div>
-            <motion.ul
-              className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-              variants={{ show: { transition: { staggerChildren: 0.06 } } }}
-              initial="hidden"
-              whileInView="show"
-              viewport={{ once: true }}
-            >
-              {insights.achievements.map((item) => (
-                <motion.li
-                  key={item.id}
-                  variants={cardVariants}
-                  className={`flex items-center gap-3 rounded border p-2 ${
-                    item.unlocked ? "border-lime-500 bg-lime-100" : "border-grey-300 bg-grey-300"
-                  }`}
-                >
-                  <div className={item.unlocked ? "" : "opacity-40 grayscale"}>
-                    <PixelChicken look={ACHIEVEMENT_LOOKS[item.id]} size={48} className="rounded" />
-                  </div>
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <p className="text-paragraph leading-5 text-grey-950">{t(`achievement.${item.id}.title`)}</p>
-                    <p className="text-xs leading-[15px] text-grey-700">{t(`achievement.${item.id}.description`)}</p>
-                  </div>
-                  <span className="sr-only">{item.unlocked ? t("account.unlocked") : t("account.locked")}</span>
-                  {item.unlocked && (
-                    <motion.span
-                      className="flex size-6 shrink-0 items-center justify-center rounded bg-lime-400 text-green-950"
-                      initial={{ scale: 0, rotate: -90 }}
-                      whileInView={{ scale: 1, rotate: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ ...spring.bouncy, delay: 0.3 }}
-                      aria-hidden
-                    >
-                      <Icon name="flag_2" size={14} />
-                    </motion.span>
-                  )}
-                </motion.li>
-              ))}
-            </motion.ul>
+            <h2>
+              <button
+                type="button"
+                onClick={() => onNavigate("/account/achievements")}
+                className="-my-2 flex min-h-11 w-full items-center gap-3 text-xl leading-[25px] text-green-950 transition-colors hover:text-green-700"
+              >
+                <span className="flex-1 text-left">{t("account.achievements")}</span>
+                <span className="text-xs text-grey-700">
+                  {unlocked} / {insights.achievements.length}
+                </span>
+                <Icon name="arrow_forward_ios" size={20} />
+              </button>
+            </h2>
+            <AchievementList items={featuredAchievements(insights.achievements, FEATURED_ACHIEVEMENTS)} />
           </div>
 
           <div className="flex flex-col gap-4">
@@ -212,41 +154,8 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
   );
 }
 
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: spring.soft },
-};
-
 function SectionTitle({ children }: { children: string }) {
   return <h2 className="text-xl leading-[25px] text-green-950">{children}</h2>;
-}
-
-interface StatTileProps {
-  label: string;
-  value?: number;
-  suffix?: string;
-  format?: (value: number) => string;
-}
-
-/** A stat that counts up when it scrolls into view. */
-function StatTile({ label, value, suffix = "", format = (n) => Math.round(n).toString() }: StatTileProps) {
-  const count = useMotionValue(0);
-  const text = useTransform(count, (latest) => format(latest));
-  useEffect(() => {
-    if (value === undefined) return;
-    const control = animate(count, value, { duration: 0.9, ease: [0.22, 1, 0.36, 1] });
-    return () => control.stop();
-  }, [count, value]);
-
-  return (
-    <motion.div variants={cardVariants} className="flex flex-col gap-1 rounded border border-grey-300 bg-grey-300 p-3">
-      <p className="text-2xl leading-8 text-grey-950">
-        {value === undefined ? "—" : <motion.span>{text}</motion.span>}
-        {value !== undefined && suffix && <span className="text-paragraph text-grey-700">{suffix}</span>}
-      </p>
-      <p className="text-xs leading-[15px] text-grey-700">{label}</p>
-    </motion.div>
-  );
 }
 
 /** Public leaderboard name, so players needn't show their full OAuth name. */

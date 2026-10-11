@@ -17,6 +17,8 @@ import { AuthCallbackScreen } from "./screens/AuthCallbackScreen";
 import { LinkedInCallbackScreen } from "./screens/LinkedInCallbackScreen";
 import { LeaderboardScreen } from "./screens/LeaderboardScreen";
 import { AccountScreen } from "./screens/AccountScreen";
+import { StatsScreen } from "./screens/StatsScreen";
+import { AchievementsScreen } from "./screens/AchievementsScreen";
 import { LegalScreen } from "./screens/LegalScreen";
 import { NotFoundScreen } from "./screens/NotFoundScreen";
 
@@ -94,7 +96,7 @@ const PAGE = {
 
 /** The puzzle screens own the full viewport for the board and terminal. */
 function showsBottomNav(path: string): boolean {
-  return path === "/" || path === "/course" || path === "/leaderboard" || path === "/account";
+  return path === "/" || path === "/course" || path === "/leaderboard" || path.startsWith("/account");
 }
 
 function renderScreen(
@@ -117,6 +119,10 @@ function renderScreen(
   }
 
   if (path === "/account") return <AccountScreen onNavigate={navigate} />;
+
+  if (path === "/account/stats") return <StatsScreen onNavigate={navigate} />;
+
+  if (path === "/account/achievements") return <AchievementsScreen onNavigate={navigate} />;
 
   if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
 
