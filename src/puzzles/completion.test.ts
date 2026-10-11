@@ -17,21 +17,22 @@ describe("puzzle completion requirements", () => {
 
   it("accepts unordered requirements from typed actions or transcript entries", () => {
     const repository = structuredClone(chickenCoronationPuzzle.initialRepository);
-    const target = {
-      branch: "main",
-      snapshot: getSnapshot(repository),
+    const puzzle = {
+      ...structuredClone(chickenCoronationPuzzle),
+      kind: "generated" as const,
+      target: { branch: "main", snapshot: getSnapshot(repository) },
+      actionRequirements: [
+        { type: "log" as const, all: false },
+        { type: "log" as const, all: true },
+      ],
     };
 
     expect(validatePuzzleCompletion(
+      puzzle,
       repository,
-      target,
       [
         { action: { type: "log", all: true } },
         { type: "log", all: false },
-      ],
-      [
-        { type: "log", all: false },
-        { type: "log", all: true },
       ],
     )).toMatchObject({ solved: true, unmet: [] });
   });

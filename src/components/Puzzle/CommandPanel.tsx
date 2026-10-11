@@ -5,6 +5,7 @@ import type { CommandOutcome } from "../../hooks/usePuzzleSession";
 import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 import { Icon } from "../Icon/Icon";
+import type { SupportedCommand } from "../../puzzles";
 
 /** One submitted command (or system message) and its output in the run transcript. */
 export interface TerminalEntry {
@@ -31,6 +32,7 @@ interface CommandPanelProps {
   disabledPlaceholder?: string;
   /** Action beside the input, such as Share once the puzzle is solved. */
   trailing?: ReactNode;
+  allowedCommands?: readonly SupportedCommand[];
 }
 
 type Flash = "idle" | "error" | "solved";
@@ -49,6 +51,7 @@ export function CommandPanel({
   disabled = false,
   disabledPlaceholder,
   trailing,
+  allowedCommands,
 }: CommandPanelProps) {
   const { t } = useI18n();
   const [flash, setFlash] = useState<Flash>("idle");
@@ -56,7 +59,7 @@ export function CommandPanel({
   const input = useRef<HTMLInputElement>(null);
   const showHistory = docked || expanded;
   const typed = entries.filter((entry) => entry.command).map((entry) => entry.command!);
-  const suggestion = disabled ? null : getCommandSuggestion(command);
+  const suggestion = disabled ? null : getCommandSuggestion(command, allowedCommands);
   const suggestionSuffix = suggestion?.slice(command.trimStart().length) ?? "";
 
   useEffect(() => {

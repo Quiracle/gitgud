@@ -90,6 +90,9 @@ function GoalCard({ puzzle }: { puzzle: PublicPuzzleDefinition }) {
         <Icon name="flag_2" size={16} />
         <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
       </div>
+      {puzzle.kind === "daily" && puzzle.parCommands !== undefined && (
+        <p className="font-primary text-sm text-black">{t("puzzle.par", { count: puzzle.parCommands })}</p>
+      )}
       <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} className="self-center" />
     </motion.div>
   );

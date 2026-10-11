@@ -222,6 +222,9 @@ export const es: Messages = {
   "daily.loading": "Cargando el puzzle de hoy…",
 
   "puzzle.goal": "Objetivo",
+  "puzzle.par_one": "par: {count} comando",
+  "puzzle.par_other": "par: {count} comandos",
+  "daily.stateOnlyHelp": "Haz coincidir la apariencia objetivo en main con cualquier comando Git compatible. La ruta prevista solo es una pista, no un requisito.",
 
   "graph.centre": "Centrar en HEAD",
   "graph.zoomOut": "Alejar",
@@ -356,7 +359,7 @@ export const es: Messages = {
   "goals.checklist": "Lista de objetivos",
   "goals.done": "(cumplido)",
   "goals.notDone": "(pendiente)",
-  "goals.note": "El puzzle se resuelve cuando todos los objetivos están marcados. Que la gallina coincida no basta si quedan objetivos de historial pendientes.",
+  "goals.note": "El puzzle se resuelve cuando todos los objetivos están marcados.",
 
   "terminal.solved": "¡Puzzle resuelto!",
   "terminal.inputLabel": "Comando de Git",
@@ -369,7 +372,8 @@ export const es: Messages = {
   "terminal.empty": "Escribe un comando de git aquí abajo.",
   "terminal.noCommands": "Todavía no hay comandos. Prueba git log.",
   "terminal.you": "tú:",
-  "terminal.historyOpen": "El estado coincide con el objetivo, pero el historial todavía no:",
+  "terminal.requirementsOpen": "El estado coincide con el objetivo, pero aún quedan requisitos de la lección:",
+  "terminal.commandNotAllowed": "Esta lección solo permite los comandos enseñados. '{command}' no está disponible aquí.",
   "terminal.tapGoal": "Toca Objetivo para ver la lista completa.",
 
   "duration.seconds": "{seconds} s",

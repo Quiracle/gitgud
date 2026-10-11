@@ -225,6 +225,9 @@ export const en = {
   "daily.loading": "Loading today's puzzle…",
 
   "puzzle.goal": "Goal",
+  "puzzle.par_one": "par: {count} command",
+  "puzzle.par_other": "par: {count} commands",
+  "daily.stateOnlyHelp": "Match the target appearance on main with any supported Git command. The intended route is only a hint, not a requirement.",
 
   "graph.centre": "Centre on HEAD",
   "graph.zoomOut": "Zoom out",
@@ -359,7 +362,7 @@ export const en = {
   "goals.checklist": "Goal checklist",
   "goals.done": "(done)",
   "goals.notDone": "(not done yet)",
-  "goals.note": "The puzzle is solved when every goal is ticked. A matching chicken isn't enough while history goals are open.",
+  "goals.note": "The puzzle is solved when every goal is ticked.",
 
   "terminal.solved": "Puzzle solved!",
   "terminal.inputLabel": "Git command",
@@ -372,7 +375,8 @@ export const en = {
   "terminal.empty": "Type a git command below.",
   "terminal.noCommands": "No commands yet. Try git log.",
   "terminal.you": "you:",
-  "terminal.historyOpen": "The state matches the goal, but the history doesn't yet:",
+  "terminal.requirementsOpen": "The state matches the goal, but lesson requirements are still open:",
+  "terminal.commandNotAllowed": "This lesson only allows the taught commands. '{command}' is not available here.",
   "terminal.tapGoal": "Tap Goal for the full checklist.",
 
   "duration.seconds": "{seconds}s",

@@ -96,8 +96,14 @@ Deno.serve(async (request) => {
         const candidate = materializeCandidate(draft, date, brief);
         const validation = validateCandidateAgainstBrief(candidate, brief);
         if (validation.ok) {
+          const validated = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+          if (!validated.ok) {
+            countValidationIssues(failureCategories, validated.issues);
+            previousIssues = validated.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);
+            continue;
+          }
           await recordFailureCategories(supabase, run.data.id, failureCategories);
-          return await publish(supabase, run.data.id, candidate, "validated");
+          return await publish(supabase, run.data.id, validated.value, "validated");
         }
         countValidationIssues(failureCategories, validation.issues);
         previousIssues = validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);
@@ -117,8 +123,11 @@ Deno.serve(async (request) => {
     if (fallback.error) throw fallback.error;
 
     if (fallback.data) {
+      // Older pool entries may carry history requirements; daily wins are state-only on main.
+      const { actionRequirements: _legacyActions, ...pooled } = fallback.data.candidate;
       const candidate = {
-        ...fallback.data.candidate,
+        ...pooled,
+        target: { branch: "main", snapshot: pooled.target?.snapshot },
         id: `daily-${date}`,
         slug: `daily-${date}`,
         version: 1,
@@ -132,7 +141,7 @@ Deno.serve(async (request) => {
           use_count: fallback.data.use_count + 1,
           last_used_at: new Date().toISOString(),
         }).eq("id", fallback.data.id);
-        return await publish(supabase, run.data.id, candidate, "fallback");
+        return await publish(supabase, run.data.id, validation.value, "fallback");
       }
       previousIssues = validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);
     }
@@ -150,8 +159,9 @@ Deno.serve(async (request) => {
   }
 });
 
-async function publish(supabase: any, runId: string, candidate: any, status: "validated" | "fallback") {
-  const { solutionCommands, ...definition } = candidate;
+async function publish(supabase: any, runId: string, validated: any, status: "validated" | "fallback") {
+  const definition = validated.puzzle;
+  const solutionCommands = validated.privateMetadata.solutionCommands;
   const published = await supabase.rpc("publish_daily_puzzle", {
     target_run_id: runId,
     target_definition: definition,

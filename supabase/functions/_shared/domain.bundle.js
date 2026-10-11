@@ -1028,7 +1028,8 @@ function parsePuzzleCandidate(input) {
       "actionRequirements",
       "solutionCommands",
       "themeId",
-      "publishedOn"
+      "publishedOn",
+      "parCommands"
     ],
     "$",
     issues
@@ -1036,6 +1037,7 @@ function parsePuzzleCandidate(input) {
   const schemaVersion = integer2(root.schemaVersion, "$.schemaVersion", issues);
   const themeId = optionalString(root.themeId, "$.themeId", issues);
   const publishedOn = optionalString(root.publishedOn, "$.publishedOn", issues);
+  const parCommands = root.parCommands === void 0 ? void 0 : integer2(root.parCommands, "$.parCommands", issues);
   const id = string(root.id, "$.id", issues);
   const version = integer2(root.version, "$.version", issues);
   const kind = enumValue(root.kind, kinds, "$.kind", issues);
@@ -1075,6 +1077,7 @@ function parsePuzzleCandidate(input) {
       description,
       difficulty,
       ...publishedOn ? { publishedOn } : {},
+      ...parCommands !== void 0 ? { parCommands } : {},
       ...objectives ? { objectives } : {},
       initialRepository: repository,
       target,
@@ -1359,13 +1362,30 @@ function issue(issues, code, message, path) {
   issues.push({ code, message, path });
 }
 
+// src/puzzles/rules.ts
+function resolvePuzzleRules(puzzle) {
+  if (puzzle.kind === "daily") {
+    return {
+      allowedCommands: SUPPORTED_ACTION_TYPES,
+      target: { branch: "main", snapshot: puzzle.target.snapshot },
+      actionRequirements: []
+    };
+  }
+  return {
+    allowedCommands: puzzle.allowedCommands,
+    target: puzzle.target,
+    actionRequirements: puzzle.actionRequirements ?? []
+  };
+}
+
 // src/puzzles/completion.ts
-function validatePuzzleCompletion(repository, target, executed, requirements = []) {
-  const base = validateRepository(repository, target);
+function validatePuzzleCompletion(puzzle, repository, executed) {
+  const rules = resolvePuzzleRules(puzzle);
+  const base = validateRepository(repository, rules.target);
   const actions = executed.map((entry) => "action" in entry ? entry.action : entry);
   const unmet = [...base.unmet];
   const checks = [...base.checks];
-  requirements.forEach((requirement, index) => {
+  rules.actionRequirements.forEach((requirement, index) => {
     const met = actions.some((action) => matchesActionRequirement(action, requirement));
     if (!met) {
       unmet.push(`A required action has not been executed: ${formatRequirement(requirement)}.`);
@@ -1411,6 +1431,24 @@ function formatRequirement(requirement) {
   }
 }
 
+// src/puzzles/par.ts
+function deriveParCommands(puzzle, solutionCommands) {
+  let repository = structuredClone(puzzle.initialRepository);
+  const actions = [];
+  let count = 0;
+  for (const command of solutionCommands) {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) return void 0;
+    const result = executeCommand(repository, command);
+    if (!result.ok) return void 0;
+    repository = result.repository;
+    actions.push(result.action);
+    if (result.action.type !== "log") count += 1;
+    if (validatePuzzleCompletion(puzzle, repository, actions).solved) return count;
+  }
+  return void 0;
+}
+
 // src/puzzles/validateCandidate.ts
 function validatePuzzleCandidate(input, config) {
   const parsed = parsePuzzleCandidate(input);
@@ -1431,12 +1469,9 @@ function validatePuzzleCandidate(input, config) {
   if (issues.length > 0) return { ok: false, issues };
   validateHistoricalVisualStates(candidate.initialRepository, config.semantic, issues);
   if (issues.length > 0) return { ok: false, issues };
-  const initialValidation = validatePuzzleCompletion(
-    candidate.initialRepository,
-    candidate.target,
-    [],
-    candidate.actionRequirements
-  );
+  validateDailyPolicy(candidate, issues);
+  if (issues.length > 0) return { ok: false, issues };
+  const initialValidation = validatePuzzleCompletion(candidate, candidate.initialRepository, []);
   if (initialValidation.solved) {
     add(issues, "target.initially-solved", "The initial repository already satisfies the target.", "$.initialRepository");
   } else {
@@ -1444,10 +1479,23 @@ function validatePuzzleCandidate(input, config) {
   }
   if (issues.length > 0) return { ok: false, issues };
   const { solutionCommands, ...puzzle } = candidate;
+  const parCommands = candidate.kind === "daily" ? deriveParCommands(candidate, solutionCommands) : void 0;
+  if (candidate.kind === "daily" && parCommands === void 0) {
+    add(issues, "solution.no-winning-state", "The daily proof never reaches a winning state.", "$.solutionCommands");
+    return { ok: false, issues };
+  }
   return {
     ok: true,
     value: {
-      puzzle,
+      puzzle: {
+        ...puzzle,
+        ...candidate.kind === "daily" ? {
+          allowedCommands: [...resolvePuzzleRules(candidate).allowedCommands],
+          target: { branch: "main", snapshot: candidate.target.snapshot },
+          actionRequirements: void 0,
+          parCommands
+        } : {}
+      },
       privateMetadata: { solutionCommands: [...solutionCommands] }
     }
   };
@@ -1491,6 +1539,16 @@ function validateText(candidate, limits, issues) {
   boundedStrings(candidate.hints, limits.maxHints, limits.maxHintLength, "$.hints", issues, "content.hints-too-large");
   boundedStrings(candidate.objectives ?? [], limits.maxObjectives, limits.maxObjectiveLength, "$.objectives", issues, "content.objectives-too-large");
   boundedStrings(candidate.solutionCommands, limits.maxSolutionCommands, limits.maxSolutionCommandLength, "$.solutionCommands", issues, "content.solution-too-large");
+}
+function validateDailyPolicy(candidate, issues) {
+  if (candidate.kind !== "daily") return;
+  if (candidate.target.branch !== "main") add(issues, "daily.target-branch", "Daily puzzles must finish on main.", "$.target.branch");
+  if (Object.keys(candidate.target.branchHeads ?? {}).length > 0) add(issues, "daily.branch-heads", "Daily puzzles cannot require branch positions.", "$.target.branchHeads");
+  if ((candidate.target.requiredProvenance ?? []).length > 0) add(issues, "daily.provenance", "Daily puzzles cannot require history provenance.", "$.target.requiredProvenance");
+  if ((candidate.actionRequirements ?? []).length > 0) add(issues, "daily.action-requirements", "Daily puzzles cannot require specific actions.", "$.actionRequirements");
+  if (candidate.parCommands !== void 0 && (!Number.isInteger(candidate.parCommands) || candidate.parCommands < 0)) {
+    add(issues, "daily.invalid-par", "parCommands must be a non-negative integer.", "$.parCommands");
+  }
 }
 function validateRepositoryStructure(repository, limits, issues) {
   const commits = Object.entries(repository.commits);
@@ -1620,7 +1678,7 @@ function replaySolution(candidate, policy, issues) {
       add(issues, "solution.parse-failed", parsed.error, path);
       return;
     }
-    if (!candidate.allowedCommands.includes(parsed.action.type)) {
+    if (!resolvePuzzleRules(candidate).allowedCommands.includes(parsed.action.type)) {
       add(issues, "solution.disallowed-command", `Solution command uses '${parsed.action.type}', which is not allowed by this puzzle.`, path);
       return;
     }
@@ -1635,12 +1693,7 @@ function replaySolution(candidate, policy, issues) {
     validatePolicyState(getSnapshot(repository, repository.head), policy, `$.solutionCommands[${index}]`, issues);
   });
   if (issues.some((item) => item.path.startsWith("$.solutionCommands"))) return;
-  const validation = validatePuzzleCompletion(
-    repository,
-    candidate.target,
-    actions,
-    candidate.actionRequirements
-  );
+  const validation = validatePuzzleCompletion(candidate, repository, actions);
   if (!validation.solved) add(issues, "solution.target-not-met", validation.unmet.join(" "), "$.solutionCommands");
 }
 function hasParentReferenceIssues(repository, issues) {

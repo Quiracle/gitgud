@@ -25,7 +25,7 @@ import {
 import { goalLabel } from "../i18n/goals";
 import { useI18n } from "../i18n/I18nProvider";
 import type { TranslationKey } from "../i18n/translate";
-import type { PublicPuzzleDefinition } from "../puzzles";
+import { resolvePuzzleRules, type PublicPuzzleDefinition } from "../puzzles";
 import type { CompletionRecord } from "../storage/progress";
 
 interface SolveScreenProps {
@@ -57,6 +57,7 @@ export function SolveScreen({
   const { t } = i18n;
   const action = resultAction ?? { label: t("solve.seeLeaderboard"), icon: "crown" as const, href: "/leaderboard" };
   const session = usePuzzleSession(puzzle, syncedCompletion);
+  const rules = resolvePuzzleRules(puzzle);
   const desktop = useMediaQuery("(min-width: 1024px)");
   // Tablets and narrow desktop windows: terminal stays at the bottom but shows history.
   const roomy = useMediaQuery("(min-width: 640px)");
@@ -211,6 +212,9 @@ export function SolveScreen({
             <Icon name="flag_2" size={16} />
             <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
           </div>
+          {puzzle.kind === "daily" && puzzle.parCommands !== undefined && (
+            <span className="self-start font-primary text-sm text-black">{t("puzzle.par", { count: puzzle.parCommands })}</span>
+          )}
           <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
           <span className="mt-1 rounded-sm bg-green-950 px-1.5 font-secondary text-xs leading-5 text-lime-400">
             {t("solve.goalsCount", { met: goalsMet, count: checks.length })}
@@ -269,6 +273,7 @@ export function SolveScreen({
             onToggle={() => setExpanded((value) => !value)}
             onHelp={openHelp}
             disabled={solved}
+            allowedCommands={rules.allowedCommands}
             trailing={sharing.available ? <ShareButton onClick={sharing.share} className="self-stretch" /> : undefined}
             disabledPlaceholder={
               session.locked
@@ -412,7 +417,7 @@ export function SolveScreen({
 
       <Dialog size="wide" open={panel === "goals"} title={t("goals.title")} onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
-          <p className="text-grey-50">{puzzle.description}</p>
+          <p className="text-grey-50">{puzzle.kind === "daily" ? t("daily.stateOnlyHelp") : puzzle.description}</p>
           <ul className="flex flex-col gap-2" aria-label={t("goals.checklist")}>
             {checks.map((check) => {
               const met = solved || check.met;
@@ -442,8 +447,8 @@ export function SolveScreen({
 
       <Dialog size="wide" open={panel === "help"} title={t("howToPlay.title")} onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
-          <p className="text-grey-50">{puzzle.description}</p>
-          {puzzle.objectives && puzzle.objectives.length > 0 && (
+          <p className="text-grey-50">{puzzle.kind === "daily" ? t("daily.stateOnlyHelp") : puzzle.description}</p>
+          {puzzle.kind !== "daily" && puzzle.objectives && puzzle.objectives.length > 0 && (
             <ul className="flex flex-col gap-1 text-grey-300">
               {puzzle.objectives.map((objective) => (
                 <li key={objective} className="flex gap-2">
@@ -455,7 +460,7 @@ export function SolveScreen({
           )}
           <HowToPlaySteps />
           <div className="flex flex-wrap gap-1">
-            {SUPPORTED_ACTION_TYPES.map((command) => (
+            {rules.allowedCommands.map((command) => (
               <span key={command} className="rounded bg-green-900 px-2 py-1 font-secondary text-xs text-lime-400">
                 git {command === "interactive-rebase" ? "rebase -i" : command}
               </span>
