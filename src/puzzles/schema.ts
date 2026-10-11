@@ -65,7 +65,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
     [
       "schemaVersion", "id", "version", "kind", "slug", "title", "description",
       "difficulty", "objectives", "initialRepository", "target", "allowedCommands",
-      "hints", "actionRequirements", "solutionCommands", "themeId", "publishedOn",
+      "hints", "actionRequirements", "solutionCommands", "themeId", "publishedOn", "parCommands",
     ],
     "$",
     issues,
@@ -74,6 +74,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
   const schemaVersion = integer(root.schemaVersion, "$.schemaVersion", issues);
   const themeId = optionalString(root.themeId, "$.themeId", issues);
   const publishedOn = optionalString(root.publishedOn, "$.publishedOn", issues);
+  const parCommands = root.parCommands === undefined ? undefined : integer(root.parCommands, "$.parCommands", issues);
   const id = string(root.id, "$.id", issues);
   const version = integer(root.version, "$.version", issues);
   const kind = enumValue(root.kind, kinds, "$.kind", issues);
@@ -122,6 +123,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
       description,
       difficulty,
       ...(publishedOn ? { publishedOn } : {}),
+      ...(parCommands !== undefined ? { parCommands } : {}),
       ...(objectives ? { objectives } : {}),
       initialRepository: repository,
       target,

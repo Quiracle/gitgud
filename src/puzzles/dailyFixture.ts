@@ -21,11 +21,7 @@ export function createDailyFixture(date: string): PublicPuzzleDefinition {
     difficulty: "easy",
     title: "The chicken's beach disguise",
     description: "For a beach holiday portrait, bring the red sunglasses from the style branch onto main.",
-    objectives: [
-      "Finish on the main branch.",
-      "Give the chicken red sunglasses.",
-      "Preserve the existing branch history.",
-    ],
+    parCommands: 1,
     initialRepository: {
       initialState,
       currentBranch: "main",
@@ -50,7 +46,7 @@ export function createDailyFixture(date: string): PublicPuzzleDefinition {
       },
     } satisfies Repository,
     target: { branch: "main", snapshot: { ...initialState, sunglasses: "red" } },
-    allowedCommands: ["log", "switch", "cherry-pick"],
+    allowedCommands: ["switch", "log", "merge", "cherry-pick", "revert", "rebase", "interactive-rebase"],
     hints: ["Inspect every branch before changing history.", "One commit can be copied onto main."],
   };
 }

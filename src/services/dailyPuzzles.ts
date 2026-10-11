@@ -25,17 +25,9 @@ export class SupabaseDailyPuzzleSource implements DailyPuzzleSource {
    * everyone on their next load. The local copy only covers an unreachable server.
    */
   async getByDate(date: string): Promise<PublicPuzzleDefinition> {
-    let response;
-    try {
-      response = await this.client
-        .from("daily_puzzles")
-        .select("definition")
-        .eq("published_on", date)
-        .eq("is_current", true)
-        .maybeSingle();
-    } catch (reason) {
-      response = { data: null, error: { message: reason instanceof Error ? reason.message : "network error" } };
-    }
+    let response = await this.fetchCurrent(date, "definition,par_commands");
+    // Par is optional metadata: a database without the par column still serves the puzzle.
+    if (response.error) response = await this.fetchCurrent(date, "definition");
     const { data, error } = response;
 
     if (error) {
@@ -45,10 +37,26 @@ export class SupabaseDailyPuzzleSource implements DailyPuzzleSource {
     }
     if (!data) throw new Error(t("daily.notPublished"));
 
-    const parsed = parsePublicPuzzleDefinition(data.definition);
+    const parsed = parsePublicPuzzleDefinition({
+      ...data.definition,
+      ...(typeof data.par_commands === "number" ? { parCommands: data.par_commands } : {}),
+    });
     if (!parsed.puzzle) throw new Error(t("daily.invalid"));
     writeCache(date, parsed.puzzle);
     return parsed.puzzle;
+  }
+
+  private async fetchCurrent(date: string, columns: string) {
+    try {
+      return await this.client
+        .from("daily_puzzles")
+        .select(columns)
+        .eq("published_on", date)
+        .eq("is_current", true)
+        .maybeSingle<{ definition: Record<string, unknown>; par_commands?: number | null }>();
+    } catch (reason) {
+      return { data: null, error: { message: reason instanceof Error ? reason.message : "network error" } };
+    }
   }
 }
 

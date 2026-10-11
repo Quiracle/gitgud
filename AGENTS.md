@@ -36,6 +36,12 @@ Do not implement daily or archive puzzles as command-sequence quizzes.
 
 Learn Basics puzzles may require the lesson's featured command, but should still validate the resulting state and relevant provenance rather than exact keystrokes or a full fixed sequence.
 
+### Puzzle policy boundary
+
+- Official daily puzzles, including archive entries, allow every supported simulator command. They win only when the exact target snapshot is on `main` and `main` is checked out. Legacy daily provenance, branch-position, action, and intended-solution metadata is advisory only.
+- Learn Basics and generated guided practice use their authored command allowlists and retain their authored state, action, and history requirements.
+- Daily `parCommands` is an optional advisory count derived from the private proof through its first win. It is not a minimum, scoring input, command limit, or completion requirement.
+
 ---
 
 ## Product scope and priority
@@ -982,6 +988,18 @@ Do not make network access a requirement for engine tests.
 ### UI verification ownership
 
 The human user performs all UI verification. AI models and coding agents must not run browser-based, interactive, visual, screenshot, component-UI, or end-to-end UI checks for this project. They may run non-UI unit and integration tests, static analysis, and production builds. When a change affects the interface, report that UI verification remains for the user instead of claiming visual correctness.
+
+---
+
+## Development workflow
+
+Every push to `main` deploys production through Vercel's Git integration. Never develop directly on `main`.
+
+- Do all work, by humans or agents, on a dedicated branch per feature or fix, created from an up-to-date `origin/main`. Name it by intent, for example `feat/<topic>`, `fix/<topic>`, `ui/<topic>`, or `chore/<topic>`.
+- Commit on that branch. Before integrating, fetch and merge (or rebase onto) the latest `origin/main`, resolve conflicts, and run the tests, `tsc -b`, and the production build on the merged result.
+- Integrate into `main` only from a branch that passes those checks, through a pull request or a merge the user has approved. Do not commit to, rebase, or force-push `main` directly.
+- Keep one concern per branch. Do not mix unrelated deploy or configuration changes into a feature branch.
+- Supabase migrations and Edge Functions deploy separately from the Vercel frontend. A client change that depends on a new column, RPC, or function must keep working until that backend change is applied, or its rollout order must be stated explicitly in the change.
 
 ---
 

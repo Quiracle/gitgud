@@ -1,0 +1,8 @@
+-- Review and run after the metadata migration. This derives only today's public
+-- scalar from the private proof; it does not alter puzzle IDs, versions, attempts,
+-- completions, timers, assistance flags, or leaderboard records.
+--
+-- Use the trusted backfill script/edge domain to replay daily_puzzle_private for the
+-- selected date, then set this one scalar. Historical rows may intentionally remain null.
+-- update public.daily_puzzles set par_commands = <trusted_replayed_count>
+-- where published_on = current_date and is_current and par_commands is null;

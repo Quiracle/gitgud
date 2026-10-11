@@ -83,6 +83,9 @@ persisted brief.
 In particular:
 - The application, not you, supplies allowedCommands, difficulty, target,
   current branch, HEAD, initial state, generated-ID baseline, IDs, and branches.
+- For an official daily, allowedCommands constrains the private proof only.
+  Players may use every simulator command and win solely by matching the target
+  appearance on main; do not write prose that presents the proof route as required.
 - branchCount, commitCount, hintCount, archetype, and story/theme requirements
   remain immutable requirements even though you do not output every one directly.
 

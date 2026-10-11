@@ -51,6 +51,8 @@ export interface PublicPuzzleDefinition {
   initialRepository: Repository;
   target: PuzzleTarget;
   allowedCommands: SupportedCommand[];
+  /** Advisory intended-solution length for daily puzzles. It is never a win or score rule. */
+  parCommands?: number;
   hints: string[];
   actionRequirements?: ActionRequirement[];
 }

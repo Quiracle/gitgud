@@ -18,7 +18,7 @@ function play(commands: string[]) {
     repository = result.repository;
     actions.push(result.action);
   }
-  return { repository, actions, validation: validatePuzzleCompletion(repository, candidate.target, actions) };
+  return { repository, actions, validation: validatePuzzleCompletion(candidate, repository, actions) };
 }
 
 describe("2026-10-10 daily: Demo day", () => {
@@ -80,17 +80,12 @@ describe("2026-10-10 daily: Demo day", () => {
     expect(play([]).validation?.solved).toBe(false);
   });
 
-  it("lists the open history goals when the chicken already matches", () => {
+  it("wins when the chicken matches on main even when legacy history metadata is unmet", () => {
     const run = play([
       "git revert m12", "git merge glam", "git merge lanyard", "git cherry-pick x42", "git merge stilts",
     ]);
     expect(run.error).toBeUndefined();
-    const checks = run.validation?.checks ?? [];
-    expect(checks.find((check) => check.id === "snapshot")?.met).toBe(true);
-    expect(checks.filter((check) => !check.met).map((check) => check.label)).toEqual([
-      "Rebase l71 onto newer work (don't merge it)",
-      "Squash t61 and t63 into one commit",
-    ]);
+    expect(run.validation).toMatchObject({ solved: true, unmet: [] });
   });
 
   it("explains why the final stilts commit can't be cherry-picked on its own", () => {
@@ -124,10 +119,9 @@ describe("2026-10-10 daily: Demo day", () => {
       "git switch glam", "git rebase lanyard", "git switch main", "git merge glam",
       "git cherry-pick x42", "git revert m12",
     ]],
-  ])("rejects %s", (_label, unmetFragment, commands) => {
+  ])("accepts %s as a daily state-only solution", (_label, _unmetFragment, commands) => {
     const run = play(commands);
     expect(run.error).toBeUndefined();
-    expect(run.validation?.solved).toBe(false);
-    expect(run.validation?.unmet.join(" ")).toContain(unmetFragment);
+    expect(run.validation).toMatchObject({ solved: true, unmet: [] });
   });
 });

@@ -16,6 +16,8 @@ export { createDailyFixture } from "./dailyFixture";
 export * from "./chickenTheme";
 export * from "./generation";
 export { validatePuzzleCompletion, matchesActionRequirement, type ExecutedAction } from "./completion";
+export { deriveParCommands } from "./par";
+export { isPuzzleActionAllowed, resolvePuzzleRules, type PuzzleRules } from "./rules";
 export {
   DEFAULT_DIFFICULTY_POLICY,
   DEFAULT_PUZZLE_LIMITS,
@@ -32,4 +34,5 @@ export {
   type PuzzleValidationResult,
   type ValidatedPuzzle,
   type ValidationIssue,
+  type SupportedCommand,
 } from "./types";
