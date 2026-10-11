@@ -5,7 +5,7 @@ import { formatDuration } from "../../lib/format";
 import { spring } from "../../lib/motion";
 import { chartSquares, chartStep, type DailyTime } from "../../lib/progressInsights";
 
-const ROWS = 6;
+const ROWS = 10;
 /** Target square size and gap in px; the chart shows as many days as fit at this size. */
 const SQUARE = 20;
 const GAP = 4;
