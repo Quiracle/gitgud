@@ -1,7 +1,10 @@
 import type { CompletionRecord } from "../storage/progress";
 
+/** The parts of a solve that streaks need; synced solves from other devices carry only these. */
+export type DailySolve = Pick<CompletionRecord, "kind" | "puzzleId" | "completedAt">;
+
 /** UTC date (YYYY-MM-DD) of each official daily solved on its own day. */
-export function dailySolveDates(completions: readonly CompletionRecord[]): Set<string> {
+export function dailySolveDates(completions: readonly DailySolve[]): Set<string> {
   const dates = new Set<string>();
   for (const completion of completions) {
     if (completion.kind !== "daily") continue;
@@ -47,9 +50,10 @@ export interface Achievement {
 /** Deterministic achievements from saved progress, so recomputing never duplicates them. */
 export function achievements(
   completions: readonly CompletionRecord[],
-  options: { lessonIds: readonly string[] },
+  options: { lessonIds: readonly string[]; syncedSolves?: readonly DailySolve[] },
 ): Achievement[] {
-  const dates = dailySolveDates(completions);
+  const syncedSolves = options.syncedSolves ?? [];
+  const dates = dailySolveDates([...completions, ...syncedSolves]);
   const lessonsDone = new Set(completions.filter((item) => item.kind === "lesson").map((item) => item.puzzleId));
   const bestStreak = longestStreak(dates);
   const list: Omit<Achievement, "unlocked">[] = [
@@ -61,7 +65,7 @@ export function achievements(
     { id: "basics-graduate", title: "Basics graduate", description: "Finish every Learn Basics lesson." },
   ];
   const unlocked: Record<AchievementId, boolean> = {
-    "first-solve": completions.length > 0,
+    "first-solve": completions.length > 0 || syncedSolves.length > 0,
     "clean-history": completions.some((item) => item.restartCount === 0),
     "daily-regular": dates.size > 0,
     "on-a-roll": bestStreak >= 3,

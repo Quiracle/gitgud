@@ -71,3 +71,20 @@ describe("achievements", () => {
     });
   });
 });
+
+describe("solves synced from other devices", () => {
+  const phone = { kind: "daily" as const, puzzleId: "daily-2026-10-11", completedAt: "2026-10-11T08:00:00.000Z" };
+
+  it("extend the streak alongside this browser's solves", () => {
+    const dates = dailySolveDates([solve("daily-2026-10-10", "2026-10-10T09:00:00Z"), phone]);
+    expect(currentStreak(dates, "2026-10-11")).toBe(2);
+    expect(recentDays(dates, "2026-10-11", 3)).toEqual([false, true, true]);
+  });
+
+  it("count towards achievements", () => {
+    const list = achievements([], { lessonIds: ["basics-01"], syncedSolves: [phone] });
+    const unlocked = Object.fromEntries(list.map((item) => [item.id, item.unlocked]));
+    expect(unlocked["first-solve"]).toBe(true);
+    expect(unlocked["daily-regular"]).toBe(true);
+  });
+});

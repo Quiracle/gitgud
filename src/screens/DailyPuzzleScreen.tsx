@@ -15,9 +15,11 @@ export function DailyPuzzleScreen({ onNavigate }: DailyPuzzleScreenProps) {
   const synced = useDailyCompletion(daily.status === "ready" ? daily.puzzle : undefined);
 
   if (daily.status === "ready" && !synced.loading) {
+    // Keyed by puzzle only: the solve itself saves a completion, and remounting then would
+    // reopen the run as already solved and skip the celebration.
     return (
       <SolveScreen
-        key={`${daily.puzzle.id}:${daily.puzzle.version}:${synced.completion?.id ?? "new"}`}
+        key={`${daily.puzzle.id}:${daily.puzzle.version}`}
         puzzle={daily.puzzle}
         syncedCompletion={synced.completion}
         onNavigate={onNavigate}

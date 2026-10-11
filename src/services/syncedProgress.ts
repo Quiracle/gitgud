@@ -1,3 +1,4 @@
+import type { DailySolve } from "../lib/progressInsights";
 import type { AttemptCommand, CompletionRecord } from "../storage/progress";
 import { requireSupabaseClient } from "./supabase";
 
@@ -46,6 +47,39 @@ export async function getSyncedDailyCompletion(
     .maybeSingle<AttemptRow>();
   if (attempt.error) throw new Error(`Synced completion is unavailable: ${attempt.error.message}`);
   return attempt.data ? parseSyncedDailyCompletion(attempt.data) : undefined;
+}
+
+/** Enough completed dailies for any streak a player can plausibly hold. */
+const SYNCED_SOLVES_LIMIT = 1000;
+
+/**
+ * Every daily the signed-in player has completed, on any device. Streaks read each attempt's own
+ * completion time: progress.completed_at follows the best score, so a replay could move it.
+ */
+export async function listSyncedDailySolves(): Promise<DailySolve[]> {
+  const client = requireSupabaseClient();
+  const { data, error } = await client
+    .from("attempts")
+    .select("puzzle_id,completed_at")
+    .eq("status", "completed")
+    .like("puzzle_id", "daily-%")
+    .order("completed_at", { ascending: false })
+    .limit(SYNCED_SOLVES_LIMIT);
+  if (error) throw new Error(`Synced solves are unavailable: ${error.message}`);
+  return parseSyncedDailySolves(data);
+}
+
+export function parseSyncedDailySolves(rows: unknown): DailySolve[] {
+  if (!Array.isArray(rows)) return [];
+  return rows.flatMap((row) => {
+    if (!row || typeof row !== "object") return [];
+    const { puzzle_id: puzzleId, completed_at: completedAt } = row as Record<string, unknown>;
+    if (typeof puzzleId !== "string" || typeof completedAt !== "string") return [];
+    // Postgres timestamps can carry an offset; streaks compare UTC calendar dates.
+    const time = Date.parse(completedAt);
+    if (Number.isNaN(time)) return [];
+    return [{ kind: "daily" as const, puzzleId, completedAt: new Date(time).toISOString() }];
+  });
 }
 
 /** Converts only well-formed, user-owned database data into a local completion view. */
