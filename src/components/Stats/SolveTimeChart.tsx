@@ -40,7 +40,7 @@ export function SolveTimeChart({ days }: SolveTimeChartProps) {
 
   return (
     <figure className="flex flex-col gap-2">
-      <div className="rounded bg-grey-900 p-4">
+      <div className="rounded bg-grey-300 p-4">
         <ol
           ref={listRef}
           className="grid gap-1"
@@ -61,10 +61,10 @@ export function SolveTimeChart({ days }: SolveTimeChartProps) {
                 {/* Bottom-up, so the stack grows from the baseline. */}
                 <div className="flex flex-col-reverse gap-1" aria-hidden>
                   {Array.from({ length: ROWS }, (_, row) => (
-                    <div key={row} className="relative aspect-square rounded border border-grey-700">
+                    <div key={row} className="relative aspect-square rounded border border-grey-400">
                       {row < filled && (
                         <motion.div
-                          className="absolute -inset-px rounded bg-lime-500"
+                          className="absolute -inset-px rounded bg-grey-900"
                           initial={{ scale: 0, opacity: 0 }}
                           whileInView={{ scale: 1, opacity: 1 }}
                           viewport={{ once: true }}
@@ -74,7 +74,7 @@ export function SolveTimeChart({ days }: SolveTimeChartProps) {
                     </div>
                   ))}
                 </div>
-                <span className="mt-1 truncate text-center text-2xs leading-none text-grey-300" aria-hidden>
+                <span className="mt-1 truncate text-center text-2xs leading-none text-green-900" aria-hidden>
                   {formatDate(noon, { weekday: "narrow", timeZone: "UTC" })}
                 </span>
               </li>
