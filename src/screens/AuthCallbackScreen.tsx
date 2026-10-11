@@ -1,6 +1,9 @@
+import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
-import { AppLink } from "../components/AppLink";
+import { Button } from "../components/Button/Button";
+import { PixelChicken, type ChickenLook } from "../components/Illustration/PixelChicken";
 import { useI18n } from "../i18n/I18nProvider";
+import { spring } from "../lib/motion";
 import { finishOAuthSignIn, normalizeReturnPath } from "../services/auth";
 
 interface AuthCallbackScreenProps {
@@ -8,6 +11,9 @@ interface AuthCallbackScreenProps {
   onReplace: (path: string) => void;
 }
 
+const CHICKEN: ChickenLook = { chicken: true, body: "default", parts: { crest: "default" } };
+
+/** OAuth return: the Figma pop-up panel, standing alone on the dark page while the session is validated. */
 export function AuthCallbackScreen({ onNavigate, onReplace }: AuthCallbackScreenProps) {
   const started = useRef(false);
   const [error, setError] = useState<string>();
@@ -41,29 +47,43 @@ export function AuthCallbackScreen({ onNavigate, onReplace }: AuthCallbackScreen
   }, [onReplace]);
 
   return (
-    <main className="grid min-h-dvh place-items-center bg-slate-950 px-6 text-slate-100">
-      <section className="w-full max-w-md rounded-3xl border border-slate-800 bg-slate-900 p-7 text-center">
-        <p className="text-xs font-black uppercase tracking-[0.25em] text-cyan-300">{t("auth.account")}</p>
-        <h1 className="mt-4 text-2xl font-black">
-          {error ? t("auth.failedTitle") : t("auth.validating")}
-        </h1>
-        {error ? (
-          <>
-            <p className="mt-3 text-sm leading-6 text-rose-200">{error}</p>
-            <AppLink
-              href="/"
-              onNavigate={onNavigate}
-              className="mt-6 inline-flex min-h-11 items-center rounded-xl bg-white px-5 py-3 font-bold text-slate-950"
+    <main className="flex min-h-dvh items-center justify-center bg-green-950 px-6 pb-[env(safe-area-inset-bottom)] pt-[env(safe-area-inset-top)]">
+      <motion.section
+        className="flex w-full max-w-[327px] flex-col items-center gap-6 rounded border border-lime-400 bg-green-950 p-6 text-center"
+        initial={{ opacity: 0, scale: 0.88, y: 24 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={spring.bouncy}
+        aria-live="polite"
+      >
+        {/* Hops while waiting; settles once there is an answer. */}
+        <motion.div
+          animate={error ? { y: 0 } : { y: [0, -8, 0] }}
+          transition={error ? spring.snappy : { duration: 0.7, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <PixelChicken look={CHICKEN} size={72} className="rounded" />
+        </motion.div>
+        <div className="flex flex-col gap-3">
+          <h1 className="text-xl leading-[25px] text-grey-50">{error ? t("auth.failedTitle") : t("auth.validating")}</h1>
+          {!error && <p className="text-sm text-grey-300">{t("auth.wait")}</p>}
+        </div>
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              className="flex w-full flex-col gap-6"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              transition={spring.snappy}
             >
-              {t("common.returnHome")}
-            </AppLink>
-          </>
-        ) : (
-          <p className="mt-3 text-sm leading-6 text-slate-400">
-            {t("auth.wait")}
-          </p>
-        )}
-      </section>
+              <p role="alert" className="rounded border border-red-500/60 bg-red-500/10 p-3 text-left text-sm text-red-200">
+                {error}
+              </p>
+              <Button href="/" onNavigate={onNavigate}>
+                {t("common.returnHome")}
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.section>
     </main>
   );
 }

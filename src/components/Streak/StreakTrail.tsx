@@ -7,14 +7,15 @@ interface StreakTrailProps {
   label: string;
 }
 
-const SEGMENT = 19;
+// Links are shorter than Figma's 19px so a full week fits beside the label on a phone.
+const SEGMENT = 14;
 const SQUARE = 12;
 
 /** Figma streak row (node 24:33053): a commit-like trail of the last days. */
 export function StreakTrail({ days, label }: StreakTrailProps) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="flex h-3 items-center" aria-label={label}>
+      <div className="flex h-3 shrink-0 items-center" aria-label={label}>
         <motion.span
           className="block h-px border-t border-dashed border-lime-400"
           style={{ width: SEGMENT }}
@@ -44,7 +45,7 @@ export function StreakTrail({ days, label }: StreakTrailProps) {
         ))}
       </div>
       <motion.p
-        className="whitespace-nowrap text-xs text-grey-200"
+        className="min-w-0 text-right text-xs text-grey-200"
         initial={{ opacity: 0, x: 8 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ ...spring.soft, delay: 0.25 + days.length * 0.12 }}

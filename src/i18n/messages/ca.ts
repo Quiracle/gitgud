@@ -25,8 +25,8 @@ export const ca: Messages = {
   "login.opening": "Obrint…",
   "login.unavailable": "Ara mateix no es pot iniciar la sessió. Pots continuar jugant com a convidat.",
   "login.dismissError": "Tanca l'error",
+  "login.legal": "En continuar, acceptes les <terms>Condicions d'ús</terms> i confirmes que has llegit la <privacy>Política de privacitat</privacy>.",
 
-  "auth.account": "Compte",
   "auth.validating": "Validant la sessió…",
   "auth.failedTitle": "No s'ha pogut iniciar la sessió",
   "auth.wait": "Només trigarà un moment. Si falla, la teva partida com a convidat continua disponible.",
@@ -49,6 +49,22 @@ export const ca: Messages = {
   "nav.logIn": "Entra",
 
   "footer.privacy": "Política de privadesa",
+
+  "legal.back": "Torna",
+
+  "consent.title": "Galetes?",
+
+  "consent.body": "Ens agradaria fer servir galetes de Google Analytics per veure com es juga a GitGud i millorar-lo. Només s'instal·len si acceptes. <policy>Política de galetes</policy>",
+
+  "consent.accept": "Acceptar",
+
+  "consent.reject": "Rebutjar",
+
+  "consent.currentAccepted": "Has acceptat les galetes d'analítica.",
+
+  "consent.currentRejected": "Has rebutjat les galetes d'analítica.",
+
+  "consent.settings": "Configuració de galetes",
 
   "streak.days_one": "Ratxa d'{count} dia!",
   "streak.days_other": "Ratxa de {count} dies!",
@@ -141,6 +157,11 @@ export const ca: Messages = {
   "account.unlocked": "Desbloquejat",
   "account.locked": "Bloquejat",
   "account.settings": "Configuració",
+  "account.cookies": "Galetes d'analítica",
+  "account.cookies.accepted": "Acceptades",
+  "account.cookies.rejected": "Rebutjades",
+  "account.cookies.unset": "Sense triar",
+  "account.cookies.change": "Canviar",
   "account.logOut": "Tanca la sessió",
   "account.delete": "Elimina el compte",
   "account.deleteSoon": "Encara no es poden eliminar comptes. Quan es pugui, s'esborraran el teu progrés i les teves entrades a la classificació.",

@@ -157,7 +157,7 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
         </section>
       )}
 
-      <SiteFooter />
+      <SiteFooter onNavigate={onNavigate} />
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} returnPath="/leaderboard" />
     </div>
   );

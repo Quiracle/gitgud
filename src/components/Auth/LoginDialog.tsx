@@ -1,11 +1,28 @@
 import { AnimatePresence, motion } from "motion/react";
+import type { ReactNode } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useI18n } from "../../i18n/I18nProvider";
+import { Rich } from "../../i18n/Rich";
 import { spring } from "../../lib/motion";
 import type { OAuthProvider } from "../../services/auth";
 import { Button } from "../Button/Button";
 import { Icon } from "../Icon/Icon";
 import { Dialog } from "../Puzzle/Dialog";
+
+/* Opens in a new tab so the sign-in dialog stays where it is. */
+const legalLink = (section: string) =>
+  function LegalLink({ children }: { children: ReactNode }) {
+    return (
+      <a
+        href={`/legal#${section}`}
+        target="_blank"
+        className="text-grey-50 underline decoration-from-font underline-offset-2 transition-colors hover:text-lime-300"
+      >
+        {children}
+      </a>
+    );
+  };
+const LEGAL_LINKS = { terms: legalLink("terms"), privacy: legalLink("privacy") };
 
 interface LoginDialogProps {
   open: boolean;
@@ -43,6 +60,9 @@ export function LoginDialog({ open, onClose, returnPath }: LoginDialogProps) {
               {pendingProvider === provider.id ? t("login.opening") : t("login.continueWith", { provider: provider.name })}
             </Button>
           ))}
+          <p className="text-xs text-grey-300">
+            <Rich text={t("login.legal")} tags={LEGAL_LINKS} />
+          </p>
         </div>
       ) : (
         <p className="rounded border border-grey-700 p-3 text-sm text-grey-300">

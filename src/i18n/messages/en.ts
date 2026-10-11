@@ -28,8 +28,8 @@ export const en = {
   "login.opening": "Opening…",
   "login.unavailable": "Log in isn't available right now. Guest play still works.",
   "login.dismissError": "Dismiss error",
+  "login.legal": "By continuing, you agree to the <terms>Terms of use</terms> and confirm you've read the <privacy>Privacy policy</privacy>.",
 
-  "auth.account": "Account",
   "auth.validating": "Validating your session…",
   "auth.failedTitle": "Sign-in could not be completed",
   "auth.wait": "This should only take a moment. Your guest game remains available if sign-in fails.",
@@ -52,6 +52,22 @@ export const en = {
   "nav.logIn": "Log in",
 
   "footer.privacy": "Privacy policy",
+
+  "legal.back": "Go back",
+
+  "consent.title": "Cookies?",
+
+  "consent.body": "We'd like to use Google Analytics cookies to see how GitGud is played and make it better. They're only set if you accept. <policy>Cookie policy</policy>",
+
+  "consent.accept": "Accept",
+
+  "consent.reject": "Reject",
+
+  "consent.currentAccepted": "You've accepted analytics cookies.",
+
+  "consent.currentRejected": "You've rejected analytics cookies.",
+
+  "consent.settings": "Cookie settings",
 
   "streak.days_one": "{count}-day streak!",
   "streak.days_other": "{count}-day streak!",
@@ -144,6 +160,11 @@ export const en = {
   "account.unlocked": "Unlocked",
   "account.locked": "Locked",
   "account.settings": "Settings",
+  "account.cookies": "Analytics cookies",
+  "account.cookies.accepted": "Accepted",
+  "account.cookies.rejected": "Rejected",
+  "account.cookies.unset": "Not chosen yet",
+  "account.cookies.change": "Change",
   "account.logOut": "Log out",
   "account.delete": "Delete account",
   "account.deleteSoon": "Account deletion isn't available yet. It will remove your progress and leaderboard entries.",

@@ -10,6 +10,13 @@ export const LOCALE_NAMES: Record<Locale, string> = {
   ca: "Català",
 };
 
+/** Short tags for compact pickers: the button shows these, the open list shows the full names. */
+export const LOCALE_TAGS: Record<Locale, string> = {
+  en: "ENG",
+  es: "ES",
+  ca: "CAT",
+};
+
 export function isLocale(value: unknown): value is Locale {
   return typeof value === "string" && (LOCALES as readonly string[]).includes(value);
 }

@@ -6,7 +6,7 @@ import { calculateStats } from "../storage/progress";
 import { openProgressStore, PROGRESS_CHANGED } from "../storage/browserProgress";
 
 /** Streak, recent days, stats, and achievements from this browser's saved progress. */
-export function useProgressInsights(days = 6) {
+export function useProgressInsights(days = 7) {
   const [completions, setCompletions] = useState(() => openProgressStore().completions());
 
   useEffect(() => {

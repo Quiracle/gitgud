@@ -25,8 +25,8 @@ export const es: Messages = {
   "login.opening": "Abriendo…",
   "login.unavailable": "Ahora mismo no se puede iniciar sesión. Puedes seguir jugando como invitado.",
   "login.dismissError": "Cerrar el error",
+  "login.legal": "Al continuar, aceptas las <terms>Condiciones de uso</terms> y confirmas que has leído la <privacy>Política de privacidad</privacy>.",
 
-  "auth.account": "Cuenta",
   "auth.validating": "Validando tu sesión…",
   "auth.failedTitle": "No se ha podido iniciar sesión",
   "auth.wait": "Solo tardará un momento. Si falla, tu partida como invitado sigue disponible.",
@@ -49,6 +49,22 @@ export const es: Messages = {
   "nav.logIn": "Entrar",
 
   "footer.privacy": "Política de privacidad",
+
+  "legal.back": "Volver",
+
+  "consent.title": "¿Cookies?",
+
+  "consent.body": "Nos gustaría usar cookies de Google Analytics para ver cómo se juega a GitGud y mejorarlo. Solo se instalan si aceptas. <policy>Política de cookies</policy>",
+
+  "consent.accept": "Aceptar",
+
+  "consent.reject": "Rechazar",
+
+  "consent.currentAccepted": "Has aceptado las cookies de analítica.",
+
+  "consent.currentRejected": "Has rechazado las cookies de analítica.",
+
+  "consent.settings": "Configuración de cookies",
 
   "streak.days_one": "¡Racha de {count} día!",
   "streak.days_other": "¡Racha de {count} días!",
@@ -141,6 +157,11 @@ export const es: Messages = {
   "account.unlocked": "Desbloqueado",
   "account.locked": "Bloqueado",
   "account.settings": "Ajustes",
+  "account.cookies": "Cookies de analítica",
+  "account.cookies.accepted": "Aceptadas",
+  "account.cookies.rejected": "Rechazadas",
+  "account.cookies.unset": "Sin elegir",
+  "account.cookies.change": "Cambiar",
   "account.logOut": "Cerrar sesión",
   "account.delete": "Eliminar la cuenta",
   "account.deleteSoon": "Todavía no se pueden eliminar cuentas. Cuando se pueda, se borrarán tu progreso y tus entradas en la clasificación.",

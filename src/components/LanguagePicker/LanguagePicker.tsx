@@ -1,6 +1,6 @@
-import { useId } from "react";
+import { useId, useRef, useState } from "react";
 import { useI18n } from "../../i18n/I18nProvider";
-import { LOCALES, LOCALE_NAMES, isLocale } from "../../i18n/locales";
+import { LOCALES, LOCALE_NAMES, LOCALE_TAGS, isLocale } from "../../i18n/locales";
 import { Icon } from "../Icon/Icon";
 
 interface LanguagePickerProps {
@@ -10,27 +10,48 @@ interface LanguagePickerProps {
 }
 
 /**
- * Native select so it works with keyboards, screen readers, and phone pickers. Each
- * option is written in its own language and tagged with it for correct pronunciation.
+ * Globe, short tag (ES, CAT, ENG) and chevron, with an invisible native select laid over
+ * them so keyboards, screen readers and phone pickers still work. The open list names each
+ * language in full, in its own language, tagged with it for correct pronunciation.
+ * Browsers count a clicked select as :focus-visible, so the ring follows how focus arrived:
+ * keyboard focus (or keys pressed afterwards) shows it, a pointer press does not.
  */
 export function LanguagePicker({ tone = "light", className = "" }: LanguagePickerProps) {
   const { locale, setLocale, t } = useI18n();
   const id = useId();
-  const colors = tone === "dark" ? "text-grey-50 border-grey-600 bg-green-900" : "text-grey-950 border-grey-500 bg-transparent";
+  const pointer = useRef(false);
+  const [ring, setRing] = useState(false);
+  const colors = tone === "dark" ? "text-grey-50 hover:text-lime-300" : "text-grey-950 hover:text-grey-700";
 
   return (
-    <div className={`relative flex items-center ${className}`}>
+    <div
+      className={`relative flex min-h-11 items-center gap-1.5 rounded transition-colors ${ring ? "outline outline-2 outline-offset-2 outline-lime-400" : ""} ${colors} ${className}`}
+    >
       <label htmlFor={id} className="sr-only">
         {t("common.language")}
       </label>
-      <Icon name="language" size={16} className={`pointer-events-none absolute left-2 ${tone === "dark" ? "text-lime-400" : "text-grey-700"}`} />
+      <Icon name="language" size={16} className={tone === "dark" ? "text-lime-400" : undefined} />
+      <span aria-hidden className="text-xs">
+        {LOCALE_TAGS[locale]}
+      </span>
+      <Icon name="keyboard_arrow_down" size={16} />
       <select
         id={id}
         value={locale}
+        onPointerDown={() => {
+          pointer.current = true;
+          setRing(false);
+        }}
+        onFocus={() => {
+          setRing(!pointer.current);
+          pointer.current = false;
+        }}
+        onKeyDown={() => setRing(true)}
+        onBlur={() => setRing(false)}
         onChange={(event) => {
           if (isLocale(event.target.value)) setLocale(event.target.value);
         }}
-        className={`min-h-11 appearance-none rounded border py-2 pl-8 pr-3 text-base sm:text-xs ${colors}`}
+        className="absolute inset-0 w-full cursor-pointer appearance-none text-base text-grey-950 opacity-0"
       >
         {LOCALES.map((option) => (
           <option key={option} value={option} lang={option}>
