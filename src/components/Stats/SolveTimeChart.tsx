@@ -40,7 +40,7 @@ export function SolveTimeChart({ days }: SolveTimeChartProps) {
                     <div key={row} className="relative aspect-square rounded border border-grey-400">
                       {row < filled && (
                         <motion.div
-                          className="absolute -inset-px rounded bg-lime-600"
+                          className="absolute -inset-px rounded bg-lime-700"
                           initial={{ scale: 0, opacity: 0 }}
                           whileInView={{ scale: 1, opacity: 1 }}
                           viewport={{ once: true }}
