@@ -49,7 +49,7 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
             transition={spring.soft}
           >
             <motion.div
-              className="shrink-0 rounded border border-lime-400 p-1"
+              className="shrink-0"
               initial={{ scale: 0.6, rotate: -8 }}
               animate={{ scale: 1, rotate: 0 }}
               transition={spring.bouncy}
