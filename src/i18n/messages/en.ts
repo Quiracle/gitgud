@@ -180,6 +180,8 @@ export const en = {
   "graph.centre": "Centre on HEAD",
   "graph.zoomOut": "Zoom out",
   "graph.zoomIn": "Zoom in",
+  "graph.selectCommit": "Use commit {commit} in the command",
+  "graph.selectBranch": "Use branch {branch} in the command",
 
   "chicken.plain": "A chicken",
   "chicken.colored": "A {color} chicken",
@@ -314,6 +316,8 @@ export const en = {
   "terminal.inputLabel": "Git command",
   "terminal.placeholder": "Start coding",
   "terminal.solvedPlaceholder": "Puzzle solved",
+  "terminal.autocompleteHint": "Suggestion: {command}. Press Tab or tap to complete.",
+  "terminal.useSuggestion": "Use command suggestion {command}",
   "terminal.hideHistory": "Hide command history",
   "terminal.showHistory": "Show command history",
   "terminal.empty": "Type a git command below.",

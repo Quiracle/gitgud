@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { getCommandSuggestion, type GitAction } from "../../engine";
 import type { CommandOutcome } from "../../hooks/usePuzzleSession";
 import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
@@ -16,6 +17,11 @@ export interface TerminalEntry {
 interface CommandPanelProps {
   entries: TerminalEntry[];
   onCommand: (command: string) => CommandOutcome;
+  command: string;
+  onCommandChange: (command: string) => void;
+  allowedCommands: readonly GitAction["type"][];
+  /** Incremented when a graph-card tap should return focus to the composer. */
+  focusRequest?: number;
   /** Mobile: collapsed shows the latest line; expanded shows the full history. */
   expanded: boolean;
   onToggle?: () => void;
@@ -34,6 +40,10 @@ type Flash = "idle" | "error" | "solved";
 export function CommandPanel({
   entries,
   onCommand,
+  command,
+  onCommandChange,
+  allowedCommands,
+  focusRequest = 0,
   expanded,
   onToggle,
   onHelp,
@@ -43,11 +53,13 @@ export function CommandPanel({
   trailing,
 }: CommandPanelProps) {
   const { t } = useI18n();
-  const [command, setCommand] = useState("");
   const [flash, setFlash] = useState<Flash>("idle");
   const recall = useRef<number | null>(null);
+  const input = useRef<HTMLInputElement>(null);
   const showHistory = docked || expanded;
   const typed = entries.filter((entry) => entry.command).map((entry) => entry.command!);
+  const suggestion = disabled ? null : getCommandSuggestion(command, allowedCommands);
+  const suggestionSuffix = suggestion?.slice(command.trimStart().length) ?? "";
 
   useEffect(() => {
     if (flash === "idle") return;
@@ -55,18 +67,34 @@ export function CommandPanel({
     return () => window.clearTimeout(timer);
   }, [flash]);
 
+  useEffect(() => {
+    if (focusRequest > 0) input.current?.focus();
+  }, [focusRequest]);
+
   function submit(event: FormEvent) {
     event.preventDefault();
     const value = command.trim();
     if (!value || disabled) return;
     const outcome = onCommand(value);
     setFlash(outcome.solved ? "solved" : outcome.ok ? "idle" : "error");
-    setCommand("");
+    onCommandChange("");
     recall.current = null;
+  }
+
+  function acceptSuggestion() {
+    if (!suggestion) return;
+    onCommandChange(suggestion);
+    recall.current = null;
+    input.current?.focus();
   }
 
   // Up/Down walk back through previously typed commands, like a shell.
   function onKeyDown(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === "Tab" && suggestion) {
+      event.preventDefault();
+      acceptSuggestion();
+      return;
+    }
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     if (!typed.length) return;
     event.preventDefault();
@@ -74,7 +102,7 @@ export function CommandPanel({
     const current = recall.current ?? typed.length;
     const next = event.key === "ArrowUp" ? Math.max(0, current - 1) : Math.min(typed.length, current + 1);
     recall.current = next > last ? null : next;
-    setCommand(next > last ? "" : typed[next]);
+    onCommandChange(next > last ? "" : typed[next]);
   }
 
   const border =
@@ -103,19 +131,32 @@ export function CommandPanel({
         <LatestLine entries={entries} />
       )}
 
-      <form onSubmit={submit} className="flex items-center gap-2">
+      <form onSubmit={submit} className="flex flex-wrap items-center gap-2">
         <label htmlFor="git-command" className="sr-only">
           {t("terminal.inputLabel")}
         </label>
         <motion.div
-          className={`flex min-w-0 flex-1 rounded border bg-green-900 transition-colors duration-200 focus-within:outline focus-within:outline-1 focus-within:-outline-offset-2 ${border}`}
+          className={`relative flex min-w-0 flex-1 rounded border bg-green-900 transition-colors duration-200 focus-within:outline focus-within:outline-1 focus-within:-outline-offset-2 ${border}`}
           animate={flash === "solved" ? { boxShadow: ["0 0 0 0 rgb(158 232 43 / 0.6)", "0 0 0 10px rgb(158 232 43 / 0)"] } : {}}
           transition={{ duration: 0.8 }}
         >
+          {suggestion && (
+            <div
+              aria-hidden
+              className="pointer-events-none absolute inset-0 flex min-w-0 items-center overflow-hidden whitespace-pre p-3 font-secondary text-code"
+            >
+              <span className="invisible">{command}</span>
+              <span className="text-grey-400/50">{suggestionSuffix}</span>
+            </div>
+          )}
           <input
+            ref={input}
             id="git-command"
             value={command}
-            onChange={(event) => setCommand(event.target.value)}
+            onChange={(event) => {
+              onCommandChange(event.target.value);
+              recall.current = null;
+            }}
             onKeyDown={onKeyDown}
             disabled={disabled}
             autoComplete="off"
@@ -124,11 +165,28 @@ export function CommandPanel({
             spellCheck={false}
             enterKeyHint="go"
             placeholder={disabled ? disabledPlaceholder ?? t("terminal.solvedPlaceholder") : t("terminal.placeholder")}
-            className="min-w-0 flex-1 bg-transparent p-3 font-secondary text-code text-grey-50 outline-none placeholder:text-grey-400 disabled:cursor-not-allowed"
+            aria-describedby={suggestion ? "git-command-suggestion" : undefined}
+            className="relative min-w-0 flex-1 bg-transparent p-3 font-secondary text-code text-grey-50 outline-none placeholder:text-grey-400 disabled:cursor-not-allowed"
           />
         </motion.div>
         {trailing}
         {!docked && !showHistory && <ToggleButton expanded={false} onToggle={onToggle} />}
+        {suggestion && (
+          <button
+            type="button"
+            onPointerDown={(event) => event.preventDefault()}
+            onClick={acceptSuggestion}
+            aria-label={t("terminal.useSuggestion", { command: suggestion })}
+            className="flex min-h-11 basis-full items-center rounded border border-grey-700 px-3 font-secondary text-code text-grey-300 opacity-70 transition hover:border-lime-400 hover:text-lime-400 hover:opacity-100 active:bg-green-900 lg:hidden"
+          >
+            {suggestion}
+          </button>
+        )}
+        {suggestion && (
+          <span id="git-command-suggestion" className="sr-only">
+            {t("terminal.autocompleteHint", { command: suggestion })}
+          </span>
+        )}
       </form>
     </div>
   );

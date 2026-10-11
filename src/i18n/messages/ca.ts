@@ -177,6 +177,8 @@ export const ca: Messages = {
   "graph.centre": "Centra a HEAD",
   "graph.zoomOut": "Allunya",
   "graph.zoomIn": "Apropa",
+  "graph.selectCommit": "Utilitza el commit {commit} a l'ordre",
+  "graph.selectBranch": "Utilitza la branca {branch} a l'ordre",
 
   "chicken.plain": "Una gallina",
   "chicken.colored": "Una gallina de color {color}",
@@ -311,6 +313,8 @@ export const ca: Messages = {
   "terminal.inputLabel": "Ordre de Git",
   "terminal.placeholder": "Escriu una ordre",
   "terminal.solvedPlaceholder": "Trencaclosques resolt",
+  "terminal.autocompleteHint": "Suggeriment: {command}. Prem Tab o toca per completar.",
+  "terminal.useSuggestion": "Utilitza el suggeriment d'ordre {command}",
   "terminal.hideHistory": "Amaga l'historial d'ordres",
   "terminal.showHistory": "Mostra l'historial d'ordres",
   "terminal.empty": "Escriu una ordre de git aquí sota.",

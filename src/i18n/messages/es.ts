@@ -177,6 +177,8 @@ export const es: Messages = {
   "graph.centre": "Centrar en HEAD",
   "graph.zoomOut": "Alejar",
   "graph.zoomIn": "Acercar",
+  "graph.selectCommit": "Usar el commit {commit} en el comando",
+  "graph.selectBranch": "Usar la rama {branch} en el comando",
 
   "chicken.plain": "Una gallina",
   "chicken.colored": "Una gallina de color {color}",
@@ -311,6 +313,8 @@ export const es: Messages = {
   "terminal.inputLabel": "Comando de Git",
   "terminal.placeholder": "Escribe un comando",
   "terminal.solvedPlaceholder": "Puzzle resuelto",
+  "terminal.autocompleteHint": "Sugerencia: {command}. Pulsa Tab o toca para completar.",
+  "terminal.useSuggestion": "Usar la sugerencia de comando {command}",
   "terminal.hideHistory": "Ocultar el historial de comandos",
   "terminal.showHistory": "Mostrar el historial de comandos",
   "terminal.empty": "Escribe un comando de git aquí abajo.",
