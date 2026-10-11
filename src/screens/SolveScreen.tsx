@@ -77,7 +77,7 @@ export function SolveScreen({
   const tree = useRef<HTMLDivElement>(null);
   const goal = useRef<HTMLButtonElement>(null);
   const solved = session.status === "completed";
-  const referenceKind = solved ? null : getCommandReferenceKind(commandDraft, puzzle.allowedCommands);
+  const referenceKind = solved ? null : getCommandReferenceKind(commandDraft);
   const checks = session.validation.checks;
   const goalsMet = solved ? checks.length : checks.filter((check) => check.met).length;
   const sharing = useResultShare(
@@ -169,7 +169,6 @@ export function SolveScreen({
       commandDraft,
       { commitId, branches },
       session.repository.currentBranch,
-      puzzle.allowedCommands,
     );
     if (!next) return;
     setCommandDraft(next);
@@ -264,7 +263,6 @@ export function SolveScreen({
             onCommand={session.runCommand}
             command={commandDraft}
             onCommandChange={setCommandDraft}
-            allowedCommands={puzzle.allowedCommands}
             focusRequest={commandFocusRequest}
             expanded={expanded}
             docked={docked}

@@ -7,19 +7,17 @@ import {
 } from "./commandAssist";
 
 describe("command assistance", () => {
-  it("suggests only commands available in the puzzle and prioritises rebase for git r", () => {
-    expect(getCommandSuggestion("git r", ["revert", "rebase"])).toBe("git rebase");
-    expect(getCommandSuggestion("git r", ["revert"])).toBe("git revert");
-    expect(getCommandSuggestion("git ch", ["log", "cherry-pick"])).toBe("git cherry-pick");
-    expect(getCommandSuggestion("git ch", ["log"])).toBeNull();
+  it("suggests globally supported commands and prioritises rebase for git r", () => {
+    expect(getCommandSuggestion("git r")).toBe("git rebase");
+    expect(getCommandSuggestion("git ch")).toBe("git cherry-pick");
+    expect(getCommandSuggestion("git unknown")).toBeNull();
   });
 
   it("completes supported command flags without competing with card arguments", () => {
-    expect(getCommandSuggestion("git merge -", ["merge"])).toBe("git merge --ff-only");
-    expect(getCommandSuggestion("git rebase -", ["interactive-rebase"])).toBe("git rebase -i");
-    expect(getCommandSuggestion("git r", ["interactive-rebase"])).toBe("git rebase -i");
-    expect(getCommandSuggestion("git merge ", ["merge"])).toBeNull();
-    expect(getCommandSuggestion("git rebase", ["rebase"])).toBeNull();
+    expect(getCommandSuggestion("git merge -")).toBe("git merge --ff-only");
+    expect(getCommandSuggestion("git rebase -")).toBe("git rebase -i");
+    expect(getCommandSuggestion("git merge ")).toBeNull();
+    expect(getCommandSuggestion("git rebase")).toBeNull();
   });
 
   it("recognises branch and commit arguments, including command variants", () => {
@@ -37,8 +35,6 @@ describe("command assistance", () => {
     expect(getCommandReferenceKind("git revert old-id")).toBe("commit");
     expect(getCommandReferenceKind("git log")).toBeNull();
     expect(getCommandReferenceKind("git merge --squash")).toBeNull();
-    expect(getCommandReferenceKind("git rebase", ["interactive-rebase"])).toBeNull();
-    expect(getCommandReferenceKind("git rebase -i", ["interactive-rebase"])).toBe("branch");
   });
 
   it("uses a selected card's commit ID for commit-level commands", () => {
@@ -69,12 +65,6 @@ describe("command assistance", () => {
       "git merge",
       { commitId: "s14", branches: [] },
       "main",
-    )).toBeNull();
-    expect(fillCommandFromCard(
-      "git rebase",
-      { commitId: "s14", branches: ["main"] },
-      "feature",
-      ["interactive-rebase"],
     )).toBeNull();
     expect(pickBranchReference(["main", "style"], "main")).toBe("style");
   });

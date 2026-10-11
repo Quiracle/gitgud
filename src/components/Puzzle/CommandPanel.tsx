@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { getCommandSuggestion, type GitAction } from "../../engine";
+import { getCommandSuggestion } from "../../engine";
 import type { CommandOutcome } from "../../hooks/usePuzzleSession";
 import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
@@ -19,7 +19,6 @@ interface CommandPanelProps {
   onCommand: (command: string) => CommandOutcome;
   command: string;
   onCommandChange: (command: string) => void;
-  allowedCommands: readonly GitAction["type"][];
   /** Incremented when a graph-card tap should return focus to the composer. */
   focusRequest?: number;
   /** Mobile: collapsed shows the latest line; expanded shows the full history. */
@@ -42,7 +41,6 @@ export function CommandPanel({
   onCommand,
   command,
   onCommandChange,
-  allowedCommands,
   focusRequest = 0,
   expanded,
   onToggle,
@@ -58,7 +56,7 @@ export function CommandPanel({
   const input = useRef<HTMLInputElement>(null);
   const showHistory = docked || expanded;
   const typed = entries.filter((entry) => entry.command).map((entry) => entry.command!);
-  const suggestion = disabled ? null : getCommandSuggestion(command, allowedCommands);
+  const suggestion = disabled ? null : getCommandSuggestion(command);
   const suggestionSuffix = suggestion?.slice(command.trimStart().length) ?? "";
 
   useEffect(() => {
