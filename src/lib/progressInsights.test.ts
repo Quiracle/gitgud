@@ -48,6 +48,15 @@ describe("daily streaks", () => {
     expect([...dailySolveDates(republished)]).toEqual(["2026-10-10"]);
   });
 
+  it("counts a solve on the puzzle's Barcelona day once Barcelona time applies", () => {
+    const lateNight = [
+      solve("daily-2026-10-21", "2026-10-20T22:30:00Z"), // 00:30 on the 21st in Barcelona
+      solve("daily-2026-10-21", "2026-10-21T22:30:00Z"), // already the 22nd in Barcelona
+    ];
+    expect([...dailySolveDates(lateNight)]).toEqual(["2026-10-21"]);
+    expect([...dailySolveDates([lateNight[1]])]).toEqual([]);
+  });
+
   it("keeps the streak alive until today ends", () => {
     const dates = dailySolveDates(completions);
     expect(currentStreak(dates, "2026-10-09")).toBe(3);

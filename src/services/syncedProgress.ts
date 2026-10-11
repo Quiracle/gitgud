@@ -78,7 +78,7 @@ export function parseSyncedDailySolves(rows: unknown): DailySolve[] {
       unknown
     >;
     if (typeof puzzleId !== "string" || typeof completedAt !== "string") return [];
-    // Postgres timestamps can carry an offset; streaks compare UTC calendar dates.
+    // Postgres timestamps can carry an offset; normalize them before streaks read their daily date.
     const time = Date.parse(completedAt);
     if (Number.isNaN(time)) return [];
     return [

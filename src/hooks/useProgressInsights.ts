@@ -8,8 +8,8 @@ import {
   recentDays,
   type DailySolve,
 } from "../lib/progressInsights";
+import { dailyDate } from "../lib/dailyDate";
 import { learnBasicsCatalog } from "../puzzles";
-import { utcDate } from "../services/dailyPuzzles";
 import { listSyncedDailySolves } from "../services/syncedProgress";
 import { calculateStats } from "../storage/progress";
 import { openProgressStore, PROGRESS_CHANGED } from "../storage/browserProgress";
@@ -51,7 +51,7 @@ export function useProgressInsights(days = 7) {
   }, [status, user?.id]);
 
   return useMemo(() => {
-    const today = utcDate();
+    const today = dailyDate();
     const dates = dailySolveDates([...completions, ...syncedSolves]);
     const lessonIds = learnBasicsCatalog.filter((lesson) => lesson.status === "available").map((lesson) => lesson.id);
     return {

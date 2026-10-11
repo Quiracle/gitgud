@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PublicPuzzleDefinition } from "../puzzles";
 import { t } from "../i18n/runtime";
-import { createDailyPuzzleSource, utcDate } from "../services/dailyPuzzles";
+import { dailyDate } from "../lib/dailyDate";
+import { createDailyPuzzleSource } from "../services/dailyPuzzles";
 
 export type DailyPuzzleState =
   | { status: "loading" }
@@ -9,7 +10,7 @@ export type DailyPuzzleState =
   | { status: "error"; message: string };
 
 /** Loads the shared official puzzle for the canonical UTC date. */
-export function useDailyPuzzle(date = utcDate()) {
+export function useDailyPuzzle(date = dailyDate()) {
   const [state, setState] = useState<DailyPuzzleState>({ status: "loading" });
 
   const load = useCallback(async () => {
