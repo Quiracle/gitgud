@@ -7,8 +7,13 @@ import {
 } from "./commandAssist";
 
 describe("command assistance", () => {
-  it("suggests globally supported commands and prioritises rebase for git r", () => {
-    expect(getCommandSuggestion("git r")).toBe("git rebase");
+  it("suggests a globally supported command only when the prefix is unambiguous", () => {
+    expect(getCommandSuggestion("git")).toBeNull();
+    expect(getCommandSuggestion("git ")).toBeNull();
+    expect(getCommandSuggestion("git r")).toBeNull();
+    expect(getCommandSuggestion("git re")).toBeNull();
+    expect(getCommandSuggestion("git reb")).toBe("git rebase");
+    expect(getCommandSuggestion("git rev")).toBe("git revert");
     expect(getCommandSuggestion("git ch")).toBe("git cherry-pick");
     expect(getCommandSuggestion("git unknown")).toBeNull();
   });

@@ -13,7 +13,7 @@ const commandCandidates = [
 /** Returns a complete supported command while the player is typing its command name. */
 export function getCommandSuggestion(input: string): string | null {
   const normalized = input.trimStart().toLowerCase();
-  if (!normalized || normalized === "git") return null;
+  if (!normalized || normalized.trimEnd() === "git") return null;
 
   if (normalized.startsWith("git merge -")) {
     return completionFor(normalized, "git merge --ff-only");
@@ -25,9 +25,8 @@ export function getCommandSuggestion(input: string): string | null {
   // Once a full command and its separating space are present, cards provide arguments.
   if (commandCandidates.some((candidate) => candidate === normalized)) return null;
   if (commandCandidates.some((candidate) => normalized === `${candidate} `)) return null;
-  return commandCandidates
-    .map((candidate) => completionFor(normalized, candidate))
-    .find(Boolean) ?? null;
+  const matches = commandCandidates.filter((candidate) => candidate.startsWith(normalized));
+  return matches.length === 1 ? matches[0] : null;
 }
 
 /** Identifies which kind of graph reference can complete the current command. */
