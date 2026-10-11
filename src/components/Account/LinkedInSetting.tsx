@@ -56,7 +56,7 @@ export function LinkedInSetting() {
           </p>
         </div>
         {(canConnect || connected) && (
-          <Button variant="outline" fullWidth={false} disabled={busy} onClick={connected ? disconnect : connect}>
+          <Button variant="outlineLight" fullWidth={false} disabled={busy} onClick={connected ? disconnect : connect}>
             {t(connected ? "account.linkedIn.disconnect" : "account.linkedIn.connect")}
           </Button>
         )}

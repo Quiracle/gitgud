@@ -183,6 +183,7 @@ export const es: Messages = {
   "profile.save": "Guardar",
   "profile.saving": "Guardando…",
   "profile.saved": "Guardado. Tu nuevo nombre ya aparece en la clasificación.",
+  "profile.info": "Sobre el nombre en la clasificación",
   "profile.help": "Se muestra en la clasificación en lugar de tu nombre completo.",
   "profile.saveFailed": "No se ha podido guardar tu nombre. Vuelve a intentarlo.",
   "profile.empty": "Elige un nombre de al menos un carácter.",

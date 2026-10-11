@@ -178,15 +178,15 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
 
           <div className="flex flex-col gap-4">
             <SectionTitle>{t("account.settings")}</SectionTitle>
+            {signedIn && user && <DisplayNameForm userId={user.id} fallback={user.displayName} />}
             <div className="flex items-center justify-between gap-4">
               <span className="text-paragraph text-grey-950">{t("common.language")}</span>
               <LanguagePicker />
             </div>
+            {signedIn && <LinkedInSetting />}
             <CookieSetting />
             {signedIn && user && (
               <>
-              <DisplayNameForm userId={user.id} fallback={user.displayName} />
-              <LinkedInSetting />
               <Button variant="outline" onClick={() => void signOut().then(() => onNavigate("/"))}>
                 {t("account.logOut")}
               </Button>
@@ -286,9 +286,14 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-2">
-      <label htmlFor="display-name" className="text-xs text-grey-700">
-        {t("profile.nameLabel")}
-      </label>
+      <div className="flex items-center gap-1">
+        <label htmlFor="display-name" className="text-xs text-grey-700">
+          {t("profile.nameLabel")}
+        </label>
+        <InfoTip id="display-name-help" label={t("profile.info")}>
+          {t("profile.help")}
+        </InfoTip>
+      </div>
       <div className="flex gap-2">
         <input
           id="display-name"
@@ -299,21 +304,66 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
             setState("idle");
           }}
           autoComplete="nickname"
+          aria-describedby="display-name-help"
           className="min-h-11 min-w-0 flex-1 rounded border border-grey-300 bg-grey-50 px-3 text-paragraph text-grey-950 outline-none transition-colors focus:border-lime-500 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-500"
         />
         <Button type="submit" fullWidth={false} className="shrink-0" disabled={unchanged || state === "saving"}>
           {state === "saving" ? t("profile.saving") : t("profile.save")}
         </Button>
       </div>
-      <motion.p
-        key={state}
-        className={`text-xs ${state === "error" ? "text-red-700" : "text-grey-600"}`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        aria-live="polite"
-      >
-        {state === "saved" ? t("profile.saved") : state === "error" ? error : t("profile.help")}
-      </motion.p>
+      <div aria-live="polite">
+        {(state === "saved" || state === "error") && (
+          <motion.p
+            key={state}
+            className={`text-xs ${state === "error" ? "text-red-700" : "text-grey-600"}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            {state === "saved" ? t("profile.saved") : error}
+          </motion.p>
+        )}
+      </div>
     </form>
+  );
+}
+
+/** An info icon that reveals help text on hover, focus, or tap. */
+function InfoTip({ id, label, children }: { id: string; label: string; children: string }) {
+  const [hovered, setHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const open = hovered || pinned;
+
+  return (
+    <span className="relative flex" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        aria-controls={id}
+        onClick={() => setPinned((value) => !value)}
+        onFocus={() => setPinned(true)}
+        onBlur={() => setPinned(false)}
+        onKeyDown={(event) => {
+          if (event.key !== "Escape") return;
+          setPinned(false);
+          setHovered(false);
+        }}
+        // A 44px hit area around the 16px glyph, pulled back so the row keeps its height.
+        className="-m-3.5 flex size-11 items-center justify-center text-grey-700 transition-colors hover:text-green-950"
+      >
+        <Icon name="info" size={16} />
+      </button>
+      <motion.span
+        id={id}
+        role="tooltip"
+        className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[220px] rounded bg-green-950 px-3 py-2 text-xs text-grey-50"
+        style={{ x: "-50%" }}
+        initial={false}
+        animate={open ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
+        transition={spring.soft}
+      >
+        {children}
+      </motion.span>
+    </span>
   );
 }

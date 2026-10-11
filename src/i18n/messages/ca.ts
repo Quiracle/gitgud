@@ -183,6 +183,7 @@ export const ca: Messages = {
   "profile.save": "Desa",
   "profile.saving": "Desant…",
   "profile.saved": "Desat. El teu nom nou ja surt a la classificació.",
+  "profile.info": "Sobre el nom a la classificació",
   "profile.help": "Es mostra a la classificació en lloc del teu nom complet.",
   "profile.saveFailed": "No s'ha pogut desar el teu nom. Torna-ho a provar.",
   "profile.empty": "Tria un nom d'almenys un caràcter.",
