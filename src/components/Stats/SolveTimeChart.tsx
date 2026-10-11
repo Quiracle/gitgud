@@ -4,7 +4,7 @@ import { formatDuration } from "../../lib/format";
 import { spring } from "../../lib/motion";
 import { chartSquares, chartStep, type DailyTime } from "../../lib/progressInsights";
 
-const ROWS = 8;
+const ROWS = 6;
 
 interface SolveTimeChartProps {
   /** Oldest first; the last entry is today. */
@@ -21,7 +21,7 @@ export function SolveTimeChart({ days }: SolveTimeChartProps) {
 
   return (
     <figure className="flex flex-col gap-2">
-      <div className="rounded bg-grey-300 px-4 pb-3 pt-4 sm:px-5">
+      <div className="rounded bg-grey-900 px-4 pb-3 pt-4 sm:px-5">
         <ol className="grid grid-cols-10 gap-1" aria-label={t("stats.chartLabel", { count: days.length })}>
           {days.map((day, column) => {
             const filled = day.elapsedMs === undefined ? 0 : chartSquares(day.elapsedMs, step, ROWS);
@@ -37,10 +37,10 @@ export function SolveTimeChart({ days }: SolveTimeChartProps) {
                 {/* Bottom-up, so the stack grows from the baseline. */}
                 <div className="flex flex-col-reverse gap-1" aria-hidden>
                   {Array.from({ length: ROWS }, (_, row) => (
-                    <div key={row} className="relative aspect-square rounded border border-grey-400">
+                    <div key={row} className="relative aspect-square rounded border border-grey-700">
                       {row < filled && (
                         <motion.div
-                          className="absolute -inset-px rounded bg-lime-700"
+                          className="absolute -inset-px rounded bg-lime-500"
                           initial={{ scale: 0, opacity: 0 }}
                           whileInView={{ scale: 1, opacity: 1 }}
                           viewport={{ once: true }}
@@ -50,7 +50,7 @@ export function SolveTimeChart({ days }: SolveTimeChartProps) {
                     </div>
                   ))}
                 </div>
-                <span className="mt-1 truncate text-center text-2xs text-green-950" aria-hidden>
+                <span className="mt-1 truncate text-center text-2xs text-grey-300" aria-hidden>
                   {formatDate(noon, { weekday: "narrow", timeZone: "UTC" })}
                 </span>
               </li>
