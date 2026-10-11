@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createDailyFixture } from "../puzzles/dailyFixture";
 import { parsePublicPuzzleDefinition } from "../puzzles/schema";
-import { FixtureDailyPuzzleSource, SupabaseDailyPuzzleSource, utcDate } from "./dailyPuzzles";
+import { FixtureDailyPuzzleSource, SupabaseDailyPuzzleSource } from "./dailyPuzzles";
 
 describe("daily puzzle delivery", () => {
   it("loads the requested canonical fixture date", async () => {
@@ -60,10 +60,6 @@ describe("daily puzzle delivery", () => {
     expect(puzzle.id).toBe("daily-2026-10-10");
     expect(puzzle.parCommands).toBeUndefined();
     vi.unstubAllGlobals();
-  });
-
-  it("derives dates in UTC", () => {
-    expect(utcDate(new Date("2026-10-10T23:59:59-07:00"))).toBe("2026-10-11");
   });
 
   it("rejects a public definition that leaks the private solution", () => {

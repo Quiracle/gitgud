@@ -47,7 +47,7 @@ Deno.serve(async (request) => {
     }
     if (body.mode && body.mode !== "generate") return response({ error: "Unknown mode." }, 400);
 
-    const date = body.date ?? tomorrowUtcDate();
+    const date = body.date ?? tomorrowDailyDate();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return response({ error: "date must use YYYY-MM-DD." }, 400);
 
     const existing = await supabase.from("daily_puzzles").select("id,difficulty").eq("published_on", date).eq("is_current", true).maybeSingle();
@@ -361,8 +361,15 @@ function readConfig() {
   };
 }
 
-function tomorrowUtcDate() {
-  const date = new Date();
+/** Tomorrow on the official daily calendar, which turns over at midnight in Barcelona. */
+function tomorrowDailyDate() {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const date = new Date(`${today}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);
 }

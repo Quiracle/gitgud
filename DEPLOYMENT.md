@@ -115,10 +115,10 @@ The helper preserves every successful fallback and can safely be run again if th
 Generate today's puzzle manually as a smoke test:
 
 ```powershell
-$todayUtc = [DateTime]::UtcNow.ToString("yyyy-MM-dd")
+$todayBarcelona = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, "Romance Standard Time").ToString("yyyy-MM-dd")
 $headers = @{ "x-generation-secret" = $generationSecret; "Content-Type" = "application/json" }
 $url = "https://$projectRef.supabase.co/functions/v1/generate-daily-puzzle"
-$body = @{ mode = "generate"; date = $todayUtc } | ConvertTo-Json
+$body = @{ mode = "generate"; date = $todayBarcelona } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
 ```
 
@@ -128,8 +128,10 @@ In **Supabase → Table Editor → daily_puzzles**, confirm there is one row and
 
 Open [supabase/schedule.sql.example](supabase/schedule.sql.example), replace both placeholders, and paste it into **Supabase → SQL Editor**.
 
-- At `23:45 UTC`, the primary job generates tomorrow's puzzle.
-- At `00:05 UTC`, the recovery job requests today's date. The idempotent database constraints make it a no-op when the primary job succeeded.
+- At `23:45` Barcelona time, the primary job generates tomorrow's puzzle.
+- At `00:05` Barcelona time, the recovery job requests today's date. The idempotent database constraints make it a no-op when the primary job succeeded.
+
+Daily dates follow Barcelona (`Europe/Madrid`). `pg_cron` runs in UTC, so each job fires at both possible UTC hours and only posts during the intended Barcelona hour; this keeps working across summer and winter time.
 
 Keep the value stored in Vault identical to the `DAILY_GENERATION_SECRET` Edge Function secret.
 
@@ -156,7 +158,7 @@ Find the publishable key under **Supabase → Project Settings → API Keys**. T
 
 The project owner should verify these in the deployed UI:
 
-- `/play` loads the row for today's UTC date.
+- `/play` loads the row for today's date in Barcelona.
 - Refreshing `/play` returns the same ID, version, difficulty, and puzzle.
 - Restart resets repository state while the original timer continues.
 - The course routes still load.
@@ -173,6 +175,6 @@ Operational checks in Supabase:
 
 ## Emergency recovery
 
-If a daily is missing, invoke `generate` manually with that UTC date using the PowerShell command above. Repeated calls are safe: once a puzzle exists, the function returns `already-published` and does not replace it.
+If a daily is missing, invoke `generate` manually with that date (Barcelona calendar) using the PowerShell command above. Repeated calls are safe: once a puzzle exists, the function returns `already-published` and does not replace it.
 
 If OpenAI is unavailable, a ready fallback pool still publishes a validated puzzle. Already-published puzzles continue working even when OpenAI or the scheduled function is down.

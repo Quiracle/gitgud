@@ -3,7 +3,7 @@ import type { PuzzleDifficulty } from "../puzzles/types";
 import { formatDuration } from "./format";
 
 export interface ShareSummary {
-  /** Canonical UTC date of the daily puzzle, YYYY-MM-DD. */
+  /** Canonical date of the daily puzzle, YYYY-MM-DD. */
   publishedOn: string;
   difficulty: PuzzleDifficulty;
   elapsedMs: number;

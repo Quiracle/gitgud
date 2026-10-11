@@ -68,10 +68,6 @@ export function createDailyPuzzleSource(): DailyPuzzleSource {
   return new SupabaseDailyPuzzleSource(requireSupabaseClient());
 }
 
-export function utcDate(now = new Date()) {
-  return now.toISOString().slice(0, 10);
-}
-
 function readCache(date: string): PublicPuzzleDefinition | undefined {
   try {
     const value = window.localStorage.getItem(`${CACHE_PREFIX}${date}`);
