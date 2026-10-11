@@ -155,7 +155,7 @@ export const ca: LegalDocument = {
           head: ["Galeta", "Finalitat", "Conservació"],
           rows: [
             ["_ga", "Google Analytics: distingeix les visites amb un ID aleatori", "2 anys"],
-            ["_ga_BFBC4GRELH", "Google Analytics: manté l'estat de la teva visita", "2 anys"],
+            ["_ga_528GL04RST", "Google Analytics: manté l'estat de la teva visita", "2 anys"],
           ],
         },
         {

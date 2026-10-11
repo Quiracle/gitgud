@@ -1,5 +1,5 @@
 /** Google Analytics 4 property. Public by design: it ships in every page view. */
-export const GA_MEASUREMENT_ID = "G-BFBC4GRELH";
+export const GA_MEASUREMENT_ID = "G-528GL04RST";
 
 type Gtag = (...args: unknown[]) => void;
 
