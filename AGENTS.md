@@ -36,6 +36,12 @@ Do not implement daily or archive puzzles as command-sequence quizzes.
 
 Learn Basics puzzles may require the lesson's featured command, but should still validate the resulting state and relevant provenance rather than exact keystrokes or a full fixed sequence.
 
+### Puzzle policy boundary
+
+- Official daily puzzles, including archive entries, allow every supported simulator command. They win only when the exact target snapshot is on `main` and `main` is checked out. Legacy daily provenance, branch-position, action, and intended-solution metadata is advisory only.
+- Learn Basics and generated guided practice use their authored command allowlists and retain their authored state, action, and history requirements.
+- Daily `parCommands` is an optional advisory count derived from the private proof through its first win. It is not a minimum, scoring input, command limit, or completion requirement.
+
 ---
 
 ## Product scope and priority
@@ -238,7 +244,7 @@ interface PuzzleDefinition {
   slug: string;
   title: string;
   description: string;
-  publishedOn?: string; // YYYY-MM-DD in UTC for daily puzzles
+  publishedOn?: string; // YYYY-MM-DD canonical daily date (Barcelona time) for daily puzzles
   initialRepository: Repository;
   target: PuzzleTarget;
   allowedCommands: SupportedCommand[];
@@ -254,7 +260,7 @@ Rules:
 - The archive lists every published challenge by date and shows completion status and the user's best result when available.
 - Users may open and replay previous challenges.
 - Replaying never deletes an earlier completion or best score.
-- Daily challenge selection uses a shared canonical date, preferably UTC, so every player receives the same puzzle and difficulty.
+- Daily challenge selection uses a shared canonical date so every player receives the same puzzle and difficulty. Days turn over at midnight in Barcelona (`Europe/Madrid`); days before 2026-10-13 ended at UTC midnight. `src/lib/dailyDate.ts` owns this rule.
 - Lessons are bundled static data. Accepted daily definitions are persisted in Supabase and cached locally after publication.
 - The daily archive reads the immutable published definitions; it never asks the AI provider to regenerate an old date.
 
@@ -264,7 +270,7 @@ Rules:
 
 AI generation of the official daily puzzle is a **required core feature**.
 
-Exactly one official puzzle is published for each canonical UTC date. Every player receives the same stored puzzle, difficulty, validation target, and leaderboard for that date.
+Exactly one official puzzle is published for each canonical date. Every player receives the same stored puzzle, difficulty, validation target, and leaderboard for that date.
 
 ### Difficulty selection
 
@@ -287,13 +293,13 @@ Difficulty affects puzzle complexity, not which users may play it. The home scre
 ### Daily generation and publication flow
 
 ```text
-Scheduled daily job, before the new UTC day
+Scheduled daily job, before the new day in Barcelona
   -> choose and persist easy, medium, or hard
   -> Supabase Edge Function
        -> send difficulty and supported-engine constraints to AI generation API
        -> request strict structured JSON
        -> validate schema, safety, graph, commands, and solvability
-       -> persist the immutable accepted definition for that UTC date
+       -> persist the immutable accepted definition for that date
   -> publish it as the official daily puzzle
   -> serve the same stored definition to every client
 ```
@@ -344,8 +350,8 @@ Use the same engine and final-state validator as hand-authored puzzles. Do not c
 
 ### Publication, archive, and ranking
 
-- Persist every accepted daily puzzle with its UTC date, difficulty, schema version, definition, prompt version, generation time, and validation result.
-- Enforce one published daily puzzle per UTC date with a database uniqueness constraint.
+- Persist every accepted daily puzzle with its canonical date, difficulty, schema version, definition, prompt version, generation time, and validation result.
+- Enforce one published daily puzzle per canonical date with a database uniqueness constraint.
 - Add the published puzzle to the archive immediately and retain it permanently.
 - Use its stable puzzle ID and version for progress, streaks, achievements, sharing, and leaderboard entries.
 - The official daily puzzle is leaderboard-eligible because every player solves the same immutable definition.
@@ -509,7 +515,7 @@ Friends rankings use the same daily score but filter to accepted friends. Suppor
 ### Daily streak
 
 - Show the signed-in user's current streak on the home screen.
-- A day counts only when its official puzzle is completed during that puzzle's canonical UTC date.
+- A day counts only when its official puzzle is completed during that puzzle's canonical date.
 - Replaying an archived puzzle does not retroactively extend a streak.
 - Completing the same daily puzzle more than once counts once.
 - Calculate streaks from durable completion dates rather than incrementing an unverified client counter.
@@ -964,14 +970,14 @@ At minimum, test:
 - Archive lookup by stable ID, version, and date.
 - Daily-candidate schema rejection for malformed, oversized, cyclic, unsupported, or unsafe responses.
 - Hidden solution replay proving an AI candidate is solvable with the normal engine.
-- Difficulty is selected once per UTC date, persisted, and never rerolled by retries or refreshes.
-- Only one immutable official puzzle can be published for a UTC date, including under concurrent jobs.
+- Difficulty is selected once per canonical date, persisted, and never rerolled by retries or refreshes.
+- Only one immutable official puzzle can be published for a canonical date, including under concurrent jobs.
 - Every client receives the same stored puzzle ID, version, and difficulty for a date.
 - Failed generation uses a validated AI fallback of the already-selected difficulty.
 - AI-guided user input remains plain data and never changes the generation contract if that lower-priority feature is enabled.
 - localStorage schema migration and guest-to-account progress merge.
 - Leaderboard best-score comparison and tie breakers.
-- UTC streak calculation, archive replays not changing streaks, and idempotent achievement awards.
+- Canonical-date streak calculation, archive replays not changing streaks, and idempotent achievement awards.
 - Friend invite acceptance and friends-only leaderboard filtering.
 - Account deletion authorization and cleanup/anonymization behavior.
 - LinkedIn posting never happens without an explicit request, tokens never reach the browser, OAuth states are single use and user bound, and failures fall back to copy and download.
@@ -982,6 +988,18 @@ Do not make network access a requirement for engine tests.
 ### UI verification ownership
 
 The human user performs all UI verification. AI models and coding agents must not run browser-based, interactive, visual, screenshot, component-UI, or end-to-end UI checks for this project. They may run non-UI unit and integration tests, static analysis, and production builds. When a change affects the interface, report that UI verification remains for the user instead of claiming visual correctness.
+
+---
+
+## Development workflow
+
+Every push to `main` deploys production through Vercel's Git integration. Never develop directly on `main`.
+
+- Do all work, by humans or agents, on a dedicated branch per feature or fix, created from an up-to-date `origin/main`. Name it by intent, for example `feat/<topic>`, `fix/<topic>`, `ui/<topic>`, or `chore/<topic>`.
+- Commit on that branch. Before integrating, fetch and merge (or rebase onto) the latest `origin/main`, resolve conflicts, and run the tests, `tsc -b`, and the production build on the merged result.
+- Integrate into `main` only from a branch that passes those checks, through a pull request or a merge the user has approved. Do not commit to, rebase, or force-push `main` directly.
+- Keep one concern per branch. Do not mix unrelated deploy or configuration changes into a feature branch.
+- Supabase migrations and Edge Functions deploy separately from the Vercel frontend. A client change that depends on a new column, RPC, or function must keep working until that backend change is applied, or its rollout order must be stated explicitly in the change.
 
 ---
 
@@ -997,7 +1015,7 @@ The hackathon MVP met these, and every release must keep meeting them:
 - Today's challenge and previous published challenges are accessible.
 - Refreshing does not erase guest progress or a signed-in user's active attempt.
 - Google and GitHub sign-in sync completed progress.
-- A scheduled server process selects one of `easy`, `medium`, or `hard` and publishes one AI-generated official puzzle for each UTC date.
+- A scheduled server process selects one of `easy`, `medium`, or `hard` and publishes one AI-generated official puzzle for each canonical date.
 - Every published daily puzzle is schema-valid and demonstrably solvable with the normal engine before it becomes playable.
 - Every player receives the same immutable daily puzzle and difficulty, and previous generated daily puzzles remain in the archive.
 - No AI provider or LinkedIn secret is present in the browser bundle or client environment.

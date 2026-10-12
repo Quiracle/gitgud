@@ -47,7 +47,7 @@ Deno.serve(async (request) => {
     }
     if (body.mode && body.mode !== "generate") return response({ error: "Unknown mode." }, 400);
 
-    const date = body.date ?? tomorrowUtcDate();
+    const date = body.date ?? tomorrowDailyDate();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return response({ error: "date must use YYYY-MM-DD." }, 400);
 
     const existing = await supabase.from("daily_puzzles").select("id,difficulty").eq("published_on", date).eq("is_current", true).maybeSingle();
@@ -96,8 +96,14 @@ Deno.serve(async (request) => {
         const candidate = materializeCandidate(draft, date, brief);
         const validation = validateCandidateAgainstBrief(candidate, brief);
         if (validation.ok) {
+          const validated = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+          if (!validated.ok) {
+            countValidationIssues(failureCategories, validated.issues);
+            previousIssues = validated.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);
+            continue;
+          }
           await recordFailureCategories(supabase, run.data.id, failureCategories);
-          return await publish(supabase, run.data.id, candidate, "validated");
+          return await publish(supabase, run.data.id, validated.value, "validated");
         }
         countValidationIssues(failureCategories, validation.issues);
         previousIssues = validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);
@@ -117,8 +123,11 @@ Deno.serve(async (request) => {
     if (fallback.error) throw fallback.error;
 
     if (fallback.data) {
+      // Older pool entries may carry history requirements; daily wins are state-only on main.
+      const { actionRequirements: _legacyActions, ...pooled } = fallback.data.candidate;
       const candidate = {
-        ...fallback.data.candidate,
+        ...pooled,
+        target: { branch: "main", snapshot: pooled.target?.snapshot },
         id: `daily-${date}`,
         slug: `daily-${date}`,
         version: 1,
@@ -132,7 +141,7 @@ Deno.serve(async (request) => {
           use_count: fallback.data.use_count + 1,
           last_used_at: new Date().toISOString(),
         }).eq("id", fallback.data.id);
-        return await publish(supabase, run.data.id, candidate, "fallback");
+        return await publish(supabase, run.data.id, validation.value, "fallback");
       }
       previousIssues = validation.issues.slice(0, 12).map((issue: { path: string; message: string }) => `${issue.path}: ${issue.message}`);
     }
@@ -150,8 +159,9 @@ Deno.serve(async (request) => {
   }
 });
 
-async function publish(supabase: any, runId: string, candidate: any, status: "validated" | "fallback") {
-  const { solutionCommands, ...definition } = candidate;
+async function publish(supabase: any, runId: string, validated: any, status: "validated" | "fallback") {
+  const definition = validated.puzzle;
+  const solutionCommands = validated.privateMetadata.solutionCommands;
   const published = await supabase.rpc("publish_daily_puzzle", {
     target_run_id: runId,
     target_definition: definition,
@@ -351,8 +361,15 @@ function readConfig() {
   };
 }
 
-function tomorrowUtcDate() {
-  const date = new Date();
+/** Tomorrow on the official daily calendar, which turns over at midnight in Barcelona. */
+function tomorrowDailyDate() {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Madrid",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  const date = new Date(`${today}T00:00:00Z`);
   date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);
 }

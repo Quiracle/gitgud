@@ -23,6 +23,8 @@ import {
 } from "./policy";
 import { parsePuzzleCandidate } from "./schema";
 import { validatePuzzleCompletion } from "./completion";
+import { deriveParCommands } from "./par";
+import { resolvePuzzleRules } from "./rules";
 import type {
   JsonValue,
   PuzzleCandidate,
@@ -67,12 +69,9 @@ export function validatePuzzleCandidate(
 
   // Structural validation above makes the established engine safe to use as the sole source
   // of Git behavior and victory rules.
-  const initialValidation = validatePuzzleCompletion(
-    candidate.initialRepository,
-    candidate.target,
-    [],
-    candidate.actionRequirements,
-  );
+  validateDailyPolicy(candidate, issues);
+  if (issues.length > 0) return { ok: false, issues };
+  const initialValidation = validatePuzzleCompletion(candidate, candidate.initialRepository, []);
   if (initialValidation.solved) {
     add(issues, "target.initially-solved", "The initial repository already satisfies the target.", "$.initialRepository");
   } else {
@@ -82,10 +81,23 @@ export function validatePuzzleCandidate(
   if (issues.length > 0) return { ok: false, issues };
 
   const { solutionCommands, ...puzzle } = candidate;
+  const parCommands = candidate.kind === "daily" ? deriveParCommands(candidate, solutionCommands) : undefined;
+  if (candidate.kind === "daily" && parCommands === undefined) {
+    add(issues, "solution.no-winning-state", "The daily proof never reaches a winning state.", "$.solutionCommands");
+    return { ok: false, issues };
+  }
   return {
     ok: true,
     value: {
-      puzzle,
+      puzzle: {
+        ...puzzle,
+        ...(candidate.kind === "daily" ? {
+          allowedCommands: [...resolvePuzzleRules(candidate).allowedCommands],
+          target: { branch: "main", snapshot: candidate.target.snapshot },
+          actionRequirements: undefined,
+          parCommands,
+        } : {}),
+      },
       privateMetadata: { solutionCommands: [...solutionCommands] },
     },
   };
@@ -137,6 +149,17 @@ function validateText(candidate: PuzzleCandidate, limits: PuzzleLimits, issues: 
   boundedStrings(candidate.hints, limits.maxHints, limits.maxHintLength, "$.hints", issues, "content.hints-too-large");
   boundedStrings(candidate.objectives ?? [], limits.maxObjectives, limits.maxObjectiveLength, "$.objectives", issues, "content.objectives-too-large");
   boundedStrings(candidate.solutionCommands, limits.maxSolutionCommands, limits.maxSolutionCommandLength, "$.solutionCommands", issues, "content.solution-too-large");
+}
+
+function validateDailyPolicy(candidate: PuzzleCandidate, issues: ValidationIssue[]) {
+  if (candidate.kind !== "daily") return;
+  if (candidate.target.branch !== "main") add(issues, "daily.target-branch", "Daily puzzles must finish on main.", "$.target.branch");
+  if (Object.keys(candidate.target.branchHeads ?? {}).length > 0) add(issues, "daily.branch-heads", "Daily puzzles cannot require branch positions.", "$.target.branchHeads");
+  if ((candidate.target.requiredProvenance ?? []).length > 0) add(issues, "daily.provenance", "Daily puzzles cannot require history provenance.", "$.target.requiredProvenance");
+  if ((candidate.actionRequirements ?? []).length > 0) add(issues, "daily.action-requirements", "Daily puzzles cannot require specific actions.", "$.actionRequirements");
+  if (candidate.parCommands !== undefined && (!Number.isInteger(candidate.parCommands) || candidate.parCommands < 0)) {
+    add(issues, "daily.invalid-par", "parCommands must be a non-negative integer.", "$.parCommands");
+  }
 }
 
 function validateRepositoryStructure(repository: Repository, limits: PuzzleLimits, issues: ValidationIssue[]) {
@@ -280,7 +303,7 @@ function replaySolution(candidate: PuzzleCandidate, policy: SemanticPolicy, issu
       add(issues, "solution.parse-failed", parsed.error, path);
       return;
     }
-    if (!candidate.allowedCommands.includes(parsed.action.type as SupportedCommand)) {
+    if (!resolvePuzzleRules(candidate).allowedCommands.includes(parsed.action.type as SupportedCommand)) {
       add(issues, "solution.disallowed-command", `Solution command uses '${parsed.action.type}', which is not allowed by this puzzle.`, path);
       return;
     }
@@ -295,12 +318,7 @@ function replaySolution(candidate: PuzzleCandidate, policy: SemanticPolicy, issu
     validatePolicyState(getSnapshot(repository, repository.head), policy, `$.solutionCommands[${index}]`, issues);
   });
   if (issues.some((item) => item.path.startsWith("$.solutionCommands"))) return;
-  const validation = validatePuzzleCompletion(
-    repository,
-    candidate.target,
-    actions,
-    candidate.actionRequirements,
-  );
+  const validation = validatePuzzleCompletion(candidate, repository, actions);
   if (!validation.solved) add(issues, "solution.target-not-met", validation.unmet.join(" "), "$.solutionCommands");
 }
 

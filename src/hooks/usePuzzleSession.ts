@@ -13,7 +13,11 @@ import {
   type RebaseTodoItem,
   type Repository,
 } from "../engine";
-import { validatePuzzleCompletion, type PublicPuzzleDefinition } from "../puzzles";
+import {
+  isPuzzleActionAllowed,
+  validatePuzzleCompletion,
+  type PublicPuzzleDefinition,
+} from "../puzzles";
 import { claimDailyCompletion, startDailyAttempt, submitDailyResult } from "../services/leaderboard";
 import { openProgressStore } from "../storage/browserProgress";
 import { bankedActiveMs, type CompletionRecord, type LocalProgressStore, type StoredAttempt } from "../storage/progress";
@@ -54,7 +58,15 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
       return { store, attempt, restored, solved };
     }
     const attempt = store.start(puzzle);
-    return { store, attempt, restored: restoreRun(puzzle, attempt), solved: undefined };
+    const restored = restoreRun(puzzle, attempt);
+    // A saved daily can meet the corrected state-only rule after an upgrade.
+    // Complete it once using its accumulated active time, without touching prior results.
+    if (puzzle.kind === "daily" && validatePuzzleCompletion(puzzle, restored.repository, restored.actions).solved) {
+      const solved = store.complete(attempt, false, bankedActiveMs(attempt));
+      restored.entries.push({ id: restored.entries.length, lines: [i18n.t("terminal.solved")], tone: "success" });
+      return { store, attempt, restored, solved };
+    }
+    return { store, attempt, restored, solved: undefined };
   });
   const store: LocalProgressStore = boot.store;
 
@@ -123,7 +135,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
   const elapsedMs = useCallback(() => completion?.elapsedMs ?? activeMs(), [activeMs, completion]);
 
   const validation = useMemo(
-    () => validatePuzzleCompletion(repository, puzzle.target, actions, puzzle.actionRequirements),
+    () => validatePuzzleCompletion(puzzle, repository, actions),
     [actions, puzzle, repository],
   );
 
@@ -191,8 +203,18 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
   const runCommand = useCallback(
     (command: string): CommandOutcome => {
       if (locked) return { ok: false, mutated: false, solved: true };
-      // Every puzzle accepts every simulated command; victory is judged on the final state.
       const parsed = parseGitCommand(command);
+      if (parsed.ok && !isPuzzleActionAllowed(puzzle, parsed.action)) {
+        const output = i18n.t("terminal.commandNotAllowed", { command: parsed.action.type });
+        const nextAttempt = store.recordCommand(
+          attempt,
+          { command, elapsedMs: activeMs(), ok: false, output },
+          false,
+        );
+        record({ command, lines: [output], tone: "error" });
+        setAttempt(nextAttempt);
+        return { ok: false, mutated: false, solved: false };
+      }
 
       // An interactive rebase with commits to edit opens the todo dialog first.
       if (parsed.ok && parsed.action.type === "interactive-rebase" && !parsed.action.todo) {
@@ -206,7 +228,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
       const result = executeCommand(repository, command);
       const nextActions = result.ok ? [...actions, result.action] : actions;
       const next = result.ok
-        ? validatePuzzleCompletion(result.repository, puzzle.target, nextActions, puzzle.actionRequirements)
+        ? validatePuzzleCompletion(puzzle, result.repository, nextActions)
         : validation;
       const solved = result.ok && next.solved;
 
@@ -216,11 +238,11 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
         result.ok,
       );
       record({ command, lines: result.output, tone: result.ok ? "normal" : "error" });
-      // The state can look finished while history goals are still open: say which ones.
+      // Lessons can intentionally keep teaching/history goals open after their snapshot matches.
       if (result.ok && result.mutated && !solved && next.checks.find((check) => check.id === "snapshot")?.met) {
         const open = next.checks.filter((check) => !check.met).map((check) => `  - ${goalLabel(check, i18n)}`);
         record({
-          lines: [i18n.t("terminal.historyOpen"), ...open, i18n.t("terminal.tapGoal")],
+          lines: [i18n.t("terminal.requirementsOpen"), ...open, i18n.t("terminal.tapGoal")],
           tone: "info",
         });
       }
@@ -345,7 +367,11 @@ function attemptFromCompletion(done: CompletionRecord): StoredAttempt {
   };
 }
 
-/** Rebuilds a saved run by replaying its commands through the engine. */
+/**
+ * Rebuilds a saved run by replaying its commands through the engine. Commands rejected by
+ * the puzzle's allowlist are never saved as replayable, so saved commands are replayed as-is:
+ * runs saved before a lesson allowlist was enforced must restore the same tree.
+ */
 function restoreRun(puzzle: PublicPuzzleDefinition, attempt: StoredAttempt) {
   let repository = structuredClone(puzzle.initialRepository);
   const actions: GitAction[] = [];

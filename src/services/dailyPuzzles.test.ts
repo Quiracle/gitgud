@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createDailyFixture } from "../puzzles/dailyFixture";
 import { parsePublicPuzzleDefinition } from "../puzzles/schema";
-import { FixtureDailyPuzzleSource, SupabaseDailyPuzzleSource, utcDate } from "./dailyPuzzles";
+import { FixtureDailyPuzzleSource, SupabaseDailyPuzzleSource } from "./dailyPuzzles";
 
 describe("daily puzzle delivery", () => {
   it("loads the requested canonical fixture date", async () => {
@@ -36,8 +36,30 @@ describe("daily puzzle delivery", () => {
     vi.unstubAllGlobals();
   });
 
-  it("derives dates in UTC", () => {
-    expect(utcDate(new Date("2026-10-10T23:59:59-07:00"))).toBe("2026-10-11");
+  it("merges par metadata and still loads when the par column is missing", async () => {
+    vi.stubGlobal("window", { localStorage: { getItem: () => null, setItem: () => undefined } });
+    const definition = { ...createDailyFixture("2026-10-10") } as Record<string, unknown>;
+    delete definition.parCommands;
+    let columns = "";
+    let hasParColumn = true;
+    const query = {
+      select: (selected: string) => ((columns = selected), query),
+      eq: () => query,
+      maybeSingle: async () =>
+        columns.includes("par_commands")
+          ? hasParColumn
+            ? { data: { definition, par_commands: 3 }, error: null }
+            : { data: null, error: { code: "42703", message: "column daily_puzzles.par_commands does not exist" } }
+          : { data: { definition }, error: null },
+    };
+    const source = new SupabaseDailyPuzzleSource({ from: () => query } as never);
+
+    expect((await source.getByDate("2026-10-10")).parCommands).toBe(3);
+    hasParColumn = false;
+    const puzzle = await source.getByDate("2026-10-10");
+    expect(puzzle.id).toBe("daily-2026-10-10");
+    expect(puzzle.parCommands).toBeUndefined();
+    vi.unstubAllGlobals();
   });
 
   it("rejects a public definition that leaks the private solution", () => {

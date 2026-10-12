@@ -1,3 +1,5 @@
+import type { GitAction } from "./types";
+
 export type CommandReferenceKind = "branch" | "commit";
 
 const commandCandidates = [
@@ -11,22 +13,34 @@ const commandCandidates = [
 ] as const;
 
 /** Returns a complete supported command while the player is typing its command name. */
-export function getCommandSuggestion(input: string): string | null {
+export function getCommandSuggestion(input: string, allowedCommands?: readonly GitAction["type"][]): string | null {
   const normalized = input.trimStart().toLowerCase();
   if (!normalized || normalized.trimEnd() === "git") return null;
 
-  if (normalized.startsWith("git merge -")) {
+  const candidates = allowedCommands
+    ? commandCandidates.filter((candidate) => allowedCommands.includes(commandType(candidate)))
+    : commandCandidates;
+  if (normalized.startsWith("git merge -") && allowedCommands?.includes("merge") !== false) {
     return completionFor(normalized, "git merge --ff-only");
   }
-  if (normalized.startsWith("git rebase -")) {
+  if (normalized.startsWith("git rebase -") && allowedCommands?.includes("interactive-rebase") !== false) {
     return completionFor(normalized, "git rebase -i");
   }
 
   // Once a full command and its separating space are present, cards provide arguments.
-  if (commandCandidates.some((candidate) => candidate === normalized)) return null;
-  if (commandCandidates.some((candidate) => normalized === `${candidate} `)) return null;
-  const matches = commandCandidates.filter((candidate) => candidate.startsWith(normalized));
+  if (candidates.some((candidate) => candidate === normalized)) return null;
+  if (candidates.some((candidate) => normalized === `${candidate} `)) return null;
+  const matches = candidates.filter((candidate) => candidate.startsWith(normalized));
   return matches.length === 1 ? matches[0] : null;
+}
+
+function commandType(command: typeof commandCandidates[number]): GitAction["type"] {
+  if (command === "git switch") return "switch";
+  if (command === "git log") return "log";
+  if (command === "git merge") return "merge";
+  if (command === "git cherry-pick") return "cherry-pick";
+  if (command === "git rebase") return "rebase";
+  return "revert";
 }
 
 /** Identifies which kind of graph reference can complete the current command. */

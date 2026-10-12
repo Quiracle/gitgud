@@ -1,18 +1,19 @@
 import type { CompletionRecord } from "../storage/progress";
+import { dailyDate } from "./dailyDate";
 
 /** The parts of a solve that streaks and the solve-time graph need; synced solves carry only these. */
 export type DailySolve = Pick<CompletionRecord, "kind" | "puzzleId" | "completedAt"> &
   Partial<Pick<CompletionRecord, "elapsedMs" | "assisted">>;
 
-/** UTC date (YYYY-MM-DD) of each official daily solved on its own day. */
+/** Date (YYYY-MM-DD) of each official daily solved on its own day. */
 export function dailySolveDates(completions: readonly DailySolve[]): Set<string> {
   const dates = new Set<string>();
   for (const completion of completions) {
     if (completion.kind !== "daily") continue;
     // Corrected republications get a version suffix: daily-2026-10-10-v2.
     const puzzleDate = /^daily-(\d{4}-\d{2}-\d{2})(?:-v\d+)?$/.exec(completion.puzzleId)?.[1];
-    // Archive replays don't count: the solve must happen on the puzzle's UTC date.
-    if (puzzleDate && completion.completedAt.slice(0, 10) === puzzleDate) dates.add(puzzleDate);
+    // Archive replays don't count: the solve must happen on the puzzle's own day.
+    if (puzzleDate && dailyDate(completion.completedAt) === puzzleDate) dates.add(puzzleDate);
   }
   return dates;
 }
@@ -46,14 +47,14 @@ export interface DailyTime {
 }
 
 /**
- * Best daily solve time on each of the last `count` UTC days, oldest first, ending today. A
+ * Best daily solve time on each of the last `count` days, oldest first, ending today. A
  * solve lands on the day it was played, so an archive replay shows up today, not on its date.
  */
 export function recentDailyTimes(solves: readonly DailySolve[], today: string, count: number): DailyTime[] {
   const best = new Map<string, number>();
   for (const completion of solves) {
     if (completion.kind !== "daily" || completion.assisted || completion.elapsedMs === undefined) continue;
-    const date = completion.completedAt.slice(0, 10);
+    const date = dailyDate(completion.completedAt);
     best.set(date, Math.min(best.get(date) ?? Infinity, completion.elapsedMs));
   }
   return Array.from({ length: count }, (_, index) => {
@@ -136,7 +137,7 @@ function rules(lessonIds: readonly string[]): Record<AchievementId, Rule> {
     "time-traveler": (list) =>
       list.some((item) => {
         const date = /^daily-(\d{4}-\d{2}-\d{2})/.exec(item.puzzleId)?.[1];
-        return !item.assisted && item.kind === "daily" && date !== undefined && item.completedAt.slice(0, 10) > date;
+        return !item.assisted && item.kind === "daily" && date !== undefined && dailyDate(item.completedAt) > date;
       }),
     "curious-mind": (list) => list.some((item) => item.kind === "generated"),
     "on-a-roll": (list) => longestStreak(dailySolveDates(list)) >= 3,

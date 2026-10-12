@@ -222,6 +222,9 @@ export const ca: Messages = {
   "daily.loading": "Carregant el trencaclosques d'avui…",
 
   "puzzle.goal": "Objectiu",
+  "puzzle.par_one": "par: {count} ordre",
+  "puzzle.par_other": "par: {count} ordres",
+  "daily.stateOnlyHelp": "Fes coincidir l'aparença objectiu a main amb qualsevol ordre Git compatible. El camí previst només és una pista, no un requisit.",
 
   "graph.centre": "Centra a HEAD",
   "graph.zoomOut": "Allunya",
@@ -356,7 +359,7 @@ export const ca: Messages = {
   "goals.checklist": "Llista d'objectius",
   "goals.done": "(assolit)",
   "goals.notDone": "(pendent)",
-  "goals.note": "El trencaclosques es resol quan tots els objectius estan marcats. Que la gallina coincideixi no n'hi ha prou si queden objectius d'historial pendents.",
+  "goals.note": "El trencaclosques es resol quan tots els objectius estan marcats.",
 
   "terminal.solved": "Trencaclosques resolt!",
   "terminal.inputLabel": "Ordre de Git",
@@ -369,7 +372,8 @@ export const ca: Messages = {
   "terminal.empty": "Escriu una ordre de git aquí sota.",
   "terminal.noCommands": "Encara no hi ha ordres. Prova git log.",
   "terminal.you": "tu:",
-  "terminal.historyOpen": "L'estat coincideix amb l'objectiu, però l'historial encara no:",
+  "terminal.requirementsOpen": "L'estat coincideix amb l'objectiu, però encara queden requisits de la lliçó:",
+  "terminal.commandNotAllowed": "Aquesta lliçó només permet les ordres ensenyades. '{command}' no està disponible aquí.",
   "terminal.tapGoal": "Toca Objectiu per veure la llista completa.",
 
   "duration.seconds": "{seconds} s",

@@ -1,5 +1,6 @@
-import { validateRepository, type GitAction, type PuzzleTarget, type Repository, type ValidationResult } from "../engine";
-import type { ActionRequirement } from "./types";
+import { validateRepository, type GitAction, type Repository, type ValidationResult } from "../engine";
+import { resolvePuzzleRules } from "./rules";
+import type { ActionRequirement, PublicPuzzleDefinition } from "./types";
 
 /** A transcript entry may carry an action alongside future command metadata. */
 export type ExecutedAction = GitAction | { action: GitAction };
@@ -9,17 +10,17 @@ export type ExecutedAction = GitAction | { action: GitAction };
  * requirements. It never treats a transcript as a prescribed command sequence.
  */
 export function validatePuzzleCompletion(
+  puzzle: PublicPuzzleDefinition,
   repository: Repository,
-  target: PuzzleTarget,
   executed: readonly ExecutedAction[],
-  requirements: readonly ActionRequirement[] = [],
 ): ValidationResult {
-  const base = validateRepository(repository, target);
+  const rules = resolvePuzzleRules(puzzle);
+  const base = validateRepository(repository, rules.target);
   const actions = executed.map((entry) => "action" in entry ? entry.action : entry);
   const unmet = [...base.unmet];
   const checks = [...base.checks];
 
-  requirements.forEach((requirement, index) => {
+  rules.actionRequirements.forEach((requirement, index) => {
     const met = actions.some((action) => matchesActionRequirement(action, requirement));
     if (!met) {
       unmet.push(`A required action has not been executed: ${formatRequirement(requirement)}.`);
