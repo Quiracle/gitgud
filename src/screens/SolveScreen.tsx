@@ -213,7 +213,7 @@ export function SolveScreen({
             <span className="text-paragraph leading-5">{t("puzzle.goal")}</span>
           </div>
           {puzzle.kind === "daily" && puzzle.parCommands !== undefined && (
-            <span className="self-start font-primary text-sm text-black">{t("puzzle.par", { count: puzzle.parCommands })}</span>
+            <span className="self-start font-primary text-xs leading-[15px] text-grey-700">{t("puzzle.par", { count: puzzle.parCommands })}</span>
           )}
           <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={64} />
           <span className="mt-1 rounded-sm bg-green-950 px-1.5 font-secondary text-xs leading-5 text-lime-400">

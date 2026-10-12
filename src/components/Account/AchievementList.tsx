@@ -1,4 +1,4 @@
-import { motion, type Variants } from "motion/react";
+import { motion } from "motion/react";
 import { useI18n } from "../../i18n/I18nProvider";
 import type { Achievement, AchievementId } from "../../lib/progressInsights";
 import { spring } from "../../lib/motion";
@@ -30,10 +30,8 @@ const ACHIEVEMENT_LOOKS: Record<AchievementId, ChickenLook> = {
   "month-streak": look({ hat: "gold", sunglasses: "gold", scarf: "purple", longLegs: "default" }),
 };
 
-const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 12 },
-  show: { opacity: 1, y: 0, transition: spring.soft },
-};
+/** Cap the stagger so cards far down a long list don't wait to appear. */
+const staggerDelay = (index: number) => Math.min(index, 5) * 0.06;
 
 interface AchievementListProps {
   items: Achievement[];
@@ -41,22 +39,23 @@ interface AchievementListProps {
   showDates?: boolean;
 }
 
-/** Achievement cards that stagger in as they scroll into view. */
+/**
+ * Achievement cards that stagger in as they scroll into view. Each card watches the
+ * viewport itself: synced progress can reorder the list after the first reveal, and
+ * cards mounted then would otherwise stay invisible but still take up space.
+ */
 export function AchievementList({ items, showDates = false }: AchievementListProps) {
   const { t, formatDate } = useI18n();
 
   return (
-    <motion.ul
-      className="grid grid-cols-1 gap-2 sm:grid-cols-2"
-      variants={{ show: { transition: { staggerChildren: 0.06 } } }}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true }}
-    >
-      {items.map((item) => (
+    <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+      {items.map((item, index) => (
         <motion.li
           key={item.id}
-          variants={cardVariants}
+          initial={{ opacity: 0, y: 12 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ ...spring.soft, delay: staggerDelay(index) }}
           className={`flex items-center gap-3 rounded border p-2 ${
             item.unlocked ? "border-lime-500 bg-lime-100" : "border-grey-300 bg-grey-300"
           }`}
@@ -88,6 +87,6 @@ export function AchievementList({ items, showDates = false }: AchievementListPro
           )}
         </motion.li>
       ))}
-    </motion.ul>
+    </ul>
   );
 }
