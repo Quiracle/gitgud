@@ -155,7 +155,7 @@ export const en: LegalDocument = {
           head: ["Cookie", "Purpose", "Kept"],
           rows: [
             ["_ga", "Google Analytics: tells visits apart with a random ID", "2 years"],
-            ["_ga_528GL04RST", "Google Analytics: keeps the state of your visit", "2 years"],
+            ["_ga_WVGCJVZ0HG", "Google Analytics: keeps the state of your visit", "2 years"],
           ],
         },
         {
