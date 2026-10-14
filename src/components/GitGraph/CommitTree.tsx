@@ -82,14 +82,16 @@ export function CommitTree({
   const lanes = useMemo(() => branchLanes(repository), [repository]);
   const colourOfCommit = (id: string) => colours.get(lanes.get(id) ?? "") ?? UNOWNED;
   const colourOfBranch = (name: string) => colours.get(name) ?? UNOWNED;
+  // Branch tags stack one per row, so rows leave room for the most crowded card.
+  const tagRows = showRefs ? Math.max(1, ...layout.nodes.map((node) => tagsOf(node.id).length)) : 0;
   // Two-column trees use the airy Figma spacing; wider trees tighten up.
   const colStep = layout.columns <= 2 ? 130 : CARD_W + 16;
-  const rowStep = (layout.rows <= 2 ? 150 : CARD_H + 32) + (showRefs ? TAG_H : 0);
+  const rowStep = (layout.rows <= 2 ? 150 : CARD_H + 32) + tagRows * TAG_H;
   const minCol = Math.min(...layout.nodes.map((node) => node.col));
   // Both sides keep room for the HEAD pointer so the tree stays centred wherever HEAD is.
   const margin = showRefs ? HEAD_EXTENT : 0;
   const width = (Math.max(...layout.nodes.map((node) => node.col)) - minCol) * colStep + CARD_W + margin * 2;
-  const height = (layout.rows - 1) * rowStep + CARD_H + (showRefs ? TAG_H : 0);
+  const height = (layout.rows - 1) * rowStep + CARD_H + tagRows * TAG_H;
   const fitScale = box.width
     ? Math.min(1, (box.width - padding * 2) / width, (box.height - padding * 2) / height)
     : 0;
@@ -102,7 +104,7 @@ export function CommitTree({
     layout.nodes.map((node) => {
       const x = margin + (node.col - minCol) * colStep;
       const y = node.row * rowStep;
-      return [node.id, { x, y, row: node.row, h: CARD_H + (tagsOf(node.id).length ? TAG_H : 0) }];
+      return [node.id, { x, y, row: node.row, h: CARD_H + tagsOf(node.id).length * TAG_H }];
     }),
   );
   const delayFor = (row: number, x: number) => (animateIn ? row * 0.14 + x / 2000 : 0);
@@ -450,17 +452,17 @@ export function CommitCard({
             <motion.div
               key="tag"
               initial={{ height: 0, opacity: 0 }}
-              animate={{ height: TAG_H, opacity: 1 }}
+              animate={{ height: ordered.length * TAG_H, opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
               transition={spring.snappy}
-              className="flex shrink-0 overflow-hidden"
+              className="flex shrink-0 flex-col overflow-hidden"
               title={ordered.join(", ")}
             >
-              {/* Segments share the card's full width; names that don't fit stay in the tooltip. */}
-              {ordered.map((name, index) => (
+              {/* One full-width row per branch, the checked-out one on top beside HEAD. */}
+              {ordered.map((name) => (
                 <span
                   key={name}
-                  className={`flex-auto truncate px-1 text-2xs leading-[17px] text-green-950 ${index === 0 ? "shrink-0 max-w-full" : "min-w-0"}`}
+                  className="shrink-0 truncate px-1 text-2xs leading-[17px] text-green-950"
                   style={{ backgroundColor: colourOf(name), transition: "background-color 300ms" }}
                 >
                   {name}
