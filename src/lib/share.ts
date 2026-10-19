@@ -58,6 +58,11 @@ export function shareFileName(publishedOn: string): string {
   return `gitgud-${publishedOn}.png`;
 }
 
+/** Phones hand the image straight to the share sheet; most desktop browsers can't. */
+export function canShareFile(file: File): boolean {
+  return typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+}
+
 export async function copyImage(blob: Blob): Promise<boolean> {
   if (typeof ClipboardItem === "undefined" || !navigator.clipboard?.write) return false;
   try {

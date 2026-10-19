@@ -3,7 +3,7 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { useLinkedInStatus } from "../../hooks/useLinkedInStatus";
 import { useI18n } from "../../i18n/I18nProvider";
 import type { TranslationKey } from "../../i18n/translate";
-import { copyImage, downloadImage, linkedInComposeUrl, shareFileName, shareText, xComposeUrl, type ShareSummary } from "../../lib/share";
+import { canShareFile, copyImage, downloadImage, linkedInComposeUrl, shareFileName, shareText, xComposeUrl, type ShareSummary } from "../../lib/share";
 import { renderShareCard } from "../../lib/shareCard";
 import type { PublicPuzzleDefinition } from "../../puzzles";
 import {
@@ -54,7 +54,8 @@ type PostState =
  * Share opens a dialog with LinkedIn, X, and download. With LinkedIn configured, the
  * LinkedIn button posts the card through the linkedin-share Edge Function: the player sees
  * the image and caption and taps Post; nothing is ever posted without that tap. Without it,
- * and always for X, the image is copied and the network's composer opens for pasting.
+ * and for X, the image is copied and the network's composer opens for pasting. On phones,
+ * X goes through the share sheet instead, which attaches the image when the player picks X.
  * Only dailies are shareable: `available` stays false for lessons and unsolved runs.
  */
 export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, result: ShareableResult | null) {
@@ -72,6 +73,7 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
   const [post, setPost] = useState<PostState>({ kind: "idle" });
   const captionId = useId();
   const usesApi = linkedIn.status.state !== "unavailable";
+  const phone = card ? canShareFile(card.file) : false;
 
   // A fresh card (another result, or another language) means a fresh caption and nothing posted yet.
   useEffect(() => {
@@ -91,6 +93,21 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
     if (!card) return;
     setNote(null);
     setOpen(true);
+  }
+
+  /** X's link can't attach an image; the share sheet can, once the player picks X. */
+  async function shareToX() {
+    if (!card) return;
+    if (!phone) {
+      await openComposer("x");
+      return;
+    }
+    setNote(null);
+    try {
+      await navigator.share({ files: [card.file], text: shareText(card.summary, window.location.origin) });
+    } catch {
+      // Closing the share sheet rejects; there is nothing to report.
+    }
   }
 
   /** No API can attach the image here, so copy it and open the composer with the text filled in. */
@@ -203,7 +220,7 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
             <Icon name="linkedin" size={20} className="mr-2" />
             {t(usesApi ? linkedInLabel(status, post) : "share.linkedIn")}
           </Button>
-          <Button variant="outline" onClick={() => openComposer("x")}>
+          <Button variant="outline" onClick={shareToX}>
             <Icon name="x" size={20} className="mr-2" />
             {t("share.x.post")}
           </Button>
