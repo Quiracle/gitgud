@@ -1,4 +1,5 @@
 import type { PublicPuzzleDefinition } from "../puzzles";
+import { clearGuestPlayer, readGuestPlayer } from "../storage/guestPlayer";
 import type { CompletionRecord, LocalProgressStore } from "../storage/progress";
 import { requireSupabaseClient } from "./supabase";
 
@@ -11,6 +12,8 @@ export interface LeaderboardEntry {
   commandCount: number;
   completedAt: string;
   isCurrentUser: boolean;
+  /** Ranked under a name chosen without an account. */
+  isGuest: boolean;
 }
 
 export interface SyncedDailyStats {
@@ -70,12 +73,56 @@ export function claimDailyCompletion(store: LocalProgressStore, completion: Comp
   return claim;
 }
 
-/** Claims every unranked, unassisted daily solve saved on this device. Failures stay claimable. */
+/**
+ * Claims every unranked, unassisted daily solve saved on this device. Failures stay claimable.
+ * Once all are on the account, the guest name's entries are removed so nobody is listed twice.
+ */
 export async function claimGuestDailies(store: LocalProgressStore, userId: string): Promise<number> {
   const results = await Promise.allSettled(
     store.unrankedDailyCompletions().map((completion) => claimDailyCompletion(store, completion, userId)),
   );
+  const guest = readGuestPlayer();
+  if (guest && store.unrankedDailyCompletions().length === 0) {
+    await forgetGuestPlayer(guest.token).then(() => clearGuestPlayer(), () => undefined);
+  }
   return results.filter((result) => result.status === "fulfilled").length;
+}
+
+export const GUEST_NAME_MIN = 2;
+export const GUEST_NAME_MAX = 24;
+const GUEST_NAME_PATTERN = /^[\p{L}\p{N}][\p{L}\p{M}\p{N} _.'-]*$/u;
+
+export type GuestNameCheck = { ok: true; name: string } | { ok: false; reason: "length" | "characters" };
+
+/** Tidies a guest leaderboard name and checks it against the rules the server enforces. */
+export function checkGuestName(input: string): GuestNameCheck {
+  const name = input.trim().replace(/\s+/g, " ");
+  const length = [...name].length;
+  if (length < GUEST_NAME_MIN || length > GUEST_NAME_MAX) return { ok: false, reason: "length" };
+  if (!GUEST_NAME_PATTERN.test(name)) return { ok: false, reason: "characters" };
+  return { ok: true, name };
+}
+
+/** Ranks a guest's unassisted daily solve under their chosen name; the server keeps their best. */
+export async function submitGuestDailyResult(token: string, displayName: string, completion: CompletionRecord): Promise<void> {
+  if (completion.kind !== "daily" || completion.assisted) throw new Error("This solve can't be ranked.");
+  const { error } = await requireSupabaseClient().rpc("submit_guest_daily_result", {
+    guest_token: token,
+    guest_name: displayName,
+    target_puzzle_id: completion.puzzleId,
+    target_puzzle_version: completion.puzzleVersion,
+    submitted_elapsed_ms: completion.elapsedMs,
+    submitted_restart_count: completion.restartCount,
+    submitted_command_count: completion.commandCount,
+    submitted_transcript: completion.commands,
+  });
+  if (error) throw new Error(`Leaderboard submission failed: ${error.message}`);
+}
+
+/** Removes a guest name and all of its leaderboard entries. */
+export async function forgetGuestPlayer(token: string): Promise<void> {
+  const { error } = await requireSupabaseClient().rpc("forget_guest_player", { guest_token: token });
+  if (error) throw new Error(`Guest entries could not be removed: ${error.message}`);
 }
 
 export async function getDailyLeaderboard(
@@ -83,11 +130,12 @@ export async function getDailyLeaderboard(
   puzzleVersion: number,
   limit = 50,
 ): Promise<LeaderboardEntry[]> {
-  const { data, error } = await requireSupabaseClient().rpc("get_daily_leaderboard", {
-    target_puzzle_id: puzzleId,
-    target_puzzle_version: puzzleVersion,
-    result_limit: limit,
-  });
+  const args = { target_puzzle_id: puzzleId, target_puzzle_version: puzzleVersion, result_limit: limit };
+  const guestToken = readGuestPlayer()?.token;
+  const client = requireSupabaseClient();
+  let { data, error } = await client.rpc("get_daily_leaderboard", guestToken ? { ...args, guest_token: guestToken } : args);
+  // Until the guest leaderboard migration is applied, the RPC has no guest_token argument.
+  if (error && guestToken && error.code === "PGRST202") ({ data, error } = await client.rpc("get_daily_leaderboard", args));
   if (error) throw new Error(`Leaderboard is unavailable: ${error.message}`);
   if (!Array.isArray(data)) return [];
   return data.map(parseEntry).filter((entry): entry is LeaderboardEntry => Boolean(entry));
@@ -140,6 +188,7 @@ function parseEntry(value: unknown): LeaderboardEntry | undefined {
     commandCount: row.command_count,
     completedAt: row.completed_at,
     isCurrentUser: row.is_current_user,
+    isGuest: row.is_guest === true,
   };
 }
 

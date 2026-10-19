@@ -18,7 +18,7 @@ export const en: LegalDocument = {
         { kind: "h3", text: "Play without an account" },
         {
           kind: "p",
-          text: "You can play every puzzle as a guest. Guest progress, attempts and settings stay in your browser's storage on your device and are not sent to us.",
+          text: "You can play every puzzle as a guest. Guest progress, attempts and settings stay in your browser's storage on your device and are not sent to us, unless you choose to join a daily leaderboard as a guest.",
         },
         { kind: "h3", text: "What we collect and why" },
         {
@@ -36,6 +36,12 @@ export const en: LegalDocument = {
               "Show you on the daily leaderboard",
               "Providing the service (Art. 6.1.b)",
               "Until you change it or delete your account",
+            ],
+            [
+              "If you join a leaderboard as a guest: the name you choose, your solve time, restarts and commands, a random guest code, and a one-way code made from your network address",
+              "Show you on the daily leaderboard without an account, and limit how many guest names one network can add",
+              "Providing the service you asked for (Art. 6.1.b) and our legitimate interest in preventing abuse (Art. 6.1.f)",
+              "Until you log in on that device, or ask us to remove it",
             ],
             [
               "Puzzle attempts: solve time, restarts, commands, hints, dates",
@@ -76,7 +82,7 @@ export const en: LegalDocument = {
         { kind: "h3", text: "What other players see" },
         {
           kind: "p",
-          text: "The daily leaderboard is public. It shows your leaderboard name, avatar, rank, solve time and restarts. It never shows your email. You can choose a different leaderboard name in Account settings.",
+          text: "The daily leaderboard is public. It shows your leaderboard name, avatar, rank, solve time and restarts. It never shows your email. You can choose a different leaderboard name in Account settings. Guest names are marked as guests.",
         },
         { kind: "h3", text: "Who helps us run GitGud" },
         {

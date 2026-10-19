@@ -118,7 +118,7 @@ Home (guest play is immediately available)
        -> Delete account
 ```
 
-Google and GitHub OAuth are accessible from Home. Login is not a prerequisite for playing: guest play must remain possible. Prompt guests to sign in when they try to sync progress, submit a leaderboard result, add friends, or use AI-guided lessons.
+Google and GitHub OAuth are accessible from Home. Login is not a prerequisite for playing: guest play must remain possible. Prompt guests to sign in when they try to sync progress, add friends, or use AI-guided lessons. A guest who completes a daily may join its leaderboard under a chosen guest name without signing in; always offer sign-in alongside that choice.
 
 The account-validation step is the OAuth callback/session validation state, not a custom email-verification flow. The challenge archive and the randomly selected easy, medium, or hard daily difficulty remain requirements even if they are omitted from a simplified flow diagram.
 
@@ -489,7 +489,7 @@ Version the localStorage schema and provide migrations or a safe fallback when i
 
 ## Leaderboard
 
-The primary leaderboard is per daily challenge, not one all-time table. Only authenticated, completed, unassisted attempts may be submitted. Historical challenges retain their own leaderboards. A player who revealed the solution receives zero points and may finish for learning/progress, but that result is not ranked.
+The primary leaderboard is per daily challenge, not one all-time table. Only completed, unassisted attempts may be submitted: by signed-in players, or by guests under a chosen guest name through `submit_guest_daily_result`. The browser keeps a random guest token and the server stores only its hash. Guest entries are labelled as guests, and they move to the account (and the guest name is removed) once that device signs in and its solves are claimed. Historical challenges retain their own leaderboards. A player who revealed the solution receives zero points and may finish for learning/progress, but that result is not ranked.
 
 Solve time and restart count are the canonical scoring inputs shown in the final flow. Keep the exact points formula in one versioned scoring-policy module so it can be tuned without rewriting stored attempts. Persist the raw inputs even when displaying derived points. Until a points formula is approved, use the deterministic ordering below and do not invent constants in UI components.
 

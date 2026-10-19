@@ -18,14 +18,31 @@ import {
   validatePuzzleCompletion,
   type PublicPuzzleDefinition,
 } from "../puzzles";
-import { claimDailyCompletion, startDailyAttempt, submitDailyResult } from "../services/leaderboard";
+import {
+  claimDailyCompletion,
+  startDailyAttempt,
+  submitDailyResult,
+  submitGuestDailyResult,
+} from "../services/leaderboard";
+import { isSupabaseConfigured } from "../services/supabase";
 import { openProgressStore } from "../storage/browserProgress";
+import { markGuestSubmitted, readGuestPlayer, saveGuestName } from "../storage/guestPlayer";
 import { bankedActiveMs, type CompletionRecord, type LocalProgressStore, type StoredAttempt } from "../storage/progress";
 
 export type SessionStatus = "active" | "surrendered" | "completed";
 
-/** Where a finished run stands with the daily leaderboard. */
-export type SubmissionState = "guest" | "not-ranked" | "assisted" | "submitting" | "submitted" | "failed";
+/**
+ * Where a finished run stands with the daily leaderboard. "guest" waits for a guest name
+ * or a sign-in; "guest-submitted" is ranked under the guest name until the player signs in.
+ */
+export type SubmissionState =
+  | "guest"
+  | "guest-submitted"
+  | "not-ranked"
+  | "assisted"
+  | "submitting"
+  | "submitted"
+  | "failed";
 
 export interface CommandOutcome {
   ok: boolean;
@@ -79,15 +96,19 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
   const [assisted, setAssisted] = useState(Boolean(boot.attempt.assisted || boot.solved?.assisted));
   const [pendingRebase, setPendingRebase] = useState<PendingRebase | null>(null);
   const [completion, setCompletion] = useState<CompletionRecord | undefined>(boot.solved);
-  const [submission, setSubmission] = useState<{ state: SubmissionState; error?: string }>({
+  const [submission, setSubmission] = useState<{ state: SubmissionState; error?: string }>(() => ({
     state: boot.solved?.ranked
       ? "submitted"
       : boot.solved?.assisted
         ? "assisted"
-        : puzzle.kind === "daily"
-          ? "guest"
-          : "not-ranked",
-  });
+        : puzzle.kind !== "daily"
+          ? "not-ranked"
+          : boot.solved && readGuestPlayer()?.submitted.includes(boot.solved.id)
+            ? "guest-submitted"
+            : "guest",
+  }));
+  /** The name this device's guest uses on leaderboards, once chosen. */
+  const [guestName, setGuestName] = useState(() => readGuestPlayer()?.displayName);
   /** Today's daily is already solved: show the result, but no more commands or restarts. */
   const locked = puzzle.kind === "daily" && status === "completed";
   const serverAttempt = useRef<Promise<string>>();
@@ -156,11 +177,39 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
       );
   }, [attempt.serverAttemptId, attempt.serverUserId, authStatus, completion, ensureServerAttempt, puzzle.kind, store, user]);
 
+  /** Ranks a guest's solve under their name. A failure keeps the name form open to retry. */
+  const submitAsGuest = useCallback(async (record: CompletionRecord, name: string) => {
+    setSubmission({ state: "submitting" });
+    try {
+      const player = saveGuestName(name);
+      setGuestName(name);
+      await submitGuestDailyResult(player.token, name, record);
+      markGuestSubmitted(record.id);
+      setSubmission({ state: "guest-submitted" });
+    } catch (reason) {
+      setSubmission({ state: "guest", error: reason instanceof Error ? reason.message : "Leaderboard submission failed." });
+    }
+  }, []);
+
+  /** Puts the finished daily on the leaderboard under a guest name, without signing in. */
+  const joinAsGuest = useCallback(
+    (name: string) => {
+      if (!completion || completion.assisted || puzzle.kind !== "daily" || authStatus === "authenticated") return;
+      void submitAsGuest(completion, name);
+    },
+    [authStatus, completion, puzzle.kind, submitAsGuest],
+  );
+
   const submit = useCallback(
     async (finished: StoredAttempt, record: CompletionRecord, wasAssisted: boolean) => {
       if (puzzle.kind !== "daily") return setSubmission({ state: "not-ranked" });
       if (wasAssisted) return setSubmission({ state: "assisted" });
-      if (authStatus !== "authenticated" || !user) return setSubmission({ state: "guest" });
+      if (authStatus !== "authenticated" || !user) {
+        // A guest who already picked a name joins every daily they solve under it.
+        const name = readGuestPlayer()?.displayName;
+        if (name && isSupabaseConfigured()) return submitAsGuest(record, name);
+        return setSubmission({ state: "guest" });
+      }
       setSubmission({ state: "submitting" });
       try {
         const id =
@@ -172,12 +221,13 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
         setSubmission({ state: "failed", error: reason instanceof Error ? reason.message : "Leaderboard submission failed." });
       }
     },
-    [authStatus, ensureServerAttempt, puzzle.kind, store, user],
+    [authStatus, ensureServerAttempt, puzzle.kind, store, submitAsGuest, user],
   );
 
-  // A daily solved as a guest goes on the leaderboard as soon as the player signs in.
+  // A daily solved as a guest moves to the player's account as soon as they sign in.
   useEffect(() => {
-    if (submission.state !== "guest" || !completion || completion.ranked || completion.assisted) return;
+    if (submission.state !== "guest" && submission.state !== "guest-submitted") return;
+    if (!completion || completion.ranked || completion.assisted) return;
     if (puzzle.kind !== "daily" || authStatus !== "authenticated" || !user) return;
     // The app-wide sign-in claim may already have submitted it.
     if (store.completions().some((item) => item.id === completion.id && item.ranked)) {
@@ -336,6 +386,8 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
     pendingRebase,
     finalElapsedMs: completion?.elapsedMs,
     submission,
+    guestName,
+    joinAsGuest,
     elapsedMs,
     runCommand,
     restart,

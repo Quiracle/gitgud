@@ -37,6 +37,7 @@ function demoEntries(): Promise<LeaderboardEntry[]> {
     commandCount: 3 + (index % 4),
     completedAt: new Date(Date.now() - index * 600_000).toISOString(),
     isCurrentUser: displayName === "maria",
+    isGuest: index % 4 === 3,
   }));
   return new Promise((resolve) => window.setTimeout(() => resolve(entries), 600));
 }
@@ -125,13 +126,21 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
             {board.status === "error" && <EmptyState title={t("leaderboard.offline")} body={board.message} />}
           </div>
 
-          {!signedIn ? (
-            <Button onClick={() => setLoginOpen(true)}>{t("leaderboard.logIn")}</Button>
-          ) : !solvedToday ? (
-            <Button href="/play" onNavigate={onNavigate}>
-              {t("home.solve")}
-            </Button>
-          ) : null}
+          {/* Guests can join under a name when they solve, so signing in is offered, not required. */}
+          {(!solvedToday || !signedIn) && (
+            <div className="flex flex-col gap-2">
+              {!solvedToday && (
+                <Button href="/play" onNavigate={onNavigate}>
+                  {t("home.solve")}
+                </Button>
+              )}
+              {!signedIn && (
+                <Button variant={solvedToday ? "primary" : "outline"} onClick={() => setLoginOpen(true)}>
+                  {t("leaderboard.logIn")}
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -291,7 +300,11 @@ function EntryRow({ entry }: { entry: LeaderboardEntry }) {
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <p className="truncate text-paragraph leading-5 text-grey-950">
           {entry.displayName}
-          {entry.isCurrentUser && <span className="ml-2 rounded bg-lime-400 px-1 text-2xs text-green-950">{t("leaderboard.you")}</span>}
+          {entry.isCurrentUser ? (
+            <span className="ml-2 rounded bg-lime-400 px-1 text-2xs text-green-950">{t("leaderboard.you")}</span>
+          ) : entry.isGuest ? (
+            <span className="ml-2 rounded bg-grey-50 px-1 text-2xs text-grey-700">{t("leaderboard.guest")}</span>
+          ) : null}
         </p>
         <p className="text-xs leading-[15px] text-grey-700">
           {t("leaderboard.retries", { count: entry.restartCount })} · {t("leaderboard.commands", { count: entry.commandCount })}

@@ -4,7 +4,7 @@ export const LEGAL_EMAIL = "mcuervoar00@gmail.com";
 export const LEGAL_DOMAIN = "gitgudgame.lol";
 export const LEGAL_REPOSITORY = "https://github.com/Quiracle/gitgud";
 /** Bump whenever the wording changes in a way players should know about. */
-export const LEGAL_UPDATED_ON = "2026-10-10";
+export const LEGAL_UPDATED_ON = "2026-10-19";
 
 export const LEGAL_SECTION_IDS = ["privacy", "cookies", "terms", "ai", "notice"] as const;
 export type LegalSectionId = typeof LEGAL_SECTION_IDS[number];

@@ -18,7 +18,7 @@ export const ca: LegalDocument = {
         { kind: "h3", text: "Juga sense compte" },
         {
           kind: "p",
-          text: "Pots jugar a tots els trencaclosques com a convidat. El progrés, els intents i la configuració de convidat es desen a l'emmagatzematge del teu navegador, al teu dispositiu, i no ens arriben.",
+          text: "Pots jugar a tots els trencaclosques com a convidat. El progrés, els intents i la configuració de convidat es desen a l'emmagatzematge del teu navegador, al teu dispositiu, i no ens arriben, tret que triïs entrar a una classificació diària com a convidat.",
         },
         { kind: "h3", text: "Quines dades recollim i per a què" },
         {
@@ -36,6 +36,12 @@ export const ca: LegalDocument = {
               "Mostrar-te a la classificació diària",
               "Prestar-te el servei (art. 6.1.b)",
               "Fins que el canviïs o eliminis el compte",
+            ],
+            [
+              "Si entres a una classificació com a convidat: el nom que triïs, el temps, els reinicis i les ordres, un codi de convidat aleatori i un codi irreversible fet a partir de l'adreça de la teva xarxa",
+              "Mostrar-te a la classificació diària sense compte i limitar quants noms de convidat pot afegir una mateixa xarxa",
+              "Prestar-te el servei que demanes (art. 6.1.b) i el nostre interès legítim a evitar abusos (art. 6.1.f)",
+              "Fins que iniciïs la sessió en aquell dispositiu o ens demanis que l'eliminem",
             ],
             [
               "Intents de trencaclosques: temps, reinicis, ordres, pistes i dates",
@@ -76,7 +82,7 @@ export const ca: LegalDocument = {
         { kind: "h3", text: "Què veuen altres jugadors" },
         {
           kind: "p",
-          text: "La classificació diària és pública. Mostra el teu nom de classificació, avatar, posició, temps i reinicis. Mai no mostra el teu correu. Pots triar un altre nom de classificació a la configuració del compte.",
+          text: "La classificació diària és pública. Mostra el teu nom de classificació, avatar, posició, temps i reinicis. Mai no mostra el teu correu. Pots triar un altre nom de classificació a la configuració del compte. Els noms de convidat es marquen com a convidats.",
         },
         { kind: "h3", text: "Qui ens ajuda a oferir GitGud" },
         {

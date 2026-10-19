@@ -1,5 +1,6 @@
 import { animate, AnimatePresence, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { LoginDialog } from "../components/Auth/LoginDialog";
 import { Button } from "../components/Button/Button";
 import { CommitTree } from "../components/GitGraph/CommitTree";
 import { Icon, type IconName } from "../components/Icon/Icon";
@@ -11,6 +12,8 @@ import { Dialog, StatRow } from "../components/Puzzle/Dialog";
 import { HowToPlaySteps } from "../components/Puzzle/HowToPlay";
 import { ShareButton, useResultShare } from "../components/Share/ResultShare";
 import { InteractiveRebaseDialog } from "../components/RebaseDialog/InteractiveRebaseDialog";
+import { GuestJoinForm, LogInLink } from "../components/Leaderboard/GuestJoinForm";
+import { useAuth } from "../context/AuthContext";
 import { useMediaQuery } from "../hooks/useMediaQuery";
 import { usePuzzleSession, type SubmissionState } from "../hooks/usePuzzleSession";
 import { useVisualViewport } from "../hooks/useVisualViewport";
@@ -24,7 +27,9 @@ import {
 } from "../engine";
 import { goalLabel } from "../i18n/goals";
 import { useI18n } from "../i18n/I18nProvider";
+import { Rich } from "../i18n/Rich";
 import type { TranslationKey } from "../i18n/translate";
+import { isSupabaseConfigured } from "../services/supabase";
 import { resolvePuzzleRules, type PublicPuzzleDefinition } from "../puzzles";
 import type { CompletionRecord } from "../storage/progress";
 
@@ -73,11 +78,21 @@ export function SolveScreen({
   const [commandFocusRequest, setCommandFocusRequest] = useState(0);
   const [panel, setPanel] = useState<Panel>("none");
   const [confetti, setConfetti] = useState<{ x: number; y: number; key: number } | null>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const { status: authStatus } = useAuth();
 
   const canvas = useRef<HTMLDivElement>(null);
   const tree = useRef<HTMLDivElement>(null);
   const goal = useRef<HTMLButtonElement>(null);
   const solved = session.status === "completed";
+  const submissionState = session.submission.state;
+  // Guests without an account can still join the daily leaderboard under a name.
+  const guestJoin =
+    puzzle.kind === "daily" &&
+    !session.assisted &&
+    authStatus !== "authenticated" &&
+    isSupabaseConfigured() &&
+    (submissionState === "guest" || submissionState === "submitting");
   const referenceKind = solved ? null : getCommandReferenceKind(commandDraft);
   const checks = session.validation.checks;
   const goalsMet = solved ? checks.length : checks.filter((check) => check.met).length;
@@ -287,24 +302,52 @@ export function SolveScreen({
       {confetti && <Confetti key={confetti.key} x={confetti.x} y={confetti.y} />}
 
       {/* No close: a solved puzzle is finished, so the popup only leads onward. */}
-      <Dialog open={panel === "result" && !sharing.open} title={session.assisted ? t("result.assistedTitle") : t("result.title")}>
+      <Dialog
+        open={panel === "result" && !sharing.open && !loginOpen}
+        title={session.assisted ? t("result.assistedTitle") : t("result.title")}
+      >
         <div className="flex flex-col gap-1">
           <StatRow label={t("result.retries")} value={i18n.formatNumber(session.restartCount)} />
           <StatRow label={t("result.time")} value={formatDuration(session.finalElapsedMs ?? session.elapsedMs())} large />
           {session.assisted && <StatRow label={t("result.points")} value={t("result.pointsAssisted")} />}
         </div>
         <AnimatePresence mode="wait" initial={false}>
-          <motion.p
-            key={session.submission.state}
-            className={`text-xs ${session.submission.state === "failed" ? "text-red-400" : "text-grey-400"}`}
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -4 }}
-            transition={{ duration: 0.18 }}
-            aria-live="polite"
-          >
-            {t(SUBMISSION_MESSAGES[session.submission.state])}
-          </motion.p>
+          {guestJoin ? (
+            <motion.div
+              key="guest-join"
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18 }}
+            >
+              <GuestJoinForm
+                initialName={session.guestName}
+                submitting={submissionState === "submitting"}
+                error={session.submission.error}
+                onJoin={session.joinAsGuest}
+                onLogIn={() => setLoginOpen(true)}
+              />
+            </motion.div>
+          ) : (
+            <motion.p
+              key={submissionState}
+              className={`text-xs ${submissionState === "failed" ? "text-red-400" : "text-grey-400"}`}
+              initial={{ opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.18 }}
+              aria-live="polite"
+            >
+              {submissionState === "guest-submitted" ? (
+                <Rich
+                  text={t("submission.guestSubmitted", { name: session.guestName ?? "" })}
+                  tags={{ login: ({ children }) => <LogInLink onClick={() => setLoginOpen(true)}>{children}</LogInLink> }}
+                />
+              ) : (
+                t(SUBMISSION_MESSAGES[submissionState])
+              )}
+            </motion.p>
+          )}
         </AnimatePresence>
         <div className="flex flex-col gap-2">
           <Button onClick={() => onNavigate(action.href)}>
@@ -324,6 +367,8 @@ export function SolveScreen({
       </Dialog>
 
       {sharing.dialog}
+
+      <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} returnPath={window.location.pathname} />
 
       <Dialog open={panel === "restart"} title={t("restart.title")} onClose={closePanel}>
         <p className="text-sm text-grey-300">{t("restart.body")}</p>
@@ -482,6 +527,7 @@ export function SolveScreen({
 
 const SUBMISSION_MESSAGES: Record<SubmissionState, TranslationKey> = {
   guest: "submission.guest",
+  "guest-submitted": "submission.submitted",
   "not-ranked": "submission.notRanked",
   assisted: "submission.assisted",
   submitting: "submission.submitting",

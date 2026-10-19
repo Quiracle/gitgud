@@ -18,7 +18,7 @@ export const es: LegalDocument = {
         { kind: "h3", text: "Juega sin cuenta" },
         {
           kind: "p",
-          text: "Puedes jugar a todos los puzles como invitado. El progreso, los intentos y los ajustes de invitado se guardan en el almacenamiento de tu navegador, en tu dispositivo, y no nos llegan.",
+          text: "Puedes jugar a todos los puzles como invitado. El progreso, los intentos y los ajustes de invitado se guardan en el almacenamiento de tu navegador, en tu dispositivo, y no nos llegan, salvo que elijas entrar en una clasificación diaria como invitado.",
         },
         { kind: "h3", text: "Qué datos recogemos y para qué" },
         {
@@ -36,6 +36,12 @@ export const es: LegalDocument = {
               "Mostrarte en la clasificación diaria",
               "Prestarte el servicio (art. 6.1.b)",
               "Hasta que lo cambies o elimines tu cuenta",
+            ],
+            [
+              "Si entras en una clasificación como invitado: el nombre que elijas, tu tiempo, reinicios y comandos, un código de invitado aleatorio y un código irreversible creado a partir de la dirección de tu red",
+              "Mostrarte en la clasificación diaria sin cuenta y limitar cuántos nombres de invitado puede añadir una misma red",
+              "Prestarte el servicio que pides (art. 6.1.b) y nuestro interés legítimo en evitar abusos (art. 6.1.f)",
+              "Hasta que inicies sesión en ese dispositivo o nos pidas que lo eliminemos",
             ],
             [
               "Intentos de puzles: tiempo, reinicios, órdenes, pistas y fechas",
@@ -76,7 +82,7 @@ export const es: LegalDocument = {
         { kind: "h3", text: "Qué ven otros jugadores" },
         {
           kind: "p",
-          text: "La clasificación diaria es pública. Muestra tu nombre de clasificación, avatar, posición, tiempo y reinicios. Nunca muestra tu correo. Puedes elegir otro nombre de clasificación en los ajustes de tu cuenta.",
+          text: "La clasificación diaria es pública. Muestra tu nombre de clasificación, avatar, posición, tiempo y reinicios. Nunca muestra tu correo. Puedes elegir otro nombre de clasificación en los ajustes de tu cuenta. Los nombres de invitado se marcan como invitados.",
         },
         { kind: "h3", text: "Quién nos ayuda a ofrecer GitGud" },
         {
