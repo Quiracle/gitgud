@@ -124,7 +124,8 @@ export function CommitTree({
   const drawing = (
     <>
       <svg className="absolute inset-0 overflow-visible" width={width} height={height} aria-hidden>
-        {layout.edges.map((edge) => {
+        {/* Merged-in lines paint first so a first-parent line sharing their path stays on top. */}
+        {[...layout.edges].sort((a, b) => Number(b.secondary) - Number(a.secondary)).map((edge) => {
           const from = position.get(edge.from)!;
           const to = position.get(edge.to)!;
           // A merged-in line belongs to the branch it brings in; any other line to the commit it leads to.
