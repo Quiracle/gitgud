@@ -98,7 +98,7 @@ begin
     where guest_id = target_guest_id and puzzle_id = target_puzzle_id and puzzle_version = target_puzzle_version
   ) then
     forwarded_for := nullif(btrim(split_part(
-      coalesce(current_setting('request.headers', true)::json ->> 'x-forwarded-for', ''), ',', 1
+      coalesce(nullif(current_setting('request.headers', true), '')::json ->> 'x-forwarded-for', ''), ',', 1
     )), '');
     if forwarded_for is not null then
       client_network := sha256(convert_to(forwarded_for || '|' || target_puzzle_id || '|' || target_puzzle_version, 'UTF8'));
