@@ -267,7 +267,6 @@ export const ca: Messages = {
   "result.share": "Comparteix el resultat",
 
   "share.button": "Comparteix",
-  "share.copy": "Copia la imatge",
   "share.download": "Baixa la imatge",
   "share.linkedIn": "Obre LinkedIn",
   "share.copied": "Imatge copiada. Enganxa-la a la teva publicació de LinkedIn (Ctrl+V o ⌘V).",
@@ -279,7 +278,9 @@ export const ca: Messages = {
   "share.solvedIn": "resolt en {time} amb {retries}",
   "share.solvedWithHelp": "resolt amb ajuda",
   "share.cta": "Juga al trencaclosques d'avui: {url}",
-  "share.otherApps": "Comparteix a altres apps",
+  "share.x.post": "Publica a X",
+  "share.x.copied": "Imatge copiada. Enganxa-la a la teva publicació d'X (Ctrl+V o ⌘V).",
+  "share.x.copyUnsupported": "Aquest navegador no pot copiar imatges. Baixa-la i afegeix-la a la teva publicació d'X.",
   "share.caption": "Text",
   "share.linkedIn.post": "Publica a LinkedIn",
   "share.linkedIn.posting": "S'està publicant…",

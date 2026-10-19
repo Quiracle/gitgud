@@ -49,13 +49,13 @@ export function linkedInComposeUrl(text: string): string {
   return `https://www.linkedin.com/feed/?shareActive=true&text=${encodeURIComponent(text)}`;
 }
 
-export function shareFileName(publishedOn: string): string {
-  return `gitgud-${publishedOn}.png`;
+/** Opens X's post composer with the text filled in. Like LinkedIn, the image is pasted by the player. */
+export function xComposeUrl(text: string): string {
+  return `https://x.com/intent/post?text=${encodeURIComponent(text)}`;
 }
 
-/** Phones hand the image straight to the share sheet; most desktop browsers can't. */
-export function canShareFile(file: File): boolean {
-  return typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+export function shareFileName(publishedOn: string): string {
+  return `gitgud-${publishedOn}.png`;
 }
 
 export async function copyImage(blob: Blob): Promise<boolean> {

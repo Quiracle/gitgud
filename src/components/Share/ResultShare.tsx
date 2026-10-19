@@ -3,7 +3,7 @@ import { useEffect, useId, useState, type ReactNode } from "react";
 import { useLinkedInStatus } from "../../hooks/useLinkedInStatus";
 import { useI18n } from "../../i18n/I18nProvider";
 import type { TranslationKey } from "../../i18n/translate";
-import { canShareFile, copyImage, downloadImage, linkedInComposeUrl, shareFileName, shareText, type ShareSummary } from "../../lib/share";
+import { copyImage, downloadImage, linkedInComposeUrl, shareFileName, shareText, xComposeUrl, type ShareSummary } from "../../lib/share";
 import { renderShareCard } from "../../lib/shareCard";
 import type { PublicPuzzleDefinition } from "../../puzzles";
 import {
@@ -51,10 +51,10 @@ type PostState =
  * Sharing for a solved daily. The card is drawn as soon as there is a result, so the
  * share sheet can open straight from the tap (iOS needs the user's gesture).
  *
- * With LinkedIn configured, Share opens a dialog that posts the card to LinkedIn through
- * the linkedin-share Edge Function: the player sees the image and caption and taps Post;
- * nothing is ever posted without that tap. Without it, phones use the share sheet and
- * desktops copy the image and open LinkedIn's composer.
+ * Share opens a dialog with LinkedIn, X, and download. With LinkedIn configured, the
+ * LinkedIn button posts the card through the linkedin-share Edge Function: the player sees
+ * the image and caption and taps Post; nothing is ever posted without that tap. Without it,
+ * and always for X, the image is copied and the network's composer opens for pasting.
  * Only dailies are shareable: `available` stays false for lessons and unsolved runs.
  */
 export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, result: ShareableResult | null) {
@@ -72,7 +72,6 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
   const [post, setPost] = useState<PostState>({ kind: "idle" });
   const captionId = useId();
   const usesApi = linkedIn.status.state !== "unavailable";
-  const phone = card ? canShareFile(card.file) : false;
 
   // A fresh card (another result, or another language) means a fresh caption and nothing posted yet.
   useEffect(() => {
@@ -88,38 +87,23 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
     }
   }, [card?.key]);
 
-  async function share() {
+  function share() {
     if (!card) return;
     setNote(null);
-    if (usesApi) {
-      setOpen(true);
-      return;
-    }
-    if (phone) {
-      await openShareSheet();
-      return;
-    }
     setOpen(true);
+  }
+
+  /** No API can attach the image here, so copy it and open the composer with the text filled in. */
+  async function openComposer(network: "linkedin" | "x") {
+    if (!card) return;
+    setNote(null);
     // Copy before opening the tab: the clipboard refuses writes once this page loses focus.
     // The write is quick, so the tap still counts as the gesture that allows the new tab.
     const copied = await copyImage(card.blob);
-    setNote(copied ? t("share.copied") : t("share.copyUnsupported"));
-    openLinkedInComposer(card.summary);
-  }
-
-  async function openShareSheet() {
-    if (!card) return;
-    try {
-      await navigator.share({ files: [card.file], text: caption || shareText(card.summary, window.location.origin) });
-    } catch {
-      // Closing the share sheet rejects; there is nothing to report.
-    }
-  }
-
-  async function copy() {
-    if (!card) return;
-    const copied = await copyImage(card.blob);
-    setNote(copied ? t("share.copied") : t("share.copyUnsupported"));
+    if (network === "x") setNote(copied ? t("share.x.copied") : t("share.x.copyUnsupported"));
+    else setNote(copied ? t("share.copied") : t("share.copyUnsupported"));
+    const text = shareText(card.summary, window.location.origin);
+    window.open(network === "x" ? xComposeUrl(text) : linkedInComposeUrl(text), "_blank", "noopener,noreferrer");
   }
 
   async function linkedInAction() {
@@ -207,40 +191,26 @@ export function useResultShare(puzzle: PublicPuzzleDefinition | undefined, resul
           </div>
         )}
         <div className="flex flex-col gap-2">
-          {usesApi && (
-            <Button
-              onClick={linkedInAction}
-              disabled={
-                status.state === "loading" ||
+          <Button
+            onClick={usesApi ? linkedInAction : () => openComposer("linkedin")}
+            disabled={
+              usesApi &&
+              (status.state === "loading" ||
                 post.kind === "busy" ||
-                (status.state === "connected" && post.kind === "idle" && captionInvalid)
-              }
-            >
-              <Icon name={post.kind === "posted" ? "open_in_new" : "share"} size={20} className="mr-2" />
-              {t(linkedInLabel(status, post))}
-            </Button>
-          )}
-          {phone ? (
-            <Button variant="outline" onClick={openShareSheet}>
-              <Icon name="share" size={20} className="mr-2" />
-              {t("share.otherApps")}
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={copy}>
-              <Icon name="content_copy" size={20} className="mr-2" />
-              {t("share.copy")}
-            </Button>
-          )}
+                (status.state === "connected" && post.kind === "idle" && captionInvalid))
+            }
+          >
+            <Icon name="linkedin" size={20} className="mr-2" />
+            {t(usesApi ? linkedInLabel(status, post) : "share.linkedIn")}
+          </Button>
+          <Button variant="outline" onClick={() => openComposer("x")}>
+            <Icon name="x" size={20} className="mr-2" />
+            {t("share.x.post")}
+          </Button>
           <Button variant="outline" onClick={() => card && downloadImage(card.blob, card.file.name)}>
             <Icon name="download" size={20} className="mr-2" />
             {t("share.download")}
           </Button>
-          {!usesApi && (
-            <Button variant="outline" onClick={() => card && openLinkedInComposer(card.summary)}>
-              <Icon name="open_in_new" size={20} className="mr-2" />
-              {t("share.linkedIn")}
-            </Button>
-          )}
         </div>
         <AnimatePresence mode="wait" initial={false}>
           <motion.p
@@ -297,10 +267,6 @@ function statusNote(status: LinkedInStatus): TranslationKey {
     default:
       return status.reason ? "share.linkedIn.unavailableNote" : "share.help";
   }
-}
-
-function openLinkedInComposer(summary: ShareSummary) {
-  window.open(linkedInComposeUrl(shareText(summary, window.location.origin)), "_blank", "noopener,noreferrer");
 }
 
 function useShareCard(summary: ShareSummary | null, puzzle: PublicPuzzleDefinition | undefined): ShareCard | null {

@@ -270,7 +270,6 @@ export const en = {
   "result.share": "Share result",
 
   "share.button": "Share",
-  "share.copy": "Copy image",
   "share.download": "Download image",
   "share.linkedIn": "Open LinkedIn",
   "share.copied": "Image copied. Paste it into your LinkedIn post (Ctrl+V or ⌘V).",
@@ -282,7 +281,9 @@ export const en = {
   "share.solvedIn": "solved in {time} with {retries}",
   "share.solvedWithHelp": "solved with help",
   "share.cta": "Play today's puzzle: {url}",
-  "share.otherApps": "Share to other apps",
+  "share.x.post": "Post to X",
+  "share.x.copied": "Image copied. Paste it into your post on X (Ctrl+V or ⌘V).",
+  "share.x.copyUnsupported": "This browser can't copy images. Download it, then add it to your post on X.",
   "share.caption": "Caption",
   "share.linkedIn.post": "Post to LinkedIn",
   "share.linkedIn.posting": "Posting…",

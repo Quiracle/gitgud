@@ -267,7 +267,6 @@ export const es: Messages = {
   "result.share": "Compartir resultado",
 
   "share.button": "Compartir",
-  "share.copy": "Copiar imagen",
   "share.download": "Descargar imagen",
   "share.linkedIn": "Abrir LinkedIn",
   "share.copied": "Imagen copiada. Pégala en tu publicación de LinkedIn (Ctrl+V o ⌘V).",
@@ -279,7 +278,9 @@ export const es: Messages = {
   "share.solvedIn": "resuelto en {time} con {retries}",
   "share.solvedWithHelp": "resuelto con ayuda",
   "share.cta": "Juega al puzzle de hoy: {url}",
-  "share.otherApps": "Compartir en otras apps",
+  "share.x.post": "Publicar en X",
+  "share.x.copied": "Imagen copiada. Pégala en tu publicación de X (Ctrl+V o ⌘V).",
+  "share.x.copyUnsupported": "Este navegador no puede copiar imágenes. Descárgala y añádela a tu publicación de X.",
   "share.caption": "Texto",
   "share.linkedIn.post": "Publicar en LinkedIn",
   "share.linkedIn.posting": "Publicando…",

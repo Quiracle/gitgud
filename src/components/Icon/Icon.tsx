@@ -6,6 +6,8 @@ import arrowBackIosNew from "../../assets/icons/arrow_back_ios_new.svg";
 import arrowForwardIos from "../../assets/icons/arrow_forward_ios.svg";
 import github from "../../assets/brand/github.png";
 import google from "../../assets/brand/google.svg";
+import linkedin from "../../assets/brand/linkedin.svg";
+import x from "../../assets/brand/x.svg";
 import check from "../../assets/icons/check.svg";
 import close from "../../assets/icons/close.svg";
 import contentCopy from "../../assets/icons/content_copy.svg";
@@ -26,7 +28,7 @@ import openInNew from "../../assets/icons/open_in_new.svg";
 import remove from "../../assets/icons/remove.svg";
 import share from "../../assets/icons/share.svg";
 
-/** Google Material Symbols, Outlined, weight 300, 24px, plus sign-in brand marks from Figma. */
+/** Google Material Symbols, Outlined, weight 300, 24px, plus sign-in and sharing brand marks from Figma. */
 const ICONS = {
   account_circle: accountCircle,
   account_circle_fill: accountCircleFill,
@@ -49,11 +51,13 @@ const ICONS = {
   info,
   keyboard_arrow_down: keyboardArrowDown,
   language,
+  linkedin,
   lightbulb_2: lightbulb2,
   my_location: myLocation,
   open_in_new: openInNew,
   remove,
   share,
+  x,
 } as const;
 
 export type IconName = keyof typeof ICONS;
