@@ -345,7 +345,6 @@ export const ca: Messages = {
   "guestName.placeholder": "p. ex. pixelhen",
   "guestName.join": "Entra",
   "guestName.joining": "Entrant…",
-  "guestName.help": "Entra a la classificació com a convidat. Aquest nom és públic.",
   "guestName.length": "Fes servir entre 2 i 24 caràcters.",
   "guestName.characters": "Comença amb una lletra o un número i fes servir lletres, números, espais o _ . ' -",
   "guestName.rateLimited": "Hi ha massa noms de convidat des d'aquesta xarxa. Inicia la sessió per classificar-te.",

@@ -345,7 +345,6 @@ export const es: Messages = {
   "guestName.placeholder": "p. ej. pixelhen",
   "guestName.join": "Entrar",
   "guestName.joining": "Entrando…",
-  "guestName.help": "Entra en la clasificación como invitado. Este nombre es público.",
   "guestName.length": "Usa entre 2 y 24 caracteres.",
   "guestName.characters": "Empieza con una letra o un número y usa letras, números, espacios o _ . ' -",
   "guestName.rateLimited": "Hay demasiados nombres de invitado desde esta red. Inicia sesión para clasificarte.",

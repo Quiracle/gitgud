@@ -54,16 +54,19 @@ export function GuestJoinForm({ initialName, submitting, error, onJoin, onLogIn 
           spellCheck={false}
           enterKeyHint="send"
           aria-invalid={message ? true : undefined}
-          aria-describedby={messageId}
+          aria-describedby={message ? messageId : undefined}
           className="min-h-11 min-w-0 flex-1 rounded border border-grey-700 bg-green-900 px-3 text-paragraph text-grey-50 outline-none transition-colors placeholder:text-grey-500 focus:border-lime-400 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-400"
         />
         <Button type="submit" fullWidth={false} className="shrink-0" disabled={submitting}>
           {submitting ? t("guestName.joining") : t("guestName.join")}
         </Button>
       </div>
-      <p id={messageId} className={`text-xs ${message ? "text-red-400" : "text-grey-400"}`} aria-live="polite">
-        {t(message ?? "guestName.help")}
-      </p>
+      {/* Only problems get a line, so the popup stays short until something needs fixing. */}
+      {message && (
+        <p id={messageId} className="text-xs text-red-400" role="alert">
+          {t(message)}
+        </p>
+      )}
       <p className="text-xs text-grey-400">
         <Rich text={t("guestName.orLogIn")} tags={{ login: ({ children }) => <LogInLink onClick={onLogIn}>{children}</LogInLink> }} />
       </p>

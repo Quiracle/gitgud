@@ -348,7 +348,6 @@ export const en = {
   "guestName.placeholder": "e.g. pixelhen",
   "guestName.join": "Join",
   "guestName.joining": "Joining…",
-  "guestName.help": "Join the leaderboard as a guest. This name is shown publicly.",
   "guestName.length": "Use 2 to 24 characters.",
   "guestName.characters": "Start with a letter or number, then use letters, numbers, spaces or _ . ' -",
   "guestName.rateLimited": "Too many guest names have joined from this network. Log in to get ranked instead.",
