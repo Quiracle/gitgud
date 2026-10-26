@@ -157,6 +157,17 @@ export function SolveScreen({
     // Only on arrival: later commands or restarts must not reopen it.
   }, []);
 
+  // Reopening a solved daily that isn't on the leaderboard yet offers to join it, once per visit.
+  const offeredJoin = useRef(false);
+  useEffect(() => {
+    if (!session.solvedOnArrival || !guestJoin || offeredJoin.current) return;
+    const timer = window.setTimeout(() => {
+      offeredJoin.current = true;
+      setPanel((current) => (current === "none" ? "result" : current));
+    }, origin ? 750 : 400);
+    return () => window.clearTimeout(timer);
+  }, [guestJoin]);
+
   function openHint() {
     if (session.hintsUsed === 0) session.takeHint();
     setPanel("hint");
@@ -301,10 +312,11 @@ export function SolveScreen({
 
       {confetti && <Confetti key={confetti.key} x={confetti.x} y={confetti.y} />}
 
-      {/* No close: a solved puzzle is finished, so the popup only leads onward. */}
+      {/* A fresh solve only leads onward; reopening a solved daily can just be dismissed. */}
       <Dialog
         open={panel === "result" && !sharing.open && !loginOpen}
         title={session.assisted ? t("result.assistedTitle") : t("result.title")}
+        onClose={session.solvedOnArrival ? closePanel : undefined}
       >
         <div className="flex flex-col gap-1">
           <StatRow label={t("result.retries")} value={i18n.formatNumber(session.restartCount)} />

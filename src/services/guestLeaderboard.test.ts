@@ -5,7 +5,15 @@ import { LocalProgressStore } from "../storage/progress";
 
 const rpc = vi.fn();
 vi.mock("./supabase", () => ({ requireSupabaseClient: () => ({ rpc }) }));
-const { checkGuestName, claimGuestDailies, getDailyLeaderboard, submitGuestDailyResult } = await import("./leaderboard");
+const {
+  canJoinAsGuest,
+  checkGuestName,
+  claimGuestDailies,
+  getDailyLeaderboard,
+  joinDailyAsGuest,
+  projectedRank,
+  submitGuestDailyResult,
+} = await import("./leaderboard");
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -126,5 +134,50 @@ describe("guest leaderboard names", () => {
     expect(await claimGuestDailies(store, "user-1")).toBe(0);
     expect(rpc.mock.calls.some(([name]) => name === "forget_guest_player")).toBe(false);
     expect(readGuestPlayer()?.displayName).toBe("pixelhen");
+  });
+
+  it("offers an unjoined guest solve until it joins under a name", async () => {
+    rpc.mockResolvedValue({ data: { status: "submitted" }, error: null });
+    const store = new LocalProgressStore(new MemoryStorage(), Date.now, () => `attempt-${ids++}`);
+    const done = solve(store, "2026-10-19");
+    expect(canJoinAsGuest(done)).toBe(true);
+    expect(canJoinAsGuest(solve(store, "2026-10-20", true))).toBe(false);
+    expect(canJoinAsGuest({ ...done, ranked: true })).toBe(false);
+
+    await joinDailyAsGuest("pixelhen", done);
+
+    expect(rpc).toHaveBeenCalledWith("submit_guest_daily_result", expect.objectContaining({ guest_name: "pixelhen" }));
+    expect(readGuestPlayer()).toMatchObject({ displayName: "pixelhen", submitted: [done.id] });
+    expect(canJoinAsGuest(done)).toBe(false);
+  });
+
+  it("keeps a solve joinable when the guest submission fails", async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: "offline" } });
+    const store = new LocalProgressStore(new MemoryStorage(), Date.now, () => `attempt-${ids++}`);
+    const done = solve(store, "2026-10-19");
+
+    await expect(joinDailyAsGuest("pixelhen", done)).rejects.toThrow();
+    expect(canJoinAsGuest(done)).toBe(true);
+  });
+});
+
+describe("projected leaderboard spot", () => {
+  const entry = (elapsedMs: number, restartCount = 0, commandCount = 3, completedAt = "2026-10-19T10:00:00Z") => ({
+    elapsedMs, restartCount, commandCount, completedAt,
+  });
+  const board = [entry(30_000), entry(45_000, 1), entry(60_000)];
+
+  it("places a result after everyone faster", () => {
+    expect(projectedRank(board, entry(10_000))).toBe(1);
+    expect(projectedRank(board, entry(50_000))).toBe(3);
+    expect(projectedRank(board, entry(90_000))).toBe(4);
+    expect(projectedRank([], entry(90_000))).toBe(1);
+  });
+
+  it("breaks time ties by retries, then commands, then completion time", () => {
+    expect(projectedRank(board, entry(45_000, 0))).toBe(2);
+    expect(projectedRank(board, entry(45_000, 2))).toBe(3);
+    expect(projectedRank(board, entry(60_000, 0, 2))).toBe(3);
+    expect(projectedRank(board, entry(60_000, 0, 3, "2026-10-19T11:00:00.000Z"))).toBe(4);
   });
 });

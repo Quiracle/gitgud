@@ -6,6 +6,7 @@ import { DifficultyBadge } from "../components/Difficulty/DifficultyBadge";
 import { Icon } from "../components/Icon/Icon";
 import { PixelChicken, type ChickenLook } from "../components/Illustration/PixelChicken";
 import { SiteFooter } from "../components/Layout/SiteFooter";
+import { GuestJoinDialog } from "../components/Leaderboard/GuestJoinDialog";
 import { TimeHistogram } from "../components/Leaderboard/TimeHistogram";
 import { useAuth } from "../context/AuthContext";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
@@ -13,7 +14,9 @@ import { useDailyCompletion } from "../hooks/useDailyCompletion";
 import { useI18n } from "../i18n/I18nProvider";
 import { formatDuration } from "../lib/format";
 import { spring } from "../lib/motion";
-import { getDailyLeaderboard, type LeaderboardEntry } from "../services/leaderboard";
+import { canJoinAsGuest, getDailyLeaderboard, projectedRank, type LeaderboardEntry } from "../services/leaderboard";
+import { isSupabaseConfigured } from "../services/supabase";
+import type { CompletionRecord } from "../storage/progress";
 
 interface LeaderboardScreenProps {
   onNavigate: (path: string) => void;
@@ -58,6 +61,8 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
   const signedIn = authStatus === "authenticated";
   const [loginOpen, setLoginOpen] = useState(false);
   const [board, setBoard] = useState<Board>({ status: "loading" });
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [reload, setReload] = useState(0);
 
   const puzzle = daily.status === "ready" ? daily.puzzle : undefined;
   const { completion } = useDailyCompletion(puzzle);
@@ -83,12 +88,18 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
     return () => {
       cancelled = true;
     };
-    // Refetch after signing in so your own row is marked.
-  }, [puzzle, dailyError, signedIn, t]);
+    // Refetch after signing in or joining as a guest so your own row is marked.
+  }, [puzzle, dailyError, signedIn, reload, t]);
 
   const entries = board.status === "ready" ? board.entries : [];
   const podium = entries.filter((entry) => entry.rank <= 3);
   const me = entries.find((entry) => entry.isCurrentUser);
+  // A guest who solved today but hasn't joined sees the spot their result would take.
+  const unjoined =
+    board.status === "ready" && authStatus === "guest" && (DEMO || isSupabaseConfigured()) && canJoinAsGuest(completion)
+      ? completion
+      : undefined;
+  const spot = unjoined ? projectedRank(entries, unjoined) : undefined;
 
   return (
     <div className="min-h-dvh bg-green-50">
@@ -144,12 +155,16 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
         </div>
       </section>
 
-      {board.status === "ready" && entries.length > 0 && (
+      {board.status === "ready" && (entries.length > 0 || unjoined) && (
         <section className="px-6 py-6">
           <div className="mx-auto flex max-w-md flex-col gap-4">
             <div className="flex items-baseline justify-between">
               <h2 className="text-xl leading-[25px] text-green-950">{t("leaderboard.todaysRanking")}</h2>
-              {me && <span className="text-xs text-grey-700">{t("leaderboard.yourRank", { rank: me.rank })}</span>}
+              {me ? (
+                <span className="text-xs text-grey-700">{t("leaderboard.yourRank", { rank: me.rank })}</span>
+              ) : spot ? (
+                <span className="text-xs text-grey-700">{t("leaderboard.projectedRank", { rank: spot })}</span>
+              ) : null}
             </div>
             <motion.ol
               className="flex flex-col gap-2"
@@ -157,9 +172,18 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
               initial="hidden"
               animate="show"
             >
-              {entries.map((entry) => (
+              {entries.slice(0, spot ? spot - 1 : undefined).map((entry) => (
                 <EntryRow key={`${entry.rank}-${entry.displayName}-${entry.completedAt}`} entry={entry} />
               ))}
+              {unjoined && spot && (
+                <>
+                  <SpotRow rank={spot} completion={unjoined} onJoin={() => setJoinOpen(true)} />
+                  {/* Everyone below the spot moves down one, as they will once you join. */}
+                  {entries.slice(spot - 1).map((entry) => (
+                    <EntryRow key={`${entry.rank}-${entry.displayName}-${entry.completedAt}`} entry={entry} rank={entry.rank + 1} />
+                  ))}
+                </>
+              )}
             </motion.ol>
             <TimeHistogram entries={entries} />
           </div>
@@ -168,6 +192,21 @@ export function LeaderboardScreen({ onNavigate }: LeaderboardScreenProps) {
 
       <SiteFooter onNavigate={onNavigate} />
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} returnPath="/leaderboard" />
+      {unjoined && (
+        <GuestJoinDialog
+          open={joinOpen && !loginOpen}
+          completion={unjoined}
+          onClose={() => setJoinOpen(false)}
+          onJoined={() => {
+            setJoinOpen(false);
+            setReload((count) => count + 1);
+          }}
+          onLogIn={() => {
+            setJoinOpen(false);
+            setLoginOpen(true);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -273,8 +312,8 @@ const rowVariants: Variants = {
   show: { opacity: 1, y: 0, transition: spring.soft },
 };
 
-/** One ranked player. Your own row is outlined in lime. */
-function EntryRow({ entry }: { entry: LeaderboardEntry }) {
+/** One ranked player. Your own row is outlined in lime. `rank` overrides the shown rank. */
+function EntryRow({ entry, rank = entry.rank }: { entry: LeaderboardEntry; rank?: number }) {
   const { t } = useI18n();
   return (
     <motion.li
@@ -284,8 +323,8 @@ function EntryRow({ entry }: { entry: LeaderboardEntry }) {
       }`}
       aria-current={entry.isCurrentUser ? "true" : undefined}
     >
-      <span className={`w-8 shrink-0 text-center text-xl leading-7 ${entry.rank <= 3 ? "text-green-950" : "text-grey-700"}`}>
-        {entry.rank}
+      <span className={`w-8 shrink-0 text-center text-xl leading-7 ${rank <= 3 ? "text-green-950" : "text-grey-700"}`}>
+        {rank}
       </span>
       {entry.avatarUrl ? (
         <img
@@ -315,3 +354,30 @@ function EntryRow({ entry }: { entry: LeaderboardEntry }) {
   );
 }
 
+/** A guest's unranked solve, shown where it would rank, with the way to join. */
+function SpotRow({ rank, completion, onJoin }: { rank: number; completion: CompletionRecord; onJoin: () => void }) {
+  const { t } = useI18n();
+  return (
+    <motion.li
+      variants={rowVariants}
+      className="flex flex-col gap-2 rounded border border-dashed border-lime-500 bg-lime-100 p-2"
+      aria-label={t("leaderboard.projectedRank", { rank })}
+    >
+      <div className="flex items-center gap-4">
+        <span className={`w-8 shrink-0 text-center text-xl leading-7 ${rank <= 3 ? "text-green-950" : "text-grey-700"}`}>{rank}</span>
+        <PixelChicken look={PODIUM_LOOKS[rank] ?? PLAIN_CHICKEN} size={40} className="rounded opacity-60" />
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <p className="truncate text-paragraph leading-5 text-grey-950">
+            {t("leaderboard.you")}
+            <span className="ml-2 rounded bg-grey-50 px-1 text-2xs text-grey-700">{t("leaderboard.notJoined")}</span>
+          </p>
+          <p className="text-xs leading-[15px] text-grey-700">
+            {t("leaderboard.retries", { count: completion.restartCount })} · {t("leaderboard.commands", { count: completion.commandCount })}
+          </p>
+        </div>
+        <span className="shrink-0 font-secondary text-code leading-5 text-grey-950">{formatDuration(completion.elapsedMs)}</span>
+      </div>
+      <Button onClick={onJoin}>{t("leaderboard.join")}</Button>
+    </motion.li>
+  );
+}

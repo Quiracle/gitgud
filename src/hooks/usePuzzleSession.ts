@@ -20,13 +20,13 @@ import {
 } from "../puzzles";
 import {
   claimDailyCompletion,
+  joinDailyAsGuest,
   startDailyAttempt,
   submitDailyResult,
-  submitGuestDailyResult,
 } from "../services/leaderboard";
 import { isSupabaseConfigured } from "../services/supabase";
 import { openProgressStore } from "../storage/browserProgress";
-import { markGuestSubmitted, readGuestPlayer, saveGuestName } from "../storage/guestPlayer";
+import { readGuestPlayer } from "../storage/guestPlayer";
 import { bankedActiveMs, type CompletionRecord, type LocalProgressStore, type StoredAttempt } from "../storage/progress";
 
 export type SessionStatus = "active" | "surrendered" | "completed";
@@ -181,10 +181,8 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
   const submitAsGuest = useCallback(async (record: CompletionRecord, name: string) => {
     setSubmission({ state: "submitting" });
     try {
-      const player = saveGuestName(name);
       setGuestName(name);
-      await submitGuestDailyResult(player.token, name, record);
-      markGuestSubmitted(record.id);
+      await joinDailyAsGuest(name, record);
       setSubmission({ state: "guest-submitted" });
     } catch (reason) {
       setSubmission({ state: "guest", error: reason instanceof Error ? reason.message : "Leaderboard submission failed." });

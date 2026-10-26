@@ -1,5 +1,5 @@
 import type { PublicPuzzleDefinition } from "../puzzles";
-import { clearGuestPlayer, readGuestPlayer } from "../storage/guestPlayer";
+import { clearGuestPlayer, markGuestSubmitted, readGuestPlayer, saveGuestName } from "../storage/guestPlayer";
 import type { CompletionRecord, LocalProgressStore } from "../storage/progress";
 import { requireSupabaseClient } from "./supabase";
 
@@ -117,6 +117,38 @@ export async function submitGuestDailyResult(token: string, displayName: string,
     submitted_transcript: completion.commands,
   });
   if (error) throw new Error(`Leaderboard submission failed: ${error.message}`);
+}
+
+/** Saves the guest name on this device and ranks the solve under it. */
+export async function joinDailyAsGuest(displayName: string, completion: CompletionRecord): Promise<void> {
+  const player = saveGuestName(displayName);
+  await submitGuestDailyResult(player.token, displayName, completion);
+  markGuestSubmitted(completion.id);
+}
+
+/**
+ * A finished daily this signed-out device could still put on the leaderboard under a
+ * guest name: unassisted, not on an account, and not yet ranked under the guest name.
+ */
+export function canJoinAsGuest(completion: CompletionRecord | undefined): completion is CompletionRecord {
+  if (!completion || completion.kind !== "daily" || completion.assisted || completion.ranked) return false;
+  return !readGuestPlayer()?.submitted.includes(completion.id);
+}
+
+type RankedResult = Pick<LeaderboardEntry, "elapsedMs" | "restartCount" | "commandCount" | "completedAt">;
+
+/** Where an unranked result would land among ranked entries (1-based), with the leaderboard's tie breakers. */
+export function projectedRank(entries: readonly RankedResult[], result: RankedResult): number {
+  return entries.filter((entry) => compareResults(entry, result) <= 0).length + 1;
+}
+
+function compareResults(a: RankedResult, b: RankedResult): number {
+  return (
+    a.elapsedMs - b.elapsedMs ||
+    a.restartCount - b.restartCount ||
+    a.commandCount - b.commandCount ||
+    Date.parse(a.completedAt) - Date.parse(b.completedAt)
+  );
 }
 
 /** Removes a guest name and all of its leaderboard entries. */
