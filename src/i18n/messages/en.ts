@@ -5,8 +5,20 @@
  * commit IDs stay as they are in every language.
  */
 export const en = {
-  "meta.title": "GitGud — Git puzzle game",
-  "meta.description": "A daily Git puzzle game: transform the repository into the goal by typing Git commands.",
+  "meta.title": "GitGud — Learn Git with a daily puzzle game",
+  "meta.description": "Solve a new visual Git puzzle every day with git merge, rebase, cherry-pick and revert, or start with 10 guided lessons. Play in your browser, no sign-up needed.",
+  "meta.page.title": "{title} — GitGud",
+  "meta.noscript": "GitGud runs in your browser and needs JavaScript turned on to play.",
+  "meta.play.heading": "Today's Git puzzle",
+  "meta.play.description": "One shared Git puzzle a day: type Git commands to turn the repository into the goal, then compare your time on the daily leaderboard.",
+  "meta.course.heading": "Learn Git basics in 10 interactive lessons",
+  "meta.course.description": "A hands-on Git course: git log, switch, merge, cherry-pick, revert, rebase and interactive rebase, one visual puzzle at a time.",
+  "meta.lesson.title": "{title} — Git lesson {number} · GitGud",
+  "meta.lesson.description": "{summary} Practise {commands} in an interactive Git puzzle.",
+  "meta.leaderboard.heading": "Daily Git puzzle leaderboard",
+  "meta.leaderboard.description": "See who solved today's Git puzzle fastest and with the fewest retries, worldwide and among friends.",
+  "meta.legal.heading": "Privacy policy, cookies and terms of use",
+  "meta.legal.description": "How GitGud handles your data, cookies and local storage, and the terms for playing.",
 
   "common.gotIt": "Got it",
   "common.tryAgain": "Try again",

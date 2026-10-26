@@ -1,5 +1,21 @@
 {
+  "headers": [
+    { "source": "/account", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] },
+    { "source": "/account/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] },
+    { "source": "/auth/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] },
+    { "source": "/linkedin/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] },
+    { "source": "/course/practice/:path*", "headers": [{ "key": "X-Robots-Tag", "value": "noindex" }] }
+  ],
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/account", "destination": "/index.html" },
+    { "source": "/account/:path*", "destination": "/index.html" },
+    { "source": "/auth/:path*", "destination": "/index.html" },
+    { "source": "/linkedin/:path*", "destination": "/index.html" },
+    { "source": "/course/practice/:path*", "destination": "/index.html" },
+    { "source": "/play", "destination": "/play/index.html" },
+    { "source": "/course", "destination": "/course/index.html" },
+    { "source": "/course/:lesson", "destination": "/course/:lesson/index.html" },
+    { "source": "/leaderboard", "destination": "/leaderboard/index.html" },
+    { "source": "/legal", "destination": "/legal/index.html" }
   ]
 }

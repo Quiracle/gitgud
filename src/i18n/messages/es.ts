@@ -2,8 +2,20 @@ import type { Messages } from "./en";
 
 /** Español (España). Git commands, branch names, and commit IDs stay in English. */
 export const es: Messages = {
-  "meta.title": "GitGud — Juego de puzzles de Git",
-  "meta.description": "Un puzzle de Git cada día: transforma el repositorio hasta llegar al objetivo escribiendo comandos de Git.",
+  "meta.title": "GitGud — Aprende Git con un puzzle diario",
+  "meta.description": "Resuelve cada día un nuevo puzzle visual de Git con git merge, rebase, cherry-pick y revert, o empieza con 10 lecciones guiadas. Juega en el navegador, sin registrarte.",
+  "meta.page.title": "{title} — GitGud",
+  "meta.noscript": "GitGud funciona en tu navegador y necesita JavaScript activado para jugar.",
+  "meta.play.heading": "El puzzle de Git de hoy",
+  "meta.play.description": "Un puzzle de Git compartido cada día: escribe comandos de Git para convertir el repositorio en el objetivo y compara tu tiempo en la clasificación diaria.",
+  "meta.course.heading": "Aprende lo básico de Git en 10 lecciones interactivas",
+  "meta.course.description": "Un curso práctico de Git: git log, switch, merge, cherry-pick, revert, rebase y rebase interactivo, un puzzle visual cada vez.",
+  "meta.lesson.title": "{title} — Lección de Git {number} · GitGud",
+  "meta.lesson.description": "{summary} Practica {commands} en un puzzle interactivo de Git.",
+  "meta.leaderboard.heading": "Clasificación del puzzle de Git diario",
+  "meta.leaderboard.description": "Mira quién ha resuelto más rápido el puzzle de Git de hoy y con menos reintentos, en todo el mundo y entre amigos.",
+  "meta.legal.heading": "Política de privacidad, cookies y condiciones de uso",
+  "meta.legal.description": "Cómo trata GitGud tus datos, las cookies y el almacenamiento local, y las condiciones para jugar.",
 
   "common.gotIt": "Entendido",
   "common.tryAgain": "Reintentar",

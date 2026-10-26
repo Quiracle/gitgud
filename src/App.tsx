@@ -5,8 +5,10 @@ import { claimGuestDailies } from "./services/leaderboard";
 import { openProgressStore } from "./storage/browserProgress";
 import { BottomNav } from "./components/BottomNav/BottomNav";
 import { CookieBanner } from "./components/Consent/CookieBanner";
+import { useI18n } from "./i18n/I18nProvider";
 import { peekCanvasOrigin } from "./lib/canvasTransition";
 import { spring } from "./lib/motion";
+import { applyPageMeta } from "./lib/pageMeta";
 import { learnBasicsCatalog } from "./puzzles";
 import { LearnScreen } from "./screens/LearnScreen";
 import { LessonScreen } from "./screens/LessonScreen";
@@ -30,6 +32,10 @@ function normalizePath(path: string): string {
 export default function App() {
   const [path, setPath] = useState(() => normalizePath(window.location.pathname));
   const { status: authStatus, user } = useAuth();
+  const { locale } = useI18n();
+
+  // Each screen gets its own title, description, canonical URL, and indexing rule.
+  useEffect(() => applyPageMeta(path, locale), [path, locale]);
 
   // Daily solves finished as a guest join the player's leaderboard once they sign in.
   useEffect(() => {

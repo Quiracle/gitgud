@@ -2,8 +2,20 @@ import type { Messages } from "./en";
 
 /** Català. Git commands, branch names, and commit IDs stay in English. */
 export const ca: Messages = {
-  "meta.title": "GitGud — Joc de trencaclosques de Git",
-  "meta.description": "Un trencaclosques de Git cada dia: transforma el repositori fins a arribar a l'objectiu escrivint ordres de Git.",
+  "meta.title": "GitGud — Aprèn Git amb un trencaclosques diari",
+  "meta.description": "Resol cada dia un nou trencaclosques visual de Git amb git merge, rebase, cherry-pick i revert, o comença amb 10 lliçons guiades. Juga al navegador, sense registrar-te.",
+  "meta.page.title": "{title} — GitGud",
+  "meta.noscript": "GitGud funciona al navegador i necessita JavaScript activat per jugar.",
+  "meta.play.heading": "El trencaclosques de Git d'avui",
+  "meta.play.description": "Un trencaclosques de Git compartit cada dia: escriu ordres de Git per convertir el repositori en l'objectiu i compara el teu temps a la classificació diària.",
+  "meta.course.heading": "Aprèn les bases de Git en 10 lliçons interactives",
+  "meta.course.description": "Un curs pràctic de Git: git log, switch, merge, cherry-pick, revert, rebase i rebase interactiu, un trencaclosques visual cada vegada.",
+  "meta.lesson.title": "{title} — Lliçó de Git {number} · GitGud",
+  "meta.lesson.description": "{summary} Practica {commands} en un trencaclosques interactiu de Git.",
+  "meta.leaderboard.heading": "Classificació del trencaclosques de Git diari",
+  "meta.leaderboard.description": "Mira qui ha resolt més ràpid el trencaclosques de Git d'avui i amb menys reintents, a tot el món i entre amics.",
+  "meta.legal.heading": "Política de privacitat, galetes i condicions d'ús",
+  "meta.legal.description": "Com tracta GitGud les teves dades, les galetes i l'emmagatzematge local, i les condicions per jugar.",
 
   "common.gotIt": "Entesos",
   "common.tryAgain": "Torna-ho a provar",
