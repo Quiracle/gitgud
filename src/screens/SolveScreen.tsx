@@ -30,7 +30,7 @@ import { useI18n } from "../i18n/I18nProvider";
 import { Rich } from "../i18n/Rich";
 import type { TranslationKey } from "../i18n/translate";
 import { isSupabaseConfigured } from "../services/supabase";
-import { resolvePuzzleRules, type PublicPuzzleDefinition } from "../puzzles";
+import { localizePuzzle, resolvePuzzleRules, type PublicPuzzleDefinition } from "../puzzles";
 import type { CompletionRecord } from "../storage/progress";
 
 interface SolveScreenProps {
@@ -62,6 +62,8 @@ export function SolveScreen({
   const { t } = i18n;
   const action = resultAction ?? { label: t("solve.seeLeaderboard"), icon: "crown" as const, href: "/leaderboard" };
   const session = usePuzzleSession(puzzle, syncedCompletion);
+  // Translate graph labels at render time so changing language never resets the run.
+  const displayRepository = localizePuzzle({ ...puzzle, initialRepository: session.repository }, i18n.locale).initialRepository;
   const rules = resolvePuzzleRules(puzzle);
   const desktop = useMediaQuery("(min-width: 1024px)");
   // Tablets and narrow desktop windows: terminal stays at the bottom but shows history.
@@ -216,7 +218,7 @@ export function SolveScreen({
       >
         <div ref={tree} className="absolute inset-0">
           <CommitTree
-            repository={session.repository}
+            repository={displayRepository}
             mode="pan"
             introScale={origin?.treeScale}
             animateIn={!origin}
@@ -474,7 +476,9 @@ export function SolveScreen({
 
       <Dialog size="wide" open={panel === "goals"} title={t("goals.title")} onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
-          <p className="text-grey-50">{puzzle.kind === "daily" ? t("daily.stateOnlyHelp") : puzzle.description}</p>
+          {puzzle.kind === "daily" && <h3 className="text-base text-grey-50">{puzzle.title}</h3>}
+          <p className="text-grey-50">{puzzle.description}</p>
+          {puzzle.kind === "daily" && <p className="text-grey-300">{t("daily.stateOnlyHelp")}</p>}
           <ul className="flex flex-col gap-2" aria-label={t("goals.checklist")}>
             {checks.map((check) => {
               const met = solved || check.met;
@@ -504,7 +508,9 @@ export function SolveScreen({
 
       <Dialog size="wide" open={panel === "help"} title={t("howToPlay.title")} onClose={closePanel}>
         <div className="flex flex-col gap-4 text-sm">
-          <p className="text-grey-50">{puzzle.kind === "daily" ? t("daily.stateOnlyHelp") : puzzle.description}</p>
+          {puzzle.kind === "daily" && <h3 className="text-base text-grey-50">{puzzle.title}</h3>}
+          <p className="text-grey-50">{puzzle.description}</p>
+          {puzzle.kind === "daily" && <p className="text-grey-300">{t("daily.stateOnlyHelp")}</p>}
           {puzzle.kind !== "daily" && puzzle.objectives && puzzle.objectives.length > 0 && (
             <ul className="flex flex-col gap-1 text-grey-300">
               {puzzle.objectives.map((objective) => (

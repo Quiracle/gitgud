@@ -1,0 +1,215 @@
+{
+  "sourceFingerprint": "49e3d23cada80c76d42caa59fbc67f8d21ab8560ab8c8ae2492c2ce6c96bb824",
+  "certificates": [
+    {
+      "templateId": "easy-0",
+      "difficulty": "easy",
+      "family": "dependency-chain",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 2,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[2],\"changes\":[[1,0,1]]},{\"parents\":[3],\"changes\":[[1,1,2]]}],\"currentBranch\":\"main\",\"head\":\"c2\",\"nextGeneratedId\":1,\"mainHead\":1,\"sideHeads\":[[\"feature\",4]],\"target\":[[0,1],[1,2],[2,0],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 1,
+        "exploredStates": 1,
+        "transitions": 9
+      }
+    },
+    {
+      "templateId": "easy-1",
+      "difficulty": "easy",
+      "family": "repair-and-assemble",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 2,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[1],\"changes\":[[1,0,1]]},{\"parents\":[2],\"changes\":[[1,0,2]]}],\"currentBranch\":\"main\",\"head\":\"c4\",\"nextGeneratedId\":1,\"mainHead\":3,\"sideHeads\":[[\"feature\",4]],\"target\":[[0,1],[1,2],[2,0],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 1,
+        "exploredStates": 1,
+        "transitions": 10
+      }
+    },
+    {
+      "templateId": "easy-4",
+      "difficulty": "easy",
+      "family": "bundled-nuisance-cleanup",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 2,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[1],\"changes\":[[0,1,0]]},{\"parents\":[2],\"changes\":[[0,0,1],[1,0,1]]}],\"currentBranch\":\"main\",\"head\":\"c1\",\"nextGeneratedId\":1,\"mainHead\":0,\"sideHeads\":[[\"feature\",3]],\"target\":[[0,0],[1,1],[2,0],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 1,
+        "exploredStates": 1,
+        "transitions": 10
+      }
+    },
+    {
+      "templateId": "medium-0",
+      "difficulty": "medium",
+      "family": "dependency-chain",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 4,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[2],\"changes\":[[1,0,1]]},{\"parents\":[3],\"changes\":[[1,1,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[5],\"changes\":[[2,0,1]]},{\"parents\":[6],\"changes\":[[2,1,2]]}],\"currentBranch\":\"main\",\"head\":\"c2\",\"nextGeneratedId\":1,\"mainHead\":1,\"sideHeads\":[[\"feature\",4],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 3,
+        "exploredStates": 45,
+        "transitions": 1063
+      }
+    },
+    {
+      "templateId": "medium-1",
+      "difficulty": "medium",
+      "family": "repair-and-assemble",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 4,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[1],\"changes\":[[1,0,1]]},{\"parents\":[2],\"changes\":[[1,0,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[3],\"changes\":[[2,0,1]]},{\"parents\":[5],\"changes\":[[2,0,2]]}],\"currentBranch\":\"main\",\"head\":\"c7\",\"nextGeneratedId\":1,\"mainHead\":6,\"sideHeads\":[[\"feature\",4],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 3,
+        "exploredStates": 45,
+        "transitions": 1489
+      }
+    },
+    {
+      "templateId": "medium-2",
+      "difficulty": "medium",
+      "family": "selective-transfer",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 4,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[2],\"changes\":[[1,0,1]]},{\"parents\":[3],\"changes\":[[1,1,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[1],\"changes\":[[2,0,1]]},{\"parents\":[5],\"changes\":[[2,0,2]]}],\"currentBranch\":\"main\",\"head\":\"c7\",\"nextGeneratedId\":1,\"mainHead\":6,\"sideHeads\":[[\"feature\",4],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 3,
+        "exploredStates": 45,
+        "transitions": 1213
+      }
+    },
+    {
+      "templateId": "medium-3",
+      "difficulty": "medium",
+      "family": "prepare-integration",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 4,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[1],\"changes\":[[1,0,1]]},{\"parents\":[2],\"changes\":[[1,0,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[5],\"changes\":[[2,0,1]]},{\"parents\":[6],\"changes\":[[2,1,2]]}],\"currentBranch\":\"main\",\"head\":\"c4\",\"nextGeneratedId\":1,\"mainHead\":3,\"sideHeads\":[[\"feature\",4],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 3,
+        "exploredStates": 45,
+        "transitions": 1213
+      }
+    },
+    {
+      "templateId": "medium-4",
+      "difficulty": "medium",
+      "family": "bundled-nuisance-cleanup",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 4,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[1],\"changes\":[[0,1,0]]},{\"parents\":[2],\"changes\":[[0,0,1],[1,0,1]]},{\"parents\":[0],\"changes\":[[2,0,1]]},{\"parents\":[4],\"changes\":[[2,1,0]]},{\"parents\":[5],\"changes\":[[2,0,1],[3,0,1]]}],\"currentBranch\":\"main\",\"head\":\"c1\",\"nextGeneratedId\":1,\"mainHead\":0,\"sideHeads\":[[\"feature\",3],[\"style\",6]],\"target\":[[0,0],[1,1],[2,0],[3,1],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 3,
+        "exploredStates": 111,
+        "transitions": 2873
+      }
+    },
+    {
+      "templateId": "medium-5",
+      "difficulty": "medium",
+      "family": "prepare-and-integrate",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 4,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[2],\"changes\":[[1,0,1]]},{\"parents\":[3],\"changes\":[[1,1,2]]},{\"parents\":[4],\"changes\":[[1,2,3]]},{\"parents\":[5],\"changes\":[[1,3,4]]}],\"currentBranch\":\"main\",\"head\":\"c2\",\"nextGeneratedId\":1,\"mainHead\":1,\"sideHeads\":[[\"feature\",6]],\"target\":[[0,1],[1,4],[2,0],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 3,
+        "exploredStates": 23,
+        "transitions": 446
+      }
+    },
+    {
+      "templateId": "hard-0",
+      "difficulty": "hard",
+      "family": "dependency-chain",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 6,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\",\"c9\",\"c10\",\"c11\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[2],\"changes\":[[1,0,1]]},{\"parents\":[3],\"changes\":[[1,1,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[5],\"changes\":[[2,0,1]]},{\"parents\":[6],\"changes\":[[2,1,2]]},{\"parents\":[0],\"changes\":[[0,0,4]]},{\"parents\":[8],\"changes\":[[3,0,1]]},{\"parents\":[9],\"changes\":[[3,1,2]]}],\"currentBranch\":\"main\",\"head\":\"c2\",\"nextGeneratedId\":1,\"mainHead\":1,\"sideHeads\":[[\"feature\",4],[\"polish\",10],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 5,
+        "exploredStates": 6058,
+        "transitions": 411211
+      }
+    },
+    {
+      "templateId": "hard-1",
+      "difficulty": "hard",
+      "family": "repair-and-assemble",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 6,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\",\"c9\",\"c10\",\"c11\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[1],\"changes\":[[1,0,1]]},{\"parents\":[2],\"changes\":[[1,0,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[3],\"changes\":[[2,0,1]]},{\"parents\":[5],\"changes\":[[2,0,2]]},{\"parents\":[0],\"changes\":[[0,0,4]]},{\"parents\":[6],\"changes\":[[3,0,1]]},{\"parents\":[8],\"changes\":[[3,0,2]]}],\"currentBranch\":\"main\",\"head\":\"c10\",\"nextGeneratedId\":1,\"mainHead\":9,\"sideHeads\":[[\"feature\",4],[\"polish\",10],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 5,
+        "exploredStates": 6613,
+        "transitions": 896878
+      }
+    },
+    {
+      "templateId": "hard-2",
+      "difficulty": "hard",
+      "family": "selective-transfer",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 6,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\",\"c9\",\"c10\",\"c11\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[2],\"changes\":[[1,0,1]]},{\"parents\":[3],\"changes\":[[1,1,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[1],\"changes\":[[2,0,1]]},{\"parents\":[5],\"changes\":[[2,0,2]]},{\"parents\":[0],\"changes\":[[0,0,4]]},{\"parents\":[8],\"changes\":[[3,0,1]]},{\"parents\":[9],\"changes\":[[3,1,2]]}],\"currentBranch\":\"main\",\"head\":\"c7\",\"nextGeneratedId\":1,\"mainHead\":6,\"sideHeads\":[[\"feature\",4],[\"polish\",10],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 5,
+        "exploredStates": 6197,
+        "transitions": 509050
+      }
+    },
+    {
+      "templateId": "hard-3",
+      "difficulty": "hard",
+      "family": "prepare-integration",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 6,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\",\"c9\",\"c10\",\"c11\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[1],\"changes\":[[1,0,1]]},{\"parents\":[2],\"changes\":[[1,0,2]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[5],\"changes\":[[2,0,1]]},{\"parents\":[6],\"changes\":[[2,1,2]]},{\"parents\":[0],\"changes\":[[0,0,4]]},{\"parents\":[3],\"changes\":[[3,0,1]]},{\"parents\":[8],\"changes\":[[3,0,2]]}],\"currentBranch\":\"main\",\"head\":\"c10\",\"nextGeneratedId\":1,\"mainHead\":9,\"sideHeads\":[[\"feature\",4],[\"polish\",10],[\"style\",7]],\"target\":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 5,
+        "exploredStates": 6383,
+        "transitions": 662980
+      }
+    },
+    {
+      "templateId": "hard-5",
+      "difficulty": "hard",
+      "family": "prepare-and-integrate",
+      "generatorVersion": 1,
+      "evaluatorVersion": 1,
+      "minimumCommands": 6,
+      "signature": "{\"ids\":[\"c1\",\"c2\",\"c3\",\"c4\",\"c5\",\"c6\",\"c7\",\"c8\",\"c9\",\"c10\"],\"initialState\":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],\"commits\":[{\"parents\":[],\"changes\":[]},{\"parents\":[0],\"changes\":[[0,0,1]]},{\"parents\":[0],\"changes\":[[0,0,2]]},{\"parents\":[2],\"changes\":[[1,0,1]]},{\"parents\":[3],\"changes\":[[1,1,2]]},{\"parents\":[4],\"changes\":[[1,2,3]]},{\"parents\":[5],\"changes\":[[1,3,4]]},{\"parents\":[1],\"changes\":[[2,0,1]]},{\"parents\":[0],\"changes\":[[0,0,3]]},{\"parents\":[8],\"changes\":[[2,0,2]]}],\"currentBranch\":\"main\",\"head\":\"c8\",\"nextGeneratedId\":1,\"mainHead\":7,\"sideHeads\":[[\"feature\",6],[\"repair\",9]],\"target\":[[0,1],[1,4],[2,2],[3,0],[4,0],[5,0]]}",
+      "search": {
+        "status": "exhausted",
+        "excludedThroughDepth": 5,
+        "exploredStates": 2562,
+        "transitions": 239156
+      }
+    }
+  ]
+}

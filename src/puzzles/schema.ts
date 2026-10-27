@@ -8,7 +8,9 @@ import type {
   PuzzleKind,
   SupportedCommand,
   ValidationIssue,
+  PuzzleLocalizations,
 } from "./types";
+import { LOCALES, isLocale } from "../i18n/locales";
 
 const kinds = new Set<PuzzleKind>(["daily", "lesson", "generated"]);
 const difficulties = new Set<PuzzleDifficulty>(["easy", "medium", "hard"]);
@@ -65,7 +67,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
     [
       "schemaVersion", "id", "version", "kind", "slug", "title", "description",
       "difficulty", "objectives", "initialRepository", "target", "allowedCommands",
-      "hints", "actionRequirements", "solutionCommands", "themeId", "publishedOn", "parCommands",
+      "hints", "actionRequirements", "solutionCommands", "themeId", "publishedOn", "parCommands", "localizations",
     ],
     "$",
     issues,
@@ -91,6 +93,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
     ? undefined
     : parseActionRequirements(root.actionRequirements, "$.actionRequirements", issues);
   const solutionCommands = stringArray(root.solutionCommands, "$.solutionCommands", issues, false);
+  const localizations = root.localizations === undefined ? undefined : parseLocalizations(root.localizations, "$.localizations", issues);
 
   if (schemaVersion !== undefined && schemaVersion !== 1 && schemaVersion !== 2) {
     issue(issues, "schema.unsupported-version", "Only puzzle schema versions 1 and 2 are supported.", "$.schemaVersion");
@@ -105,7 +108,7 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
   if (
     issues.length > 0 || (schemaVersion !== 1 && schemaVersion !== 2) || id === undefined || version === undefined || kind === undefined || slug === undefined ||
     title === undefined || description === undefined || difficulty === undefined || repository === undefined || target === undefined || allowedCommands === undefined || hints === undefined ||
-    solutionCommands === undefined || (root.actionRequirements !== undefined && actionRequirements === undefined)
+    solutionCommands === undefined || (root.actionRequirements !== undefined && actionRequirements === undefined) || (root.localizations !== undefined && localizations === undefined)
   ) {
     return { issues };
   }
@@ -130,9 +133,34 @@ export function parsePuzzleCandidate(input: unknown): SchemaParseResult {
       allowedCommands,
       hints,
       ...(actionRequirements ? { actionRequirements } : {}),
+      ...(localizations ? { localizations } : {}),
       solutionCommands,
     },
   };
+}
+
+function parseLocalizations(value: unknown, path: string, issues: ValidationIssue[]): PuzzleLocalizations | undefined {
+  const source = record(value, path, issues);
+  if (!source) return undefined;
+  rejectUnknownKeys(source, [...LOCALES], path, issues);
+  for (const locale of LOCALES) if (!Object.hasOwn(source, locale)) issue(issues, "schema.missing-localization", `Missing '${locale}' localization.`, `${path}.${locale}`);
+  const result: Partial<PuzzleLocalizations> = {};
+  for (const [key, raw] of Object.entries(source)) {
+    if (!isLocale(key)) continue;
+    const localePath = `${path}.${key}`;
+    const entry = record(raw, localePath, issues);
+    if (!entry) continue;
+    rejectUnknownKeys(entry, ["title", "description", "objectives", "hints", "commitMessages"], localePath, issues);
+    const title = string(entry.title, `${localePath}.title`, issues);
+    const description = string(entry.description, `${localePath}.description`, issues);
+    const objectives = stringArray(entry.objectives, `${localePath}.objectives`, issues, false);
+    const hints = stringArray(entry.hints, `${localePath}.hints`, issues, false);
+    const commitMessages = stringRecord(entry.commitMessages, `${localePath}.commitMessages`, issues);
+    if (title !== undefined && description !== undefined && objectives !== undefined && hints !== undefined && commitMessages !== undefined) {
+      result[key] = { title, description, objectives, hints, commitMessages };
+    }
+  }
+  return LOCALES.every((locale) => result[locale]) ? result as PuzzleLocalizations : undefined;
 }
 
 function parseRepository(value: unknown, path: string, issues: ValidationIssue[]): Repository | undefined {

@@ -17,3 +17,4 @@ export {
   GUIDED_HINT_COUNT,
   type GuidedFocus,
 } from "./guided";
+export { applyStoryText, createTemplateLocalizations } from "./editorial";

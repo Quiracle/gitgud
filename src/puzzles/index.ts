@@ -12,6 +12,7 @@ export {
 } from "./learnBasics";
 export { validatePuzzleCandidate } from "./validateCandidate";
 export { parsePuzzleCandidate, parsePublicPuzzleDefinition } from "./schema";
+export { localizePuzzle, localizeRepository } from "./localization";
 export { createDailyFixture } from "./dailyFixture";
 export * from "./chickenTheme";
 export * from "./generation";
@@ -29,6 +30,8 @@ export {
   PUZZLE_SCHEMA_VERSION,
   DAILY_PUZZLE_SCHEMA_VERSION,
   type PublicPuzzleDefinition,
+  type PuzzleLocalization,
+  type PuzzleLocalizations,
   type ActionRequirement,
   type PuzzleCandidate,
   type PuzzleValidationResult,

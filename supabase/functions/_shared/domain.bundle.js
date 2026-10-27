@@ -158,16 +158,16 @@ function sample(random, values, count) {
   return result;
 }
 function seededRandom(seed) {
-  let hash = 1779033703 ^ seed.length;
+  let hash2 = 1779033703 ^ seed.length;
   for (let index = 0; index < seed.length; index += 1) {
-    hash = Math.imul(hash ^ seed.charCodeAt(index), 3432918353);
-    hash = hash << 13 | hash >>> 19;
+    hash2 = Math.imul(hash2 ^ seed.charCodeAt(index), 3432918353);
+    hash2 = hash2 << 13 | hash2 >>> 19;
   }
   return () => {
-    hash = Math.imul(hash ^ hash >>> 16, 2246822507);
-    hash = Math.imul(hash ^ hash >>> 13, 3266489909);
-    hash ^= hash >>> 16;
-    let value = hash += 1831565813;
+    hash2 = Math.imul(hash2 ^ hash2 >>> 16, 2246822507);
+    hash2 = Math.imul(hash2 ^ hash2 >>> 13, 3266489909);
+    hash2 ^= hash2 >>> 16;
+    let value = hash2 += 1831565813;
     value = Math.imul(value ^ value >>> 15, value | 1);
     value ^= value + Math.imul(value ^ value >>> 7, value | 61);
     return ((value ^ value >>> 14) >>> 0) / 4294967296;
@@ -993,6 +993,12 @@ var DEFAULT_DIFFICULTY_POLICY = {
   }
 };
 
+// src/i18n/locales.ts
+var LOCALES = ["en", "es", "ca"];
+function isLocale(value) {
+  return typeof value === "string" && LOCALES.includes(value);
+}
+
 // src/puzzles/schema.ts
 var kinds = /* @__PURE__ */ new Set(["daily", "lesson", "generated"]);
 var difficulties = /* @__PURE__ */ new Set(["easy", "medium", "hard"]);
@@ -1029,7 +1035,8 @@ function parsePuzzleCandidate(input) {
       "solutionCommands",
       "themeId",
       "publishedOn",
-      "parCommands"
+      "parCommands",
+      "localizations"
     ],
     "$",
     issues
@@ -1052,6 +1059,7 @@ function parsePuzzleCandidate(input) {
   const hints = stringArray(root.hints, "$.hints", issues, false);
   const actionRequirements = root.actionRequirements === void 0 ? void 0 : parseActionRequirements(root.actionRequirements, "$.actionRequirements", issues);
   const solutionCommands = stringArray(root.solutionCommands, "$.solutionCommands", issues, false);
+  const localizations = root.localizations === void 0 ? void 0 : parseLocalizations(root.localizations, "$.localizations", issues);
   if (schemaVersion !== void 0 && schemaVersion !== 1 && schemaVersion !== 2) {
     issue(issues, "schema.unsupported-version", "Only puzzle schema versions 1 and 2 are supported.", "$.schemaVersion");
   }
@@ -1061,7 +1069,7 @@ function parsePuzzleCandidate(input) {
   if (publishedOn !== void 0 && !/^\d{4}-\d{2}-\d{2}$/.test(publishedOn)) {
     issue(issues, "schema.invalid-date", "publishedOn must use YYYY-MM-DD UTC format.", "$.publishedOn");
   }
-  if (issues.length > 0 || schemaVersion !== 1 && schemaVersion !== 2 || id === void 0 || version === void 0 || kind === void 0 || slug === void 0 || title === void 0 || description === void 0 || difficulty === void 0 || repository === void 0 || target === void 0 || allowedCommands === void 0 || hints === void 0 || solutionCommands === void 0 || root.actionRequirements !== void 0 && actionRequirements === void 0) {
+  if (issues.length > 0 || schemaVersion !== 1 && schemaVersion !== 2 || id === void 0 || version === void 0 || kind === void 0 || slug === void 0 || title === void 0 || description === void 0 || difficulty === void 0 || repository === void 0 || target === void 0 || allowedCommands === void 0 || hints === void 0 || solutionCommands === void 0 || root.actionRequirements !== void 0 && actionRequirements === void 0 || root.localizations !== void 0 && localizations === void 0) {
     return { issues };
   }
   return {
@@ -1084,9 +1092,33 @@ function parsePuzzleCandidate(input) {
       allowedCommands,
       hints,
       ...actionRequirements ? { actionRequirements } : {},
+      ...localizations ? { localizations } : {},
       solutionCommands
     }
   };
+}
+function parseLocalizations(value, path, issues) {
+  const source = record(value, path, issues);
+  if (!source) return void 0;
+  rejectUnknownKeys(source, [...LOCALES], path, issues);
+  for (const locale of LOCALES) if (!Object.hasOwn(source, locale)) issue(issues, "schema.missing-localization", `Missing '${locale}' localization.`, `${path}.${locale}`);
+  const result = {};
+  for (const [key, raw] of Object.entries(source)) {
+    if (!isLocale(key)) continue;
+    const localePath = `${path}.${key}`;
+    const entry = record(raw, localePath, issues);
+    if (!entry) continue;
+    rejectUnknownKeys(entry, ["title", "description", "objectives", "hints", "commitMessages"], localePath, issues);
+    const title = string(entry.title, `${localePath}.title`, issues);
+    const description = string(entry.description, `${localePath}.description`, issues);
+    const objectives = stringArray(entry.objectives, `${localePath}.objectives`, issues, false);
+    const hints = stringArray(entry.hints, `${localePath}.hints`, issues, false);
+    const commitMessages = stringRecord(entry.commitMessages, `${localePath}.commitMessages`, issues);
+    if (title !== void 0 && description !== void 0 && objectives !== void 0 && hints !== void 0 && commitMessages !== void 0) {
+      result[key] = { title, description, objectives, hints, commitMessages };
+    }
+  }
+  return LOCALES.every((locale) => result[locale]) ? result : void 0;
 }
 function parseRepository(value, path, issues) {
   const source = record(value, path, issues);
@@ -1538,6 +1570,21 @@ function validateText(candidate, limits, issues) {
   text(candidate.description, limits.maxDescriptionLength, "$.description", issues);
   boundedStrings(candidate.hints, limits.maxHints, limits.maxHintLength, "$.hints", issues, "content.hints-too-large");
   boundedStrings(candidate.objectives ?? [], limits.maxObjectives, limits.maxObjectiveLength, "$.objectives", issues, "content.objectives-too-large");
+  if (candidate.localizations) {
+    const commitIds = Object.keys(candidate.initialRepository.commits).sort();
+    for (const locale of ["en", "ca", "es"]) {
+      const localized = candidate.localizations[locale];
+      const path = `$.localizations.${locale}`;
+      text(localized.title, limits.maxTitleLength, `${path}.title`, issues);
+      text(localized.description, limits.maxDescriptionLength, `${path}.description`, issues);
+      boundedStrings(localized.hints, limits.maxHints, limits.maxHintLength, `${path}.hints`, issues, "content.hints-too-large");
+      boundedStrings(localized.objectives, limits.maxObjectives, limits.maxObjectiveLength, `${path}.objectives`, issues, "content.objectives-too-large");
+      for (const [id, message] of Object.entries(localized.commitMessages)) text(message, limits.maxCommitMessageLength, `${path}.commitMessages.${id}`, issues);
+      if (Object.keys(localized.commitMessages).sort().join("\0") !== commitIds.join("\0")) add(issues, "localization.commit-ids", "Localized commit messages must match the repository commit IDs exactly.", `${path}.commitMessages`);
+      if (localized.objectives.length !== (candidate.objectives ?? []).length) add(issues, "localization.objective-count", "Localized objectives must preserve the canonical count.", `${path}.objectives`);
+      if (localized.hints.length !== candidate.hints.length) add(issues, "localization.hint-count", "Localized hints must preserve the canonical count.", `${path}.hints`);
+    }
+  }
   boundedStrings(candidate.solutionCommands, limits.maxSolutionCommands, limits.maxSolutionCommandLength, "$.solutionCommands", issues, "content.solution-too-large");
 }
 function validateDailyPolicy(candidate, issues) {
@@ -1997,11 +2044,906 @@ function toGuidedPuzzle(candidate, lessonId) {
     solutionCommands
   };
 }
+
+// src/puzzles/generation/certificates.json
+var certificates_default = {
+  sourceFingerprint: "49e3d23cada80c76d42caa59fbc67f8d21ab8560ab8c8ae2492c2ce6c96bb824",
+  certificates: [
+    {
+      templateId: "easy-0",
+      difficulty: "easy",
+      family: "dependency-chain",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 2,
+      signature: '{"ids":["c1","c2","c3","c4","c5"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["feature",4]],"target":[[0,1],[1,2],[2,0],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 1,
+        exploredStates: 1,
+        transitions: 9
+      }
+    },
+    {
+      templateId: "easy-1",
+      difficulty: "easy",
+      family: "repair-and-assemble",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 2,
+      signature: '{"ids":["c1","c2","c3","c4","c5"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[1],"changes":[[1,0,1]]},{"parents":[2],"changes":[[1,0,2]]}],"currentBranch":"main","head":"c4","nextGeneratedId":1,"mainHead":3,"sideHeads":[["feature",4]],"target":[[0,1],[1,2],[2,0],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 1,
+        exploredStates: 1,
+        transitions: 10
+      }
+    },
+    {
+      templateId: "easy-4",
+      difficulty: "easy",
+      family: "bundled-nuisance-cleanup",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 2,
+      signature: '{"ids":["c1","c2","c3","c4"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[1],"changes":[[0,1,0]]},{"parents":[2],"changes":[[0,0,1],[1,0,1]]}],"currentBranch":"main","head":"c1","nextGeneratedId":1,"mainHead":0,"sideHeads":[["feature",3]],"target":[[0,0],[1,1],[2,0],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 1,
+        exploredStates: 1,
+        transitions: 10
+      }
+    },
+    {
+      templateId: "medium-0",
+      difficulty: "medium",
+      family: "dependency-chain",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 4,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[5],"changes":[[2,0,1]]},{"parents":[6],"changes":[[2,1,2]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["feature",4],["style",7]],"target":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 3,
+        exploredStates: 45,
+        transitions: 1063
+      }
+    },
+    {
+      templateId: "medium-1",
+      difficulty: "medium",
+      family: "repair-and-assemble",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 4,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[1],"changes":[[1,0,1]]},{"parents":[2],"changes":[[1,0,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[3],"changes":[[2,0,1]]},{"parents":[5],"changes":[[2,0,2]]}],"currentBranch":"main","head":"c7","nextGeneratedId":1,"mainHead":6,"sideHeads":[["feature",4],["style",7]],"target":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 3,
+        exploredStates: 45,
+        transitions: 1489
+      }
+    },
+    {
+      templateId: "medium-2",
+      difficulty: "medium",
+      family: "selective-transfer",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 4,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[1],"changes":[[2,0,1]]},{"parents":[5],"changes":[[2,0,2]]}],"currentBranch":"main","head":"c7","nextGeneratedId":1,"mainHead":6,"sideHeads":[["feature",4],["style",7]],"target":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 3,
+        exploredStates: 45,
+        transitions: 1213
+      }
+    },
+    {
+      templateId: "medium-3",
+      difficulty: "medium",
+      family: "prepare-integration",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 4,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[1],"changes":[[1,0,1]]},{"parents":[2],"changes":[[1,0,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[5],"changes":[[2,0,1]]},{"parents":[6],"changes":[[2,1,2]]}],"currentBranch":"main","head":"c4","nextGeneratedId":1,"mainHead":3,"sideHeads":[["feature",4],["style",7]],"target":[[0,1],[1,2],[2,2],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 3,
+        exploredStates: 45,
+        transitions: 1213
+      }
+    },
+    {
+      templateId: "medium-4",
+      difficulty: "medium",
+      family: "bundled-nuisance-cleanup",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 4,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[1],"changes":[[0,1,0]]},{"parents":[2],"changes":[[0,0,1],[1,0,1]]},{"parents":[0],"changes":[[2,0,1]]},{"parents":[4],"changes":[[2,1,0]]},{"parents":[5],"changes":[[2,0,1],[3,0,1]]}],"currentBranch":"main","head":"c1","nextGeneratedId":1,"mainHead":0,"sideHeads":[["feature",3],["style",6]],"target":[[0,0],[1,1],[2,0],[3,1],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 3,
+        exploredStates: 111,
+        transitions: 2873
+      }
+    },
+    {
+      templateId: "medium-5",
+      difficulty: "medium",
+      family: "prepare-and-integrate",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 4,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[4],"changes":[[1,2,3]]},{"parents":[5],"changes":[[1,3,4]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["feature",6]],"target":[[0,1],[1,4],[2,0],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 3,
+        exploredStates: 23,
+        transitions: 446
+      }
+    },
+    {
+      templateId: "hard-0",
+      difficulty: "hard",
+      family: "dependency-chain",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 6,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10","c11"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[5],"changes":[[2,0,1]]},{"parents":[6],"changes":[[2,1,2]]},{"parents":[0],"changes":[[0,0,4]]},{"parents":[8],"changes":[[3,0,1]]},{"parents":[9],"changes":[[3,1,2]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["feature",4],["polish",10],["style",7]],"target":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 5,
+        exploredStates: 6058,
+        transitions: 411211
+      }
+    },
+    {
+      templateId: "hard-1",
+      difficulty: "hard",
+      family: "repair-and-assemble",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 6,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10","c11"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[1],"changes":[[1,0,1]]},{"parents":[2],"changes":[[1,0,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[3],"changes":[[2,0,1]]},{"parents":[5],"changes":[[2,0,2]]},{"parents":[0],"changes":[[0,0,4]]},{"parents":[6],"changes":[[3,0,1]]},{"parents":[8],"changes":[[3,0,2]]}],"currentBranch":"main","head":"c10","nextGeneratedId":1,"mainHead":9,"sideHeads":[["feature",4],["polish",10],["style",7]],"target":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 5,
+        exploredStates: 6613,
+        transitions: 896878
+      }
+    },
+    {
+      templateId: "hard-2",
+      difficulty: "hard",
+      family: "selective-transfer",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 6,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10","c11"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[1],"changes":[[2,0,1]]},{"parents":[5],"changes":[[2,0,2]]},{"parents":[0],"changes":[[0,0,4]]},{"parents":[8],"changes":[[3,0,1]]},{"parents":[9],"changes":[[3,1,2]]}],"currentBranch":"main","head":"c7","nextGeneratedId":1,"mainHead":6,"sideHeads":[["feature",4],["polish",10],["style",7]],"target":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 5,
+        exploredStates: 6197,
+        transitions: 509050
+      }
+    },
+    {
+      templateId: "hard-3",
+      difficulty: "hard",
+      family: "prepare-integration",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 6,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10","c11"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[1],"changes":[[1,0,1]]},{"parents":[2],"changes":[[1,0,2]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[5],"changes":[[2,0,1]]},{"parents":[6],"changes":[[2,1,2]]},{"parents":[0],"changes":[[0,0,4]]},{"parents":[3],"changes":[[3,0,1]]},{"parents":[8],"changes":[[3,0,2]]}],"currentBranch":"main","head":"c10","nextGeneratedId":1,"mainHead":9,"sideHeads":[["feature",4],["polish",10],["style",7]],"target":[[0,1],[1,2],[2,2],[3,2],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 5,
+        exploredStates: 6383,
+        transitions: 662980
+      }
+    },
+    {
+      templateId: "hard-5",
+      difficulty: "hard",
+      family: "prepare-and-integrate",
+      generatorVersion: 1,
+      evaluatorVersion: 1,
+      minimumCommands: 6,
+      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[4],"changes":[[1,2,3]]},{"parents":[5],"changes":[[1,3,4]]},{"parents":[1],"changes":[[2,0,1]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[8],"changes":[[2,0,2]]}],"currentBranch":"main","head":"c8","nextGeneratedId":1,"mainHead":7,"sideHeads":[["feature",6],["repair",9]],"target":[[0,1],[1,4],[2,2],[3,0],[4,0],[5,0]]}',
+      search: {
+        status: "exhausted",
+        excludedThroughDepth: 5,
+        exploredStates: 2562,
+        transitions: 239156
+      }
+    }
+  ]
+};
+
+// src/puzzles/generation/deterministic.ts
+var SUPPORTED_ACTION_TYPES2 = SUPPORTED_ACTION_TYPES;
+var DETERMINISTIC_GENERATOR_VERSION = 1;
+var SLOTS = ["sunglasses", "scarf", "longLegs", "hat", "crest"];
+var COLORS = ["red", "blue", "turquoise", "purple", "gold"];
+var COLORS_WITHOUT_BLUE = ["red", "turquoise", "purple", "gold"];
+var MODULE_COUNTS = { easy: 1, medium: 2, hard: 3 };
+var BRANCHES = ["feature", "style", "polish"];
+function createDeterministicCandidate(date, difficulty, seed, variant = 0) {
+  validateInputs(date, difficulty, seed, variant);
+  const moduleCount = MODULE_COUNTS[difficulty];
+  const random = createRandom(`${date}|${difficulty}|${seed}|${variant}`);
+  const slots = selectSlots(moduleCount, random);
+  const colors = shuffled(COLORS, random);
+  const moduleKinds = modulePattern(moduleCount, variant);
+  const blockerColors = shuffled(COLORS_WITHOUT_BLUE, random).slice(0, moduleCount);
+  const commits = {};
+  const addCommit = (id2, parent, message, changes) => {
+    commits[id2] = { id: id2, parents: parent ? [parent] : [], message, changes: changes.map((change) => ({ type: "set", ...change })), provenance: { type: "original", sourceCommits: [] } };
+  };
+  addCommit("c1", void 0, "Create the empty repository", []);
+  addCommit("c2", "c1", "Color the chicken black", [{ property: "body", from: "cream", to: "black" }]);
+  const branches = { main: "c2" };
+  let nextId = 3;
+  let mainHead = "c2";
+  const solutionCommands = [];
+  const targetSnapshot = { ...EMPTY_CHICKEN_STATE, body: "black" };
+  for (let index = 0; index < moduleCount; index += 1) {
+    const slot = slots[index];
+    const desired = colors[index];
+    const branch = BRANCHES[index];
+    const branchBody = blockerColors[index];
+    const poisonId = `c${nextId++}`;
+    addCommit(poisonId, "c1", `Color the chicken ${branchBody} on ${branch}`, [{ property: "body", from: "cream", to: branchBody }]);
+    let branchHead = poisonId;
+    if (moduleKinds[index] === "dependency") {
+      const interim = COLORS.find((color) => color !== desired && color !== branchBody);
+      const firstId = `c${nextId++}`;
+      addCommit(firstId, branchHead, `Add ${interim} ${slot}`, [{ property: slot, from: "none", to: interim }]);
+      branchHead = firstId;
+      const finalId = `c${nextId++}`;
+      addCommit(finalId, branchHead, `Change ${slot} to ${desired}`, [{ property: slot, from: interim, to: desired }]);
+      branchHead = finalId;
+      solutionCommands.push(`git cherry-pick ${firstId}`, `git cherry-pick ${finalId}`);
+    } else {
+      const wrong = COLORS.find((color) => color !== desired && color !== branchBody);
+      const badId = `c${nextId++}`;
+      addCommit(badId, mainHead, `Add the wrong ${slot}`, [{ property: slot, from: "none", to: wrong }]);
+      mainHead = badId;
+      const desiredId = `c${nextId++}`;
+      addCommit(desiredId, branchHead, `Add ${desired} ${slot} on ${branch}`, [{ property: slot, from: "none", to: desired }]);
+      branchHead = desiredId;
+      solutionCommands.push(`git revert ${badId}`, `git cherry-pick ${desiredId}`);
+    }
+    branches[branch] = branchHead;
+    targetSnapshot[slot] = desired;
+  }
+  branches.main = mainHead;
+  const id = `daily-${date}`;
+  const candidate = {
+    schemaVersion: 2,
+    themeId: "chicken-v1",
+    id,
+    version: 1,
+    kind: "daily",
+    slug: id,
+    title: "A Chicken Makeover",
+    description: "Give the chicken its final look by curating work across branches.",
+    difficulty,
+    publishedOn: date,
+    objectives: ["Make main match the illustrated target."],
+    initialRepository: {
+      commits,
+      branches,
+      currentBranch: "main",
+      head: mainHead,
+      initialState: { ...EMPTY_CHICKEN_STATE, body: "cream" },
+      nextGeneratedId: 1
+    },
+    target: { branch: "main", snapshot: targetSnapshot },
+    allowedCommands: [...SUPPORTED_ACTION_TYPES2],
+    hints: ["Each side branch contains useful accessory work.", "Cherry-pick the useful changes onto main.", "Revert any mainline accessory that conflicts with the target."],
+    solutionCommands
+  };
+  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+  if (!validation.ok) {
+    throw new Error(`Deterministic candidate failed validation: ${validation.issues.map((issue2) => `${issue2.code} at ${issue2.path}`).join(", ")}`);
+  }
+  const family = familyForPattern(moduleKinds);
+  const signature = mechanicsSignature(candidate);
+  return { candidate, family, signature, generatorVersion: DETERMINISTIC_GENERATOR_VERSION };
+}
+function createBundledCandidate(date, difficulty, seed) {
+  validateInputs(date, difficulty, seed, 0);
+  const count = MODULE_COUNTS[difficulty];
+  const random = createRandom(`${date}|bundled|${difficulty}|${seed}`);
+  const desiredSlots = shuffled(["sunglasses", "scarf", "longLegs"], random).slice(0, count);
+  const nuisanceSlots = shuffled(["body", "hat", "crest"], random).slice(0, count);
+  const colors = shuffled(COLORS, random);
+  const commits = {};
+  const branches = { main: "c1" };
+  const solutionCommands = [];
+  const targetSnapshot = { ...EMPTY_CHICKEN_STATE, body: "cream" };
+  const addCommit = (id2, parent, message, changes) => {
+    commits[id2] = { id: id2, parents: [parent], message, changes: changes.map((change) => ({ type: "set", ...change })), provenance: { type: "original", sourceCommits: [] } };
+  };
+  commits.c1 = { id: "c1", parents: [], message: "Create the empty repository", changes: [], provenance: { type: "original", sourceCommits: [] } };
+  let nextId = 2;
+  for (let index = 0; index < count; index += 1) {
+    const branch = BRANCHES[index];
+    const nuisance = nuisanceSlots[index];
+    const desiredSlot = desiredSlots[index];
+    const color = colors[index];
+    const nuisanceColor = color;
+    const baseline = nuisance === "body" ? "cream" : "none";
+    const first = `c${nextId++}`;
+    addCommit(first, "c1", `Add a distracting ${nuisance}`, [{ property: nuisance, from: baseline, to: nuisanceColor }]);
+    const cleanup = `c${nextId++}`;
+    addCommit(cleanup, first, `Remove the distracting ${nuisance}`, [{ property: nuisance, from: nuisanceColor, to: baseline }]);
+    const bundled = `c${nextId++}`;
+    addCommit(bundled, cleanup, `Bundle the useful ${desiredSlot} change`, [
+      { property: nuisance, from: baseline, to: nuisanceColor },
+      { property: desiredSlot, from: "none", to: color }
+    ]);
+    branches[branch] = bundled;
+    solutionCommands.push(`git merge ${branch}`, `git revert ${first}`);
+    targetSnapshot[desiredSlot] = color;
+  }
+  const id = `daily-${date}`;
+  const candidate = {
+    schemaVersion: 2,
+    themeId: "chicken-v1",
+    id,
+    version: 1,
+    kind: "daily",
+    slug: id,
+    title: "Useful Work, Extra Baggage",
+    description: "Bring useful accessories onto main and clean up each branch's nuisance change.",
+    difficulty,
+    publishedOn: date,
+    objectives: ["Keep the useful accessories and remove the nuisance changes."],
+    initialRepository: {
+      commits,
+      branches,
+      currentBranch: "main",
+      head: "c1",
+      initialState: { ...EMPTY_CHICKEN_STATE, body: "cream" },
+      nextGeneratedId: 1
+    },
+    target: { branch: "main", snapshot: targetSnapshot },
+    allowedCommands: [...SUPPORTED_ACTION_TYPES2],
+    hints: ["Each branch bundles an accessory with an unwanted change.", "Merge a branch to bring in both changes.", "Clean up its nuisance change while keeping the accessory."],
+    solutionCommands
+  };
+  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+  if (!validation.ok) {
+    throw new Error(`Bundled candidate failed validation: ${validation.issues.map((issue2) => `${issue2.code} at ${issue2.path}`).join(", ")}`);
+  }
+  return {
+    candidate,
+    family: "bundled-nuisance-cleanup",
+    signature: mechanicsSignature(candidate),
+    generatorVersion: DETERMINISTIC_GENERATOR_VERSION
+  };
+}
+function mechanicsSignature(candidate) {
+  return JSON.stringify(mechanicsShape(candidate));
+}
+function validateInputs(date, difficulty, seed, variant) {
+  if (!isCanonicalDate(date)) throw new Error("date must be a valid YYYY-MM-DD calendar date.");
+  if (!(difficulty in MODULE_COUNTS)) throw new Error("difficulty must be easy, medium, or hard.");
+  if (typeof seed !== "string" || seed.trim().length === 0 || seed.length > 256) throw new Error("seed must be a non-empty string of at most 256 characters.");
+  if (!Number.isSafeInteger(variant) || variant < 0) throw new Error("variant must be a non-negative safe integer.");
+}
+function modulePattern(count, variant) {
+  const pattern = variant % 4;
+  if (pattern === 0) return Array.from({ length: count }, () => "dependency");
+  if (pattern === 1) return Array.from({ length: count }, () => "repair");
+  if (pattern === 2) return Array.from({ length: count }, (_, index) => index % 2 === 0 ? "dependency" : "repair");
+  return Array.from({ length: count }, (_, index) => index % 2 === 0 ? "repair" : "dependency");
+}
+function selectSlots(count, random) {
+  const available = shuffled(SLOTS, random);
+  const selected = [];
+  for (const slot of available) {
+    if (slot === "hat" && selected.includes("crest") || slot === "crest" && selected.includes("hat")) continue;
+    selected.push(slot);
+    if (selected.length === count) break;
+  }
+  return selected;
+}
+function familyForPattern(pattern) {
+  const key = pattern.map((kind) => kind === "dependency" ? "d" : "r").join("");
+  if (/^d+$/.test(key)) return "dependency-chain";
+  if (/^r+$/.test(key)) return "repair-and-assemble";
+  if (key.startsWith("d")) return "selective-transfer";
+  return "prepare-integration";
+}
+function mechanicsShape(candidate) {
+  const ids = Object.keys(candidate.initialRepository.commits).sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)));
+  const propertyIds = /* @__PURE__ */ new Map();
+  const valuesByProperty = /* @__PURE__ */ new Map();
+  const getPropertyId = (property) => {
+    if (!propertyIds.has(property)) propertyIds.set(property, propertyIds.size);
+    return propertyIds.get(property);
+  };
+  const getValueId = (property, value) => {
+    const key = JSON.stringify(value);
+    let values = valuesByProperty.get(property);
+    if (!values) valuesByProperty.set(property, values = /* @__PURE__ */ new Map());
+    if (!values.has(key)) values.set(key, values.size);
+    return values.get(key);
+  };
+  for (const id of ids) for (const change of candidate.initialRepository.commits[id].changes) getPropertyId(change.property);
+  for (const property of Object.keys(candidate.initialRepository.initialState)) getPropertyId(property);
+  const state = (snapshot) => [...propertyIds.entries()].sort(([, a], [, b]) => a - b).map(([property, id]) => [id, getValueId(property, snapshot[property])]);
+  const initialState = state(candidate.initialRepository.initialState);
+  const commits = ids.map((id) => {
+    const commit = candidate.initialRepository.commits[id];
+    return {
+      parents: commit.parents.map((parent) => ids.indexOf(parent)),
+      changes: commit.changes.map((change) => [getPropertyId(change.property), getValueId(change.property, change.from), getValueId(change.property, change.to)])
+    };
+  });
+  const target = state(candidate.target.snapshot);
+  return {
+    // IDs are retained because merge-base tie breaking depends on them.
+    ids,
+    initialState,
+    commits,
+    currentBranch: candidate.initialRepository.currentBranch,
+    head: candidate.initialRepository.head,
+    nextGeneratedId: candidate.initialRepository.nextGeneratedId,
+    mainHead: ids.indexOf(candidate.initialRepository.branches.main),
+    sideHeads: Object.entries(candidate.initialRepository.branches).filter(([branch]) => branch !== "main").sort(([a], [b]) => a.localeCompare(b)).map(([branch, head]) => [branch, ids.indexOf(head)]),
+    target
+  };
+}
+function isCanonicalDate(date) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const parsed = /* @__PURE__ */ new Date(`${date}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === date;
+}
+function createRandom(input) {
+  let state = Number.parseInt(hashString(input), 36) >>> 0;
+  return () => {
+    state = state + 1831565813 >>> 0;
+    let value = state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffled(values, random) {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(random() * (index + 1));
+    [result[index], result[other]] = [result[other], result[index]];
+  }
+  return result;
+}
+function hashString(input) {
+  let hash2 = 2166136261;
+  for (let index = 0; index < input.length; index += 1) hash2 = Math.imul(hash2 ^ input.charCodeAt(index), 16777619);
+  return (hash2 >>> 0).toString(36);
+}
+
+// src/puzzles/generation/integration.ts
+var COLORS2 = ["red", "blue", "turquoise", "purple", "gold"];
+var ACCESSORIES = ["sunglasses", "scarf", "longLegs"];
+function createIntegrationCandidate(date, difficulty, seed) {
+  validateInputs2(date, difficulty, seed);
+  const random = createRandom2(`${date}|prepare-and-integrate|${difficulty}|${seed}`);
+  const accessories = shuffled2(ACCESSORIES, random);
+  const colors = shuffled2(COLORS2, random);
+  const primary = accessories[0];
+  const targetColor = colors[3];
+  const commits = {};
+  const addCommit = (id2, parent, message, changes) => {
+    commits[id2] = { id: id2, parents: [parent], message, changes: changes.map((change) => ({ type: "set", ...change })), provenance: { type: "original", sourceCommits: [] } };
+  };
+  commits.c1 = { id: "c1", parents: [], message: "Create the empty repository", changes: [], provenance: { type: "original", sourceCommits: [] } };
+  addCommit("c2", "c1", "Color the chicken black", [{ property: "body", from: "cream", to: "black" }]);
+  addCommit("c3", "c1", "Add an unwanted red body color", [{ property: "body", from: "cream", to: "red" }]);
+  let previous = "c3";
+  for (let index = 0; index < 4; index += 1) {
+    const id2 = `c${index + 4}`;
+    addCommit(id2, previous, `Set ${primary} to ${colors[index]}`, [
+      { property: primary, from: index === 0 ? "none" : colors[index - 1], to: colors[index] }
+    ]);
+    previous = id2;
+  }
+  const branches = { main: "c2", feature: "c7" };
+  let mainHead = "c2";
+  const solutionCommands = ["git switch feature", "git revert c3", "git switch main", "git merge feature"];
+  const targetSnapshot = { ...EMPTY_CHICKEN_STATE, body: "black", [primary]: targetColor };
+  if (difficulty === "hard") {
+    const secondary = accessories[1];
+    const secondaryTarget = colors[2];
+    const wrong = COLORS2.find((color) => color !== secondaryTarget);
+    addCommit("c8", "c2", `Add the wrong ${secondary}`, [{ property: secondary, from: "none", to: wrong }]);
+    addCommit("c9", "c1", "Color the repair branch blue", [{ property: "body", from: "cream", to: "blue" }]);
+    addCommit("c10", "c9", `Add the desired ${secondary}`, [{ property: secondary, from: "none", to: secondaryTarget }]);
+    branches.main = "c8";
+    branches.repair = "c10";
+    mainHead = "c8";
+    solutionCommands.push("git revert c8", "git cherry-pick c10");
+    targetSnapshot[secondary] = secondaryTarget;
+  }
+  const id = `daily-${date}`;
+  const candidate = {
+    schemaVersion: 2,
+    themeId: "chicken-v1",
+    id,
+    version: 1,
+    kind: "daily",
+    slug: id,
+    title: "Prepare and Integrate",
+    description: "Prepare the accessory on feature, clean its distraction, and integrate the finished work.",
+    difficulty,
+    publishedOn: date,
+    objectives: ["Finish the accessory work on main without the unwanted body color."],
+    initialRepository: {
+      commits,
+      branches,
+      currentBranch: "main",
+      head: mainHead,
+      initialState: { ...EMPTY_CHICKEN_STATE, body: "cream" },
+      nextGeneratedId: 1
+    },
+    target: { branch: "main", snapshot: targetSnapshot },
+    allowedCommands: [...SUPPORTED_ACTION_TYPES2],
+    hints: ["The feature branch has a distraction before its useful work.", "Remove the distraction before integrating feature.", "On hard, repair the second accessory separately."],
+    solutionCommands
+  };
+  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+  if (!validation.ok) {
+    throw new Error(`Integration candidate failed validation: ${validation.issues.map((issue2) => `${issue2.code} at ${issue2.path}`).join(", ")}`);
+  }
+  return {
+    candidate,
+    family: "prepare-and-integrate",
+    signature: mechanicsSignature(candidate),
+    generatorVersion: DETERMINISTIC_GENERATOR_VERSION
+  };
+}
+function validateInputs2(date, difficulty, seed) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(`${date}T00:00:00Z`)) || (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).toISOString().slice(0, 10) !== date) {
+    throw new Error("date must be a valid YYYY-MM-DD calendar date.");
+  }
+  if (difficulty !== "medium" && difficulty !== "hard") throw new Error("difficulty must be medium or hard.");
+  if (typeof seed !== "string" || seed.trim().length === 0 || seed.length > 256) throw new Error("seed must be a non-empty string of at most 256 characters.");
+}
+function createRandom2(input) {
+  let state = Number.parseInt(hashString2(input), 36) >>> 0;
+  return () => {
+    state = state + 1831565813 >>> 0;
+    let value = state;
+    value = Math.imul(value ^ value >>> 15, value | 1);
+    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
+    return ((value ^ value >>> 14) >>> 0) / 4294967296;
+  };
+}
+function shuffled2(values, random) {
+  const result = [...values];
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const other = Math.floor(random() * (index + 1));
+    [result[index], result[other]] = [result[other], result[index]];
+  }
+  return result;
+}
+function hashString2(input) {
+  let hash2 = 2166136261;
+  for (let index = 0; index < input.length; index += 1) hash2 = Math.imul(hash2 ^ input.charCodeAt(index), 16777619);
+  return (hash2 >>> 0).toString(36);
+}
+
+// src/puzzles/generation/editorial.ts
+var LOCALES2 = ["en", "ca", "es"];
+var THEMES = {
+  en: [
+    { title: "Studio Day", subject: "studio portrait" },
+    { title: "Festival Lights", subject: "festival display" },
+    { title: "Garden Portrait", subject: "garden portrait" },
+    { title: "The Big Premiere", subject: "premiere night portrait" },
+    { title: "Colorful Postcard", subject: "art fair postcard" },
+    { title: "The Workshop", subject: "makers' workshop display" },
+    { title: "A Little Celebration", subject: "celebration keepsake" },
+    { title: "Gallery Opening", subject: "gallery opening portrait" }
+  ],
+  ca: [
+    { title: "Dia d'estudi", subject: "retrat d'estudi" },
+    { title: "Llums de festa", subject: "muntatge de festa" },
+    { title: "Retrat al jard\xED", subject: "retrat de jard\xED" },
+    { title: "La gran estrena", subject: "retrat de nit d'estrena" },
+    { title: "Postal acolorida", subject: "postal de fira d'art" },
+    { title: "El taller", subject: "muntatge de taller creatiu" },
+    { title: "Una petita celebraci\xF3", subject: "record de celebraci\xF3" },
+    { title: "Obertura de la galeria", subject: "retrat d'obertura de galeria" }
+  ],
+  es: [
+    { title: "D\xEDa de estudio", subject: "retrato de estudio" },
+    { title: "Luces de festival", subject: "montaje de festival" },
+    { title: "Retrato en el jard\xEDn", subject: "retrato de jard\xEDn" },
+    { title: "El gran estreno", subject: "retrato de noche de estreno" },
+    { title: "Postal colorida", subject: "postal de feria de arte" },
+    { title: "El taller", subject: "montaje de taller creativo" },
+    { title: "Una peque\xF1a celebraci\xF3n", subject: "recuerdo de celebraci\xF3n" },
+    { title: "Apertura de la galer\xEDa", subject: "retrato de apertura de galer\xEDa" }
+  ]
+};
+var PROPERTY_NAMES = {
+  body: { en: "body", ca: "cos", es: "cuerpo" },
+  sunglasses: { en: "sunglasses", ca: "ulleres de sol", es: "gafas de sol" },
+  hat: { en: "hat", ca: "barret", es: "sombrero" },
+  scarf: { en: "scarf", ca: "mocador", es: "pa\xF1uelo" },
+  crest: { en: "crest", ca: "cresta", es: "cresta" },
+  longLegs: { en: "long legs", ca: "cames llargues", es: "patas largas" }
+};
+var VALUE_NAMES = {
+  none: { en: "none", ca: "cap", es: "ninguno" },
+  cream: { en: "cream", ca: "crema", es: "crema" },
+  black: { en: "black", ca: "negre", es: "negro" },
+  red: { en: "red", ca: "vermell", es: "rojo" },
+  blue: { en: "blue", ca: "blau", es: "azul" },
+  turquoise: { en: "turquoise", ca: "turquesa", es: "turquesa" },
+  purple: { en: "purple", ca: "porpra", es: "morado" },
+  gold: { en: "gold", ca: "daurat", es: "dorado" },
+  outline: { en: "outline", ca: "contorn", es: "contorno" }
+};
+function createTemplateLocalizations(candidate, family, seed) {
+  const themeIndex = hash(`${family}|${seed}`) % THEMES.en.length;
+  const firstSolutionCommand = candidate.solutionCommands[0];
+  const parsedFirstCommand = firstSolutionCommand ? parseGitCommand(firstSolutionCommand) : void 0;
+  const firstCommitReference = parsedFirstCommand?.ok && (parsedFirstCommand.action.type === "cherry-pick" || parsedFirstCommand.action.type === "revert") ? parsedFirstCommand.action.commit : void 0;
+  const step = firstSolutionCommand ?? "git log";
+  const hintStyle = getHintStyle(candidate, family);
+  const empty = (locale) => ({
+    en: "the repository's existing work",
+    ca: "la feina que ja hi ha al repositori",
+    es: "el trabajo existente del repositorio"
+  })[locale];
+  const title = (locale) => THEMES[locale][themeIndex].title;
+  const description = (locale) => ({
+    en: `The ${THEMES.en[themeIndex].subject} is being prepared. Use the illustrated target as your reference while reviewing ${empty("en")}.`,
+    ca: `Preparem el ${THEMES.ca[themeIndex].subject} amb un \xFAltim retoc. Fes servir la il\xB7lustraci\xF3 objectiu com a refer\xE8ncia mentre revises ${empty("ca")}.`,
+    es: `Preparamos el ${THEMES.es[themeIndex].subject} con un \xFAltimo retoque. Usa la ilustraci\xF3n objetivo como referencia mientras revisas ${empty("es")}.`
+  })[locale];
+  const objectives = (locale) => ({
+    en: ["Make main match the illustrated target."],
+    ca: ["Fes que main coincideixi amb la il\xB7lustraci\xF3 objectiu."],
+    es: ["Haz que main coincida con la ilustraci\xF3n objetivo."]
+  })[locale];
+  const hints = (locale) => {
+    const first = {
+      dependency: {
+        en: "Inspect the linked changes in order; a later change may depend on an earlier value.",
+        ca: "Revisa els canvis relacionats per ordre; un canvi posterior pot dependre d'un valor anterior.",
+        es: "Inspecciona los cambios relacionados en orden; un cambio posterior puede depender de un valor anterior."
+      },
+      repair: {
+        en: "Compare main with the target and identify any current change that needs repair.",
+        ca: "Compara main amb l'objectiu i identifica si cal corregir algun canvi actual.",
+        es: "Compara main con el objetivo e identifica si hay alg\xFAn cambio actual que corregir."
+      },
+      bundle: {
+        en: "Review the useful changes across the branches and compare them with the target.",
+        ca: "Revisa els canvis \xFAtils de les branques i compara'ls amb l'objectiu.",
+        es: "Revisa los cambios \xFAtiles de las ramas y comp\xE1ralos con el objetivo."
+      },
+      "prepare-and-integrate": {
+        en: "You can prepare work on another branch before integrating it; also check main for any unwanted change.",
+        ca: "Pots preparar feina en una altra branca abans d'integrar-la; comprova tamb\xE9 si hi ha cap canvi no desitjat a main.",
+        es: "Puedes preparar trabajo en otra rama antes de integrarlo; comprueba tambi\xE9n si hay alg\xFAn cambio no deseado en main."
+      }
+    }[hintStyle][locale];
+    const second = firstCommitReference ? { en: `Inspect the changes in commit ${firstCommitReference} and compare them with the target.`, ca: `Revisa els canvis del commit ${firstCommitReference} i compara'ls amb l'objectiu.`, es: `Inspecciona los cambios del commit ${firstCommitReference} y comp\xE1ralos con el objetivo.` }[locale] : { en: "Compare the changes on each branch with the target state.", ca: "Compara els canvis de cada branca amb l'estat objectiu.", es: "Compara los cambios de cada rama con el estado objetivo." }[locale];
+    const third = {
+      en: `One possible route begins with ${step}; this may not be the only way to reach the target.`,
+      ca: `Una ruta possible comen\xE7a amb ${step}; potser no \xE9s l'\xFAnica manera d'arribar a l'objectiu.`,
+      es: `Una ruta posible empieza con ${step}; quiz\xE1 no sea la \xFAnica forma de alcanzar el objetivo.`
+    }[locale];
+    return [first, second, third];
+  };
+  const commitMessages = (locale) => Object.fromEntries(Object.entries(candidate.initialRepository.commits).map(([id, commit]) => {
+    if (commit.changes.length === 0) {
+      return [id, { en: "Start the repository", ca: "Inicia el repositori", es: "Inicia el repositorio" }[locale]];
+    }
+    const facts = commit.changes.map((change) => {
+      const property = PROPERTY_NAMES[change.property]?.[locale] ?? change.property;
+      const from = VALUE_NAMES[String(change.from)]?.[locale] ?? String(change.from);
+      const to = VALUE_NAMES[String(change.to)]?.[locale] ?? String(change.to);
+      return { en: `set ${property} from ${from} to ${to}`, ca: `canvia ${property} de ${from} a ${to}`, es: `cambia ${property} de ${from} a ${to}` }[locale];
+    });
+    return [id, { en: facts.join("; "), ca: facts.join("; "), es: facts.join("; ") }[locale]];
+  }));
+  const build = (locale) => ({
+    title: title(locale),
+    description: description(locale),
+    objectives: objectives(locale),
+    hints: hints(locale),
+    commitMessages: commitMessages(locale)
+  });
+  return { en: build("en"), ca: build("ca"), es: build("es") };
+}
+function applyStoryText(candidate, input) {
+  if (!plainRecord(input) || !exactKeys(input, LOCALES2)) return void 0;
+  const localizedText = {};
+  for (const locale of LOCALES2) {
+    const entry = input[locale];
+    if (!plainRecord(entry) || !exactKeys(entry, ["title", "description"])) return void 0;
+    if (!safeStoryString(entry.title, DEFAULT_PUZZLE_LIMITS.maxTitleLength) || !safeStoryString(entry.description, DEFAULT_PUZZLE_LIMITS.maxDescriptionLength)) return void 0;
+    localizedText[locale] = { title: entry.title, description: entry.description };
+  }
+  const localizations = candidate.localizations ? structuredClone(candidate.localizations) : createTemplateLocalizations(candidate, "daily", candidate.id);
+  for (const locale of LOCALES2) {
+    localizations[locale] = { ...localizations[locale], ...localizedText[locale] };
+  }
+  const english = localizedText.en;
+  return { ...candidate, title: english.title, description: english.description, localizations };
+}
+function safeStoryString(value, maximum) {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= maximum && !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(value) && !/(?:https?:\/\/|www\.|<\/?[a-z][^>]*>|```|`|\b(?:git|cherry-pick|revert|rebase|merge|checkout|switch|branch|commit)\b|\b[A-Za-z][A-Za-z0-9_-]{0,47}\b\s*(?:;|&&|\|))/i.test(value) && !/[<>`{}[\]\\]/.test(value);
+}
+function getHintStyle(candidate, family) {
+  const normalizedFamily = family.toLowerCase();
+  if (normalizedFamily.includes("prepare-and-integrate") || normalizedFamily.includes("prepare-integration")) return "prepare-and-integrate";
+  if (normalizedFamily.includes("bundled")) return "bundle";
+  const hasRevert = candidate.solutionCommands.some((command) => {
+    const parsed = parseGitCommand(command);
+    return parsed.ok && parsed.action.type === "revert";
+  });
+  if (normalizedFamily.includes("repair") || hasRevert) return "repair";
+  if (normalizedFamily.includes("dependency")) return "dependency";
+  const pickedIds = candidate.solutionCommands.flatMap((command) => {
+    const parsed = parseGitCommand(command);
+    return parsed.ok && parsed.action.type === "cherry-pick" ? [parsed.action.commit] : [];
+  });
+  const commits = candidate.initialRepository.commits;
+  const hasDependency = pickedIds.some((id) => pickedIds.some((other) => other !== id && isAncestor3(other, id, commits)));
+  return hasDependency ? "dependency" : "bundle";
+}
+function isAncestor3(ancestor, descendant, commits) {
+  const pending = [...commits[descendant]?.parents ?? []];
+  const visited = /* @__PURE__ */ new Set();
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === ancestor) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    pending.push(...commits[current]?.parents ?? []);
+  }
+  return false;
+}
+function plainRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+}
+function exactKeys(value, keys) {
+  const actual = Object.keys(value).sort();
+  return actual.length === keys.length && actual.every((key, index) => key === [...keys].sort()[index]);
+}
+function hash(value) {
+  let result = 2166136261;
+  for (let index = 0; index < value.length; index += 1) result = Math.imul(result ^ value.charCodeAt(index), 16777619);
+  return (result >>> 0) % THEMES.en.length;
+}
+
+// src/puzzles/generation/certified.ts
+var DAILY_STORY_PROMPT_VERSION = 3;
+var DAILY_MINIMUM_COMMANDS = { easy: 2, medium: 4, hard: 6 };
+var registry = certificates_default.certificates;
+var DAILY_CERTIFICATION = {
+  sourceFingerprint: certificates_default.sourceFingerprint,
+  templates: registry.map(({ templateId, difficulty, family, minimumCommands }) => ({ templateId, difficulty, family, minimumCommands }))
+};
+function selectDailyTemplate(difficulty, seed, recent = []) {
+  const candidates = registry.filter((c) => c.difficulty === difficulty);
+  if (!candidates.length) throw new Error("No certified templates for the reserved difficulty.");
+  const rank = (c) => recent.slice(0, 14).reduce((penalty, entry, index) => penalty + (entry.signature === c.signature ? 1e3 : entry.family === c.family ? 100 : 0) * (14 - index), 0);
+  candidates.sort((a, b) => rank(a) - rank(b) || seedRank(`${seed}:${a.templateId}`) - seedRank(`${seed}:${b.templateId}`) || a.templateId.localeCompare(b.templateId));
+  return candidates[0].templateId;
+}
+function createCertifiedDaily(date, difficulty, seed, templateId) {
+  const certificate = registry.find((c) => c.templateId === templateId && c.difficulty === difficulty);
+  if (!certificate || certificate.generatorVersion !== DETERMINISTIC_GENERATOR_VERSION || certificate.search.status !== "exhausted" || certificate.minimumCommands !== DAILY_MINIMUM_COMMANDS[difficulty] || certificate.search.excludedThroughDepth < certificate.minimumCommands - 1) {
+    throw new Error("Missing or incomplete daily difficulty certificate.");
+  }
+  const variant = Number(templateId.split("-").at(-1));
+  const generated = variant === 5 && difficulty !== "easy" ? createIntegrationCandidate(date, difficulty, seed) : variant === 4 ? createBundledCandidate(date, difficulty, seed) : createDeterministicCandidate(date, difficulty, seed, variant);
+  if (mechanicsSignature(generated.candidate) !== certificate.signature) throw new Error("Generated mechanics differ from the certified template.");
+  const localizations = createTemplateLocalizations(generated.candidate, generated.family, seed);
+  const candidate = {
+    ...generated.candidate,
+    title: localizations.en.title,
+    description: localizations.en.description,
+    objectives: localizations.en.objectives,
+    hints: localizations.en.hints,
+    initialRepository: {
+      ...generated.candidate.initialRepository,
+      commits: Object.fromEntries(Object.entries(generated.candidate.initialRepository.commits).map(([id, commit]) => [id, { ...commit, message: localizations.en.commitMessages[id] }]))
+    },
+    localizations
+  };
+  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+  if (!validation.ok || (validation.value.puzzle.parCommands ?? 0) < certificate.minimumCommands) {
+    throw new Error("Certified daily failed its normal publication validator.");
+  }
+  return {
+    ...generated,
+    candidate,
+    templateId,
+    quality: {
+      evaluatorVersion: certificate.evaluatorVersion,
+      minimumCommands: certificate.minimumCommands,
+      excludedThroughDepth: certificate.search.excludedThroughDepth,
+      proofCommands: validation.value.puzzle.parCommands,
+      certification: certificates_default.sourceFingerprint
+    }
+  };
+}
+function seedRank(value) {
+  let result = 2166136261;
+  for (const char of value) result = Math.imul(result ^ char.charCodeAt(0), 16777619);
+  return result >>> 0;
+}
+
+// src/puzzles/generation/publication.ts
+async function publishDeterministicDaily(date, dependencies) {
+  const { store } = dependencies;
+  const published = await store.published(date);
+  if (published) return { status: "already-published", ...published };
+  const recent = await store.recent(date);
+  const difficulty = dependencies.chooseDifficulty();
+  const seed = dependencies.createSeed();
+  const reservation = await store.reserve({ date, difficulty, seed, templateId: selectDailyTemplate(difficulty, seed, recent) });
+  if (reservation.date !== date) throw new Error("Reservation date does not match the requested daily.");
+  const templateId = reservation.templateId ?? selectDailyTemplate(reservation.difficulty, reservation.seed, recent);
+  const generated = createCertifiedDaily(date, reservation.difficulty, reservation.seed, templateId);
+  const runId = await store.startRun({
+    date,
+    difficulty: reservation.difficulty,
+    templateId,
+    family: generated.family,
+    signature: generated.signature,
+    generatorVersion: generated.generatorVersion,
+    promptVersion: DAILY_STORY_PROMPT_VERSION,
+    quality: generated.quality
+  });
+  try {
+    let candidate = generated.candidate;
+    let storySource = "template";
+    let storyFailure;
+    if (dependencies.story) {
+      try {
+        const prose = await dependencies.story({ theme: candidate.title, target: structuredClone(candidate.target.snapshot) });
+        const edited = applyStoryText(candidate, prose);
+        if (edited) {
+          candidate = edited;
+          storySource = "ai";
+        } else storyFailure = "story-invalid";
+      } catch {
+        storyFailure = "story-unavailable";
+      }
+    }
+    await store.recordStory(runId, storySource, storyFailure);
+    const validated = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+    if (!validated.ok) throw new Error("Final daily publication validation failed.");
+    const id = await store.publish(runId, validated.value);
+    return { status: "published", id, difficulty: reservation.difficulty, source: "deterministic", storySource };
+  } catch (error) {
+    await store.failed(runId, "publication-failed");
+    throw error;
+  }
+}
 export {
   CHICKEN_V2_SEMANTIC_POLICY,
+  DAILY_CERTIFICATION,
+  createCertifiedDaily,
   createGenerationBrief,
   createGuidedBrief,
   normalizeGuidedGoal,
+  publishDeterministicDaily,
   toGuidedPuzzle,
   validateCandidateAgainstBrief,
   validatePuzzleCandidate

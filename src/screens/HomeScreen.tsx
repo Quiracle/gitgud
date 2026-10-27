@@ -21,6 +21,7 @@ import { useProgressInsights } from "../hooks/useProgressInsights";
 import { hasSeenWelcome, markWelcomeSeen } from "../storage/onboarding";
 import { rise, spring, stagger } from "../lib/motion";
 import type { PublicPuzzleDefinition } from "../puzzles";
+import { localizePuzzle } from "../puzzles/localization";
 import type { LearnBasicsLesson } from "../puzzles/learnBasics/types";
 
 interface HomeScreenProps {
@@ -33,9 +34,10 @@ const RECOMMENDED_LESSONS = ["basics-05-three-way-merge", "basics-06-cherry-pick
 
 /** Figma home frame (node 24:33046). */
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
-  const { t, formatDate } = useI18n();
+  const { t, formatDate, locale } = useI18n();
   const learnBasicsCatalog = useLessonCatalog();
   const daily = useDailyPuzzle();
+  const localizedDaily = daily.status === "ready" ? localizePuzzle(daily.puzzle, locale) : undefined;
   const handOff = useCanvasHandOff(onNavigate);
   const { streak, recent } = useProgressInsights();
   const { completion: todaysResult } = useDailyCompletion(daily.status === "ready" ? daily.puzzle : undefined);
@@ -90,7 +92,7 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
               </div>
               <PuzzlePreview
                 canvasRef={handOff.canvasRef}
-                puzzle={daily.status === "ready" ? daily.puzzle : undefined}
+                puzzle={localizedDaily}
                 onScale={handOff.onScale}
                 onOpen={() => handOff.open("/play")}
                 openLabel={t("home.openPuzzle")}
@@ -150,7 +152,8 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
                   href="/play"
                   icon="extension"
                   title={t("home.dailyGame", { date: formatDate(`${daily.date}T00:00:00Z`, { month: "short", day: "numeric", timeZone: "UTC" }) })}
-                  puzzle={daily.puzzle}
+                  description={localizedDaily?.description}
+                  puzzle={localizePuzzle(daily.puzzle, locale)}
                   onNavigate={onNavigate}
                 />
               )}

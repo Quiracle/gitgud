@@ -14,6 +14,7 @@ import {
   type Repository,
 } from "../engine";
 import {
+  localizeRepository,
   isPuzzleActionAllowed,
   validatePuzzleCompletion,
   type PublicPuzzleDefinition,
@@ -266,14 +267,15 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
 
       // An interactive rebase with commits to edit opens the todo dialog first.
       if (parsed.ok && parsed.action.type === "interactive-rebase" && !parsed.action.todo) {
-        const plan = planInteractiveRebase(repository, parsed.action.onto);
+        const plan = planInteractiveRebase(localizeRepository(puzzle, repository, i18n.locale), parsed.action.onto);
         if (plan.ok && plan.todo.length > 0) {
           setPendingRebase({ onto: plan.onto, todo: plan.todo });
           return { ok: true, mutated: false, solved: validation.solved };
         }
       }
 
-      const result = executeCommand(repository, command);
+      // Localize original messages for new command results without mutating the live canonical state.
+      const result = executeCommand(localizeRepository(puzzle, repository, i18n.locale), command);
       const nextActions = result.ok ? [...actions, result.action] : actions;
       const next = result.ok
         ? validatePuzzleCompletion(puzzle, result.repository, nextActions)

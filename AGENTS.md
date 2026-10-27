@@ -4,7 +4,7 @@
 
 Build a daily Git puzzle game with these connected experiences:
 
-- One official AI-generated daily challenge shared by all players.
+- One official daily challenge with deterministic, certified mechanics and optional AI-authored story text, shared by all players.
 - An archive of previous daily challenges.
 - A Learn Git Basics course of about ten guided puzzles.
 - Lower-priority AI-guided practice based on a learner's chosen topic or goal.
@@ -50,7 +50,7 @@ The hackathon MVP shipped in this order. GitGud is now a production app; keep th
 
 1. Purpose-built Git simulation engine and final-state validation.
 2. Playable puzzle screen, command input, restart, and win state.
-3. Secure AI generation, validation, and publication of one official daily puzzle.
+3. Deterministic certification, validation, and publication of one official daily puzzle, with optional secure AI story text.
 4. Daily challenge, restart, and browsable challenge archive.
 5. Ten static Learn Basics puzzles with saved progress.
 6. Google and GitHub sign-in with synced progress.
@@ -59,7 +59,7 @@ The hackathon MVP shipped in this order. GitGud is now a production app; keep th
 9. Friends leaderboard and friend invitations.
 10. Topic-based AI-guided lessons as a lower-priority feature.
 
-The official AI-generated daily puzzle is a required core feature. Topic-based AI-guided lessons are not a launch blocker. Do not let social features or a temporary generation-service outage make already-published daily, archive, or Learn Basics puzzles unavailable.
+The official daily puzzle is a required core feature. Its mechanics and publication must work without an AI provider; AI contributes only optional localized story text. Topic-based AI-guided lessons are not a launch blocker. Do not let social features or a temporary generation-service outage make daily, archive, or Learn Basics puzzles unavailable.
 
 ---
 
@@ -195,7 +195,7 @@ Supabase is used only for:
 - Attempt metadata and completed solve records.
 - Daily leaderboard queries.
 - Optional public display names and avatars from OAuth profile metadata.
-- Secure server-side generation and publication of the official daily puzzle.
+- Secure server-side publication of certified deterministic daily mechanics and optional AI story text.
 - Lower-priority AI-guided lesson generation.
 - LinkedIn connections and posting result cards on a player's behalf.
 
@@ -207,7 +207,7 @@ Do not add:
 - Server-side Git.
 - API calls for executing Git commands or calculating repository state.
 
-Never call the AI provider directly from the browser or expose its API key through a `VITE_` environment variable. The scheduled daily job calls a Supabase Edge Function that owns the secret, requests structured puzzle JSON, validates it, and publishes it. If AI-guided lessons are enabled, the browser also reaches the provider only through an authenticated, rate-limited Edge Function.
+Never call the AI provider directly from the browser or expose its API key through a `VITE_` environment variable. The scheduled daily job calls a Supabase Edge Function that selects certified deterministic mechanics, validates the signature and private proof, and publishes them. It may request structured story text containing only localized titles and descriptions; invalid or unavailable text falls back to deterministic templates. If AI-guided lessons are enabled, they retain their own authenticated, rate-limited Edge Function and full guided-puzzle generation contract.
 
 Keep a storage/service interface between React and Supabase so guest mode can use localStorage and tests can use an in-memory implementation.
 
@@ -266,98 +266,47 @@ Rules:
 
 ---
 
-## Official AI-generated daily puzzle
+## Official deterministic daily puzzle and AI story
 
-AI generation of the official daily puzzle is a **required core feature**.
+The daily challenge is core; its mechanics do not depend on an AI provider. AI may author localized title and description text only. It never chooses or changes the graph, target, difficulty, command allowlist, objectives, hints, commit messages, proof, IDs, or publication metadata.
 
-Exactly one official puzzle is published for each canonical date. Every player receives the same stored puzzle, difficulty, validation target, and leaderboard for that date.
+Exactly one immutable official puzzle is published for each canonical date. Every player receives the same stored puzzle, difficulty, mechanics, and leaderboard for that date. A scheduled Supabase Edge Function selects and reserves the difficulty, certified template, and seed once. Refreshes and retries reuse that reservation; archive entries are never regenerated.
 
-### Difficulty selection
+### Offline certification and runtime checks
 
-Before generation, the scheduled server process randomly selects exactly one category:
+- `pnpm daily:certify` searches candidate mechanics with the actual simulator and records a source fingerprint plus search results in the certificate registry.
+- `pnpm daily:check` is offline and conservative. It rejects stale source fingerprints, unknown template IDs, missing or incomplete certificates, and inconclusive/budget-exhausted searches. Do not bypass the check or hand-edit certificates.
+- The proposed minimum certified solution lengths are 2 commands for easy, 4 for medium, and 6 for hard. These are quality thresholds, not game command limits, scoring inputs, or completion requirements.
+- At publication, the Edge Function instantiates a certified template and verifies its mechanics signature against the registry. It replays the private solution proof through the ordinary engine and completion validator and confirms the certified threshold before publishing.
+- `parCommands` is derived from the private proof through its first win and remains advisory only.
+- Difficulty selection is shared and persisted with the date before story generation; a story retry or outage never rerolls it.
+- Select easy, medium, or hard uniformly unless the user approves a weighted policy. Consecutive days with the same difficulty are valid. Difficulty changes puzzle complexity, never eligibility to play.
 
-```ts
-type PuzzleDifficulty = "easy" | "medium" | "hard";
-```
+### Mandatory publication validation
 
-Choose uniformly from the three categories unless a weighted policy is approved. Repeated difficulties on consecutive days are valid. Store the selected difficulty with the date before calling the model and never reroll it because a user refreshes, generation is retried, or the puzzle is replayed.
+Every deterministic candidate still passes the normal strict schema and safety checks: size limits, unique valid commit IDs and branch names, existing references, an acyclic bounded graph, supported semantic properties and operations, and applicable historical changes. Every private proof command must be supported and replay successfully without conflict resolution or detached HEAD behavior. The initial state must not win, and the proof must reach the actual daily final-state validator. User-facing text must satisfy length and safety limits. Keep the proof separate from the public definition. A difficulty certificate supplements these checks; it never replaces them.
 
-Suggested difficulty constraints:
+### AI story contract and fallback
 
-- `easy`: one primary Git concept, small graph, short solution, generous hints.
-- `medium`: two related concepts, moderate graph, more than one valid solution when possible.
-- `hard`: several concepts, larger graph, provenance/history invariants, limited hints.
+The Edge Function may request a strict object containing exactly `en`, `ca`, and `es`, each with only `title` and `description`. Each value must be short, plain, safe text within configured length limits. Reject extra fields, missing locales, markup, control characters, shell/code-like text, and URLs. The AI does not receive commit graphs, branch names, solution commands, or proof. Do not treat story text as a mechanically verified explanation or claim that its narrative statements were proven by the solver.
 
-Difficulty affects puzzle complexity, not which users may play it. The home screen shows today's category before the player starts.
+Deterministic templates provide all three locales for title, description, objectives, hints, and original commit messages. If AI story generation is unavailable or its response fails validation, retain the deterministic mechanics and use template title/description text. Never discard a valid daily or block publication solely because story generation failed. Guided AI lessons remain separate and retain their own full puzzle-generation, validation, authentication, and rate-limiting requirements.
 
-### Daily generation and publication flow
+### Reserve operations
 
-```text
-Scheduled daily job, before the new day in Barcelona
-  -> choose and persist easy, medium, or hard
-  -> Supabase Edge Function
-       -> send difficulty and supported-engine constraints to AI generation API
-       -> request strict structured JSON
-       -> validate schema, safety, graph, commands, and solvability
-       -> persist the immutable accepted definition for that date
-  -> publish it as the official daily puzzle
-  -> serve the same stored definition to every client
-```
-
-Do not generate the official daily puzzle on the first player's device or separately per player. The scheduled job should run early enough to allow validation and a bounded retry before publication.
-
-The AI provider is never called directly from the browser. Provider credentials live only in Edge Function secrets.
-
-### Generation contract
-
-The model returns only structured data matching a strict, versioned schema. At minimum it provides:
-
-```ts
-interface DailyPuzzleCandidate {
-  schemaVersion: number;
-  title: string;
-  description: string;
-  theme: string;
-  difficulty: "easy" | "medium" | "hard";
-  initialRepository: Repository;
-  target: PuzzleTarget;
-  allowedCommands: SupportedCommand[];
-  hints: string[];
-  solutionCommands: string[]; // validation only; never show before completion
-}
-```
-
-The service creates IDs, date, version, timestamps, and the final `PuzzleDefinition`; do not trust model-generated database IDs, dates, or difficulty. The returned `difficulty` must equal the category already selected by the server.
-
-The model may vary the title, story, labels, commit messages, and illustrated semantic theme using an allowlisted set of existing visual assets and semantic properties. Do not ask it to generate React, JavaScript, SVG, executable code, or arbitrary asset URLs.
-
-### Mandatory validation before play
-
-Reject a generated response unless all of these pass:
-
-- The response matches the schema and size limits exactly.
-- Commit IDs and branch names are unique and valid.
-- Every parent, branch head, and target reference exists.
-- The commit graph is acyclic and within configured commit/branch limits.
-- Semantic changes use only supported, allowlisted operations and properties.
-- Every allowed and solution command is supported by the simulator.
-- Replaying `solutionCommands` from the initial repository completes the puzzle under the normal final-state validator.
-- The initial state is not already a winning state.
-- No step requires unsupported conflict resolution or detached HEAD behavior.
-- User-facing strings satisfy length and content-safety rules.
-
-Use the same engine and final-state validator as hand-authored puzzles. Do not create a second, weaker validator for generated content. If generation or validation fails, make bounded server-side regeneration attempts. If those fail, publish a previously generated and validated AI fallback puzzle of the selected difficulty. Never publish an invalid puzzle or change an already-published puzzle.
+- `preflight` reports whether the certificate registry is ready, `reserveCounts`, and `storyAvailable`. It does not call the AI provider and does not verify provider credentials, billing, or availability.
+- `prepare-reserve` prepares deterministic certified mechanics seeds/templates. `seed-fallbacks` remains a compatibility alias. The reserve is an optimization; publication can select a certified bundled template when it is empty.
+- The reserve preparation helper defaults to 14 entries per difficulty and may be safely resumed.
 
 ### Publication, archive, and ranking
 
-- Persist every accepted daily puzzle with its canonical date, difficulty, schema version, definition, prompt version, generation time, and validation result.
+- Persist each accepted daily puzzle with canonical date, difficulty, schema version, immutable definition, template/signature, generation metadata, validation result, and story source.
 - Enforce one published daily puzzle per canonical date with a database uniqueness constraint.
-- Add the published puzzle to the archive immediately and retain it permanently.
+- Add each published puzzle to the archive immediately and retain it permanently.
 - Use its stable puzzle ID and version for progress, streaks, achievements, sharing, and leaderboard entries.
-- The official daily puzzle is leaderboard-eligible because every player solves the same immutable definition.
-- Keep generation diagnostics private; never expose hidden solution commands before completion.
-
-Never execute arbitrary model output as code.
+- Daily challenges remain leaderboard-eligible because every player solves the same immutable definition.
+- Keep private proof and diagnostics private. Never expose the solution proof before the player completes or reveals it.
+- Never execute model output as code.
 
 ---
 
@@ -365,7 +314,7 @@ Never execute arbitrary model output as code.
 
 Topic-based creation belongs inside **Guided Learning** and is lower priority than the official daily game, Learn Basics, authentication, and leaderboard.
 
-A signed-in learner may enter a topic or learning goal and optionally choose a Git command to practise. Reuse the daily generator's strict schema and mandatory validation, then open the normal puzzle screen with additional teaching text and hints.
+A signed-in learner may enter a topic or learning goal and optionally choose a Git command to practise. Guided lessons use their own strict full-puzzle schema and mandatory validation, then open the normal puzzle screen with additional teaching text and hints. Do not route their generated mechanics through the daily story-only contract.
 
 AI-guided lessons:
 
@@ -968,12 +917,13 @@ At minimum, test:
 - Restart restoring the exact initial repository and incrementing restart count.
 - Restart preserving the initial attempt start time and cumulative elapsed time, including after many retries.
 - Archive lookup by stable ID, version, and date.
-- Daily-candidate schema rejection for malformed, oversized, cyclic, unsupported, or unsafe responses.
-- Hidden solution replay proving an AI candidate is solvable with the normal engine.
+- Daily certificate checks reject stale fingerprints, unknown mechanics templates, missing certificates, and inconclusive searches.
+- Runtime daily publication rejects a mechanics-signature mismatch or a private proof that does not win under the normal engine and completion validator.
+- Localized story parsing rejects missing locales, extra fields, oversized text, markup, control characters, shell/code-like strings, and URLs; invalid story falls back to deterministic template text.
 - Difficulty is selected once per canonical date, persisted, and never rerolled by retries or refreshes.
 - Only one immutable official puzzle can be published for a canonical date, including under concurrent jobs.
 - Every client receives the same stored puzzle ID, version, and difficulty for a date.
-- Failed generation uses a validated AI fallback of the already-selected difficulty.
+- A story-provider outage or invalid story does not block deterministic daily publication and does not reroll the reserved difficulty.
 - AI-guided user input remains plain data and never changes the generation contract if that lower-priority feature is enabled.
 - localStorage schema migration and guest-to-account progress merge.
 - Leaderboard best-score comparison and tie breakers.
@@ -1015,8 +965,8 @@ The hackathon MVP met these, and every release must keep meeting them:
 - Today's challenge and previous published challenges are accessible.
 - Refreshing does not erase guest progress or a signed-in user's active attempt.
 - Google and GitHub sign-in sync completed progress.
-- A scheduled server process selects one of `easy`, `medium`, or `hard` and publishes one AI-generated official puzzle for each canonical date.
-- Every published daily puzzle is schema-valid and demonstrably solvable with the normal engine before it becomes playable.
+- A scheduled server process selects one of `easy`, `medium`, or `hard` and publishes one certified deterministic official puzzle for each canonical date, optionally with AI-authored story text.
+- Every published daily puzzle matches an approved mechanics signature and its private proof wins with the normal engine before it becomes playable.
 - Every player receives the same immutable daily puzzle and difficulty, and previous generated daily puzzles remain in the archive.
 - No AI provider or LinkedIn secret is present in the browser bundle or client environment.
 - An authenticated completion can appear on the correct daily leaderboard with time and restart count.
