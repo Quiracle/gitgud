@@ -1,5 +1,7 @@
 # Deploy GitGud before the hackathon deadline
 
+**Daily-generation rollout is on hold.** The eight-template prototype does not meet the product's variety requirement. Its rollout instructions below describe the current draft implementation, not a release recommendation. Complete the [procedural generation acceptance gates](docs/procedural-daily-generation.md) before deploying this feature.
+
 GitGud uses two managed deployments:
 
 - **Vercel** serves the static React/Vite application.

@@ -41,6 +41,8 @@ By default, local development uses a validated bundled daily fixture. Copy `.env
 
 ## Daily challenge generation and deployment
 
+**Release status:** the eight-template implementation below is a prototype, not an approved daily-content system. It proves solvability and minimum length but does not provide enough lasting variety. The procedural replacement is an offline experiment and is not connected to publication. See [the replacement plan and evidence](docs/procedural-daily-generation.md).
+
 Daily mechanics come from a deterministic library of offline-certified templates. Each publication selects and reserves one difficulty, template, and seed, verifies its mechanics signature, replays a private proof with the normal simulator, and stores one immutable puzzle per Barcelona calendar date. AI can provide only localized title and description text; missing, malformed, unsafe, or unavailable story output falls back to deterministic English, Catalan, and Spanish copy. AI does not choose or change the graph, target, commands, objectives, hints, or proof.
 
 The offline checks are `pnpm daily:certify` to build/update the certificate registry and `pnpm daily:check` to verify that it still matches the mechanics source. Unknown or stale mechanics are rejected conservatively until certified. The proposed minimum certified solution lengths are 2 commands for easy, 4 for medium, and 6 for hard. These thresholds describe template quality and are not gameplay command limits or scoring rules.
