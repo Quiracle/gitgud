@@ -24,6 +24,15 @@ pnpm build
 
 The human project owner performs UI checks. These commands do not run browser or visual tests.
 
+For isolated verification of the new reservation SQL without a hosted database, install the optional test runtime into an ignored local directory and run:
+
+```powershell
+npm install --prefix daily-review.local/sql-runtime --no-save --package-lock=false @electric-sql/pglite@0.5.12
+node scripts/check-daily-migration.mjs
+```
+
+This checks the actual migration against a minimal predecessor schema, including reserve selection, retry identity, legacy reservations, input validation, RLS, and role privileges. It does not test hosted concurrency or replace a staging rollout. It adds no runtime dependency to the game.
+
 ## 2. Create and link Supabase
 
 1. In Supabase, create a project in a nearby region and save its database password.
