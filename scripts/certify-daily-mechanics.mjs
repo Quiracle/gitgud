@@ -13,15 +13,16 @@ async function sourceFiles(directory) {
   return paths.flat();
 }
 const paths = [...await sourceFiles(resolve("src/engine")),
-  ...["completion.ts", "rules.ts", "generation/quality.ts", "generation/deterministic.ts", "generation/integration.ts"].map(p => resolve("src/puzzles", p))].sort();
+  ...["completion.ts", "rules.ts", "generation/quality.ts", "generation/deterministic.ts", "generation/integration.ts", "generation/workshop.ts", "generation/templates.ts"].map(p => resolve("src/puzzles", p))].sort();
 const hash = createHash("sha256");
 for (const path of paths) hash.update(relative(process.cwd(), path).replaceAll("\\", "/") + "\n" + (await readFile(path, "utf8")).replaceAll("\r\n", "\n"));
 const sourceFingerprint = hash.digest("hex");
-// The three-module bundled family exceeded the exhaustive search budget. It is
-// deliberately excluded, rather than treating an inconclusive search as proof.
-// Easy variants 2/3 are isomorphic to 0/1; do not count cosmetic duplicates as variety.
-const variants = { easy: [0, 1, 4], medium: [0, 1, 2, 3, 4, 5], hard: [0, 1, 2, 3, 5] };
-const templateIds = Object.entries(variants).flatMap(([d, values]) => values.map(v => `${d}-${v}`));
+const compiled = await build({ stdin: {
+  contents: "export * from './src/puzzles/generation/templates'; export * from './src/puzzles/generation/quality'; export {DETERMINISTIC_GENERATOR_VERSION} from './src/puzzles/generation/deterministic'; export {deriveParCommands} from './src/puzzles/par';",
+  resolveDir: process.cwd(), loader: "ts",
+}, bundle: true, write: false, format: "esm", platform: "node" });
+const domain = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString("base64")}`);
+const templateIds = domain.DAILY_TEMPLATE_IDS;
 let previous;
 try { previous = JSON.parse(await readFile(output, "utf8")); } catch { /* First certification. */ }
 if (process.argv.includes("--check")) {
@@ -32,19 +33,15 @@ if (process.argv.includes("--check")) {
   console.log(`Daily certificates match the engine and generator (${previous.certificates.length} templates).`);
   process.exit(0);
 }
-const compiled = await build({ stdin: {
-  contents: "export * from './src/puzzles/generation/deterministic'; export * from './src/puzzles/generation/quality'; export * from './src/puzzles/generation/integration';",
-  resolveDir: process.cwd(), loader: "ts",
-}, bundle: true, write: false, format: "esm", platform: "node" });
-const domain = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString("base64")}`);
 const certificates = [];
 for (const difficulty of ["easy", "medium", "hard"]) {
   const minimumCommands = { easy: 2, medium: 4, hard: 6 }[difficulty];
-  for (const variant of variants[difficulty]) {
-    const templateId = `${difficulty}-${variant}`;
-    const generated = variant === 5 ? domain.createIntegrationCandidate("2030-01-01", difficulty, "certification-v1") : variant === 4
-      ? domain.createBundledCandidate("2030-01-01", difficulty, "certification-v1")
-      : domain.createDeterministicCandidate("2030-01-01", difficulty, "certification-v1", variant);
+  for (const templateId of templateIds.filter(id => id.startsWith(`${difficulty}-`))) {
+    const generated = domain.createTemplateCandidate(templateId, "2030-01-01", "certification-v1");
+    if (domain.deriveParCommands(generated.candidate, generated.candidate.solutionCommands) !== minimumCommands ||
+        (difficulty !== "easy" && !domain.hasStrategicProof(generated.candidate))) {
+      throw new Error(`${templateId} must have an optimal strategic proof, not just a long copy sequence.`);
+    }
     const matching = certificates.find(c => c.signature === generated.signature) ??
       (previous?.sourceFingerprint === sourceFingerprint ? previous.certificates.find(c => c.signature === generated.signature) : undefined);
     const started = Date.now();

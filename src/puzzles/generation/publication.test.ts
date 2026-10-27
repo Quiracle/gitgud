@@ -108,16 +108,16 @@ describe("deterministic daily publication orchestration", () => {
 
   it("uses persisted difficulty and seed over a different retry proposal", async () => {
     const store = new MemoryStore();
-    await store.reserve({ date: DATE, difficulty: "medium", seed: "durable-seed", templateId: "medium-0" });
+    await store.reserve({ date: DATE, difficulty: "medium", seed: "durable-seed", templateId: "medium-5" });
     const result = await publishDeterministicDaily(DATE, dependencies(store, {
       chooseDifficulty: () => "easy",
       createSeed: () => "different-retry-seed",
     }));
     expect(result).toMatchObject({ status: "published", difficulty: "medium" });
-    expect(store.persistedReservation(DATE)).toMatchObject({ difficulty: "medium", seed: "durable-seed", templateId: "medium-0" });
-    expect(store.runs[0].metadata).toMatchObject({ difficulty: "medium", templateId: "medium-0" });
+    expect(store.persistedReservation(DATE)).toMatchObject({ difficulty: "medium", seed: "durable-seed", templateId: "medium-5" });
+    expect(store.runs[0].metadata).toMatchObject({ difficulty: "medium", templateId: "medium-5" });
     expect(store.publishedRows[0].puzzle.puzzle.initialRepository)
-      .toEqual(createCertifiedDaily(DATE, "medium", "durable-seed", "medium-0").candidate.initialRepository);
+      .toEqual(createCertifiedDaily(DATE, "medium", "durable-seed", "medium-5").candidate.initialRepository);
   });
 
   it.each([

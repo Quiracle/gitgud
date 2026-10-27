@@ -1,6 +1,6 @@
 import certificates from "./certificates.json";
-import { createBundledCandidate, createDeterministicCandidate, DETERMINISTIC_GENERATOR_VERSION, mechanicsSignature } from "./deterministic";
-import { createIntegrationCandidate } from "./integration";
+import { DETERMINISTIC_GENERATOR_VERSION, mechanicsSignature } from "./deterministic";
+import { createTemplateCandidate, hasStrategicProof } from "./templates";
 import { createTemplateLocalizations } from "./editorial";
 import { CHICKEN_V2_SEMANTIC_POLICY } from "../chickenTheme";
 import { validatePuzzleCandidate } from "../validateCandidate";
@@ -43,10 +43,7 @@ export function createCertifiedDaily(date: string, difficulty: PuzzleDifficulty,
       certificate.search.excludedThroughDepth < certificate.minimumCommands - 1) {
     throw new Error("Missing or incomplete daily difficulty certificate.");
   }
-  const variant = Number(templateId.split("-").at(-1));
-  const generated = variant === 5 && difficulty !== "easy"
-    ? createIntegrationCandidate(date, difficulty, seed)
-    : variant === 4 ? createBundledCandidate(date, difficulty, seed) : createDeterministicCandidate(date, difficulty, seed, variant);
+  const generated = createTemplateCandidate(templateId, date, seed);
   if (mechanicsSignature(generated.candidate) !== certificate.signature) throw new Error("Generated mechanics differ from the certified template.");
   const localizations = createTemplateLocalizations(generated.candidate, generated.family, seed);
   const candidate = {
@@ -60,7 +57,8 @@ export function createCertifiedDaily(date: string, difficulty: PuzzleDifficulty,
     localizations,
   };
   const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-  if (!validation.ok || (validation.value.puzzle.parCommands ?? 0) < certificate.minimumCommands) {
+  if (!validation.ok || validation.value.puzzle.parCommands !== certificate.minimumCommands ||
+      (difficulty !== "easy" && !hasStrategicProof(candidate))) {
     throw new Error("Certified daily failed its normal publication validator.");
   }
   return {
@@ -71,6 +69,7 @@ export function createCertifiedDaily(date: string, difficulty: PuzzleDifficulty,
       excludedThroughDepth: certificate.search.excludedThroughDepth,
       proofCommands: validation.value.puzzle.parCommands!,
       certification: certificates.sourceFingerprint,
+      strategicProof: hasStrategicProof(candidate),
     },
   };
 }

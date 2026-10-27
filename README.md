@@ -45,6 +45,8 @@ Daily mechanics come from a deterministic library of offline-certified templates
 
 The offline checks are `pnpm daily:certify` to build/update the certificate registry and `pnpm daily:check` to verify that it still matches the mechanics source. Unknown or stale mechanics are rejected conservatively until certified. The proposed minimum certified solution lengths are 2 commands for easy, 4 for medium, and 6 for hard. These thresholds describe template quality and are not gameplay command limits or scoring rules.
 
+Command count alone is insufficient: medium and hard templates must also have a shortest verified solution that integrates or rebases work. Repetitive predecessor-copy templates are excluded at those levels. The curated library includes branch preparation and bundled changes whose temporary effects can be cleaned up or squashed. All valid player solutions remain accepted, including cherry-picks; this is a generation requirement, not a command restriction.
+
 Run `pnpm daily:review` for a reproducible review pack in the ignored `daily-review.local/` directory. It includes each certified template's graph, initial appearance, target, hints, separate public JSON definitions, and optional solution spoilers. It makes no network calls or database changes. Human playtesting remains necessary to assess enjoyment and UI behavior.
 
 To play these examples locally, generate the pack, then start Vite in review mode (PowerShell):

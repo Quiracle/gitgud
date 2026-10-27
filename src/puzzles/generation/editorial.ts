@@ -106,6 +106,11 @@ export function createTemplateLocalizations(candidate: PuzzleCandidate, family: 
         ca: "Pots preparar feina en una altra branca abans d'integrar-la; comprova també si hi ha cap canvi no desitjat a main.",
         es: "Puedes preparar trabajo en otra rama antes de integrarlo; comprueba también si hay algún cambio no deseado en main.",
       },
+      "clean-room-integration": {
+        en: "Useful work is bundled with temporary changes. Consider what a whole branch contributes, and what must be restored afterward.",
+        ca: "La feina útil està agrupada amb canvis temporals. Considera què aporta una branca sencera i què cal restaurar després.",
+        es: "El trabajo útil está agrupado con cambios temporales. Considera qué aporta una rama entera y qué debes restaurar después.",
+      },
     }[hintStyle][locale];
     const second = firstCommitReference
       ? { en: `Inspect the changes in commit ${firstCommitReference} and compare them with the target.`, ca: `Revisa els canvis del commit ${firstCommitReference} i compara'ls amb l'objectiu.`, es: `Inspecciona los cambios del commit ${firstCommitReference} y compáralos con el objetivo.` }[locale]
@@ -163,9 +168,10 @@ function safeStoryString(value: unknown, maximum: number): value is string {
     !/[<>`{}[\]\\]/.test(value);
 }
 
-type HintStyle = "dependency" | "repair" | "bundle" | "prepare-and-integrate";
+type HintStyle = "dependency" | "repair" | "bundle" | "prepare-and-integrate" | "clean-room-integration";
 
 function getHintStyle(candidate: PuzzleCandidate, family: string): HintStyle {
+  if (family === "clean-room-integration") return "clean-room-integration";
   const normalizedFamily = family.toLowerCase();
   if (normalizedFamily.includes("prepare-and-integrate") || normalizedFamily.includes("prepare-integration")) return "prepare-and-integrate";
   if (normalizedFamily.includes("bundled")) return "bundle";

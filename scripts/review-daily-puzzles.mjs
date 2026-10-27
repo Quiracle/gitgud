@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 // Local review material only: no AI, credentials, database, or publication.
@@ -13,8 +13,22 @@ await mkdir(output, { recursive: true });
 const sections = ["# Daily puzzle review pack", "Generated locally from the certified library. These are review examples, not published daily puzzles. Every supported command remains available. Win by matching the target on main, with main checked out.",
   "Review whether the puzzle has a useful discovery, whether alternatives are interesting, and whether the hints are helpful. The minimum command count proves resistance to shortcuts; it does not measure enjoyment."];
 const proofs = {};
+const existingDates = new Map();
+for (const template of domain.DAILY_CERTIFICATION.templates) {
+  try {
+    const existing = JSON.parse(await readFile(resolve(output, `${template.templateId}.json`), "utf8"));
+    if (/^2099-\d{2}-\d{2}$/.test(existing.publishedOn)) existingDates.set(template.templateId, existing.publishedOn);
+  } catch { /* First review example for this template. */ }
+}
+const usedDates = new Set(existingDates.values());
 for (const [index, template] of domain.DAILY_CERTIFICATION.templates.entries()) {
-  const date = new Date(Date.UTC(2099, 0, 1 + index)).toISOString().slice(0, 10);
+  // Curation can retire templates without changing examples a person is already testing.
+  let date = existingDates.get(template.templateId);
+  if (!date) {
+    let offset = index;
+    do { date = new Date(Date.UTC(2099, 0, 1 + offset++)).toISOString().slice(0, 10); } while (usedDates.has(date));
+  }
+  usedDates.add(date);
   const generated = domain.createCertifiedDaily(date, template.difficulty, "review-pack-v1", template.templateId);
   const validated = domain.validatePuzzleCandidate(generated.candidate, { semantic: domain.CHICKEN_V2_SEMANTIC_POLICY });
   if (!validated.ok) throw new Error(`Review candidate invalid: ${template.templateId}`);

@@ -4,6 +4,8 @@ import { validatePuzzleCompletion } from "../completion";
 import type { PuzzleDifficulty } from "../types";
 import certificateDocument from "./certificates.json";
 import { createCertifiedDaily, selectDailyTemplate, type RecentMechanics } from "./certified";
+import { DAILY_TEMPLATE_IDS, createTemplateCandidate, hasStrategicProof } from "./templates";
+import { createDeterministicCandidate } from "./deterministic";
 
 const certificates = certificateDocument.certificates as Array<{
   templateId: string;
@@ -20,7 +22,7 @@ function dateFor(index: number) {
 
 describe("certified daily mechanics registry", () => {
   it("instantiates every registered template reproducibly across varied seeds and dates", () => {
-    expect(certificates).toHaveLength(14);
+    expect(certificates.map(c => c.templateId).sort()).toEqual([...DAILY_TEMPLATE_IDS].sort());
     for (const certificate of certificates) {
       let referenceSignature: string | undefined;
       for (let index = 0; index < 25; index += 1) {
@@ -76,7 +78,17 @@ describe("certified daily mechanics registry", () => {
       const generated = createCertifiedDaily(dateFor(42), certificate.difficulty, "evidence-check", certificate.templateId);
       expect(generated.quality.minimumCommands).toBe(certificate.minimumCommands);
       expect(generated.quality.excludedThroughDepth).toBe(certificate.search.excludedThroughDepth);
-      expect(generated.quality.proofCommands).toBeGreaterThanOrEqual(certificate.minimumCommands);
+      expect(generated.quality.proofCommands).toBe(certificate.minimumCommands);
+      if (certificate.difficulty !== "easy") expect(generated.quality.strategicProof).toBe(true);
+    }
+  });
+
+  it("retires repetitive copy chains above easy and requires an optimal integration strategy", () => {
+    for (const difficulty of ["medium", "hard"] as const) {
+      for (let variant = 0; variant < 4; variant += 1) {
+        expect(() => createTemplateCandidate(`${difficulty}-${variant}`, "2030-01-01", "seed")).toThrow(/Unapproved/);
+        expect(hasStrategicProof(createDeterministicCandidate("2030-01-01", difficulty, "seed", variant).candidate)).toBe(false);
+      }
     }
   });
 });

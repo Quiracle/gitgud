@@ -279,6 +279,7 @@ Exactly one immutable official puzzle is published for each canonical date. Ever
 - The proposed minimum certified solution lengths are 2 commands for easy, 4 for medium, and 6 for hard. These are quality thresholds, not game command limits, scoring inputs, or completion requirements.
 - At publication, the Edge Function instantiates a certified template and verifies its mechanics signature against the registry. It replays the private solution proof through the ordinary engine and completion validator and confirms the certified threshold before publishing.
 - `parCommands` is derived from the private proof through its first win and remains advisory only.
+- Medium/hard templates must have a shortest verified proof that uses integration or rebase; a sequence of predecessor cherry-picks does not establish interesting difficulty. `src/puzzles/generation/templates.ts` owns the approved library. Keep all player solutions valid under the daily state-only rules; never enforce the generator's proof strategy on players.
 - Difficulty selection is shared and persisted with the date before story generation; a story retry or outage never rerolls it.
 - Select easy, medium, or hard uniformly unless the user approves a weighted policy. Consecutive days with the same difficulty are valid. Difficulty changes puzzle complexity, never eligibility to play.
 
