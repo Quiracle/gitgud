@@ -47,4 +47,14 @@ The offline checks are `pnpm daily:certify` to build/update the certificate regi
 
 Run `pnpm daily:review` for a reproducible review pack in the ignored `daily-review.local/` directory. It includes each certified template's graph, initial appearance, target, hints, separate public JSON definitions, and optional solution spoilers. It makes no network calls or database changes. Human playtesting remains necessary to assess enjoyment and UI behavior.
 
+To play these examples locally, generate the pack, then start Vite in review mode (PowerShell):
+
+```powershell
+$env:VITE_DAILY_PUZZLE_SOURCE = "review"
+$env:VITE_DAILY_REVIEW_TEMPLATE = "medium-5"
+pnpm dev
+```
+
+Use a guest session in a separate local browser profile. Change the template ID to any ID in the review pack and restart Vite to try another puzzle. Each template has a separate local progress identity. Review mode is development-only, does not publish puzzles, and its local definitions and private proofs are excluded from production builds. Leaderboards and server solution reveal are unavailable for these unpublished examples; the review pack contains optional proof spoilers. Remove the two environment variables to return to the normal source.
+
 Vercel hosts only the static Vite frontend; no Docker image or custom server is required. Follow [DEPLOYMENT.md](DEPLOYMENT.md) for the frontend, migration, Edge Function, reserve, cron, and Vercel rollout order. AI-guided practice remains a separate feature with its own puzzle-generation contract.
