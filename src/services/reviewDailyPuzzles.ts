@@ -4,7 +4,7 @@ import type { DailyPuzzleSource } from "./dailyPuzzles";
 
 /** Local developer review only. Files are produced by pnpm daily:review, never shipped. */
 export class ReviewDailyPuzzleSource implements DailyPuzzleSource {
-  constructor(private readonly template: string, private readonly request: typeof fetch = fetch) {
+  constructor(private readonly template: string, private readonly request: typeof fetch = (input, init) => globalThis.fetch(input, init)) {
     if (!/^(easy|medium|hard)-\d+$/.test(template)) throw new Error("Invalid VITE_DAILY_REVIEW_TEMPLATE.");
   }
 
