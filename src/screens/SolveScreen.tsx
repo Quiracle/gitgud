@@ -31,6 +31,8 @@ import { Rich } from "../i18n/Rich";
 import type { TranslationKey } from "../i18n/translate";
 import { isSupabaseConfigured } from "../services/supabase";
 import { resolvePuzzleRules, type PublicPuzzleDefinition } from "../puzzles";
+import { openProgressStore } from "../storage/browserProgress";
+import { hasSeenDailyGoals, markDailyGoalsSeen } from "../storage/onboarding";
 import type { CompletionRecord } from "../storage/progress";
 
 interface SolveScreenProps {
@@ -149,10 +151,16 @@ export function SolveScreen({
   const openHelp = () => setPanel(intro ? "intro" : "help");
 
   // Explain the lesson (or list the goals) once the canvas has settled, unless the run is already under way.
+  // Daily goals open by themselves only on a player's first daily; after that the goal card is enough.
   useEffect(() => {
     const first: Panel | undefined = intro ? (intro.autoOpen ? "intro" : undefined) : "goals";
     if (!first || solved || session.commandCount > 0) return;
-    const timer = window.setTimeout(() => setPanel((current) => (current === "none" ? first : current)), origin ? 750 : 400);
+    const firstDaily = puzzle.kind === "daily" && first === "goals";
+    if (firstDaily && hasSeenDailyGoals(() => openProgressStore().completions().some((c) => c.kind === "daily"))) return;
+    const timer = window.setTimeout(() => {
+      if (firstDaily) markDailyGoalsSeen();
+      setPanel((current) => (current === "none" ? first : current));
+    }, origin ? 750 : 400);
     return () => window.clearTimeout(timer);
     // Only on arrival: later commands or restarts must not reopen it.
   }, []);
