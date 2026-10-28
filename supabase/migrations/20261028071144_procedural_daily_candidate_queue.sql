@@ -34,7 +34,7 @@ alter table public.daily_certified_candidates enable row level security;
 revoke all on public.daily_certified_candidates from public, anon, authenticated;
 grant select, insert, update on public.daily_certified_candidates to service_role;
 create index daily_certified_candidates_available
-  on public.daily_certified_candidates (source_fingerprint, difficulty, created_at, id)
+  on public.daily_certified_candidates (difficulty, created_at, id)
   where consumed_on is null and withdrawn_at is null;
 create index daily_certified_candidates_recent_patterns
   on public.daily_certified_candidates (strategy_key, consumed_on desc)
@@ -48,6 +48,7 @@ alter table public.daily_generation_runs
 grant select, insert, update on public.daily_generation_briefs to service_role;
 grant select, insert, update on public.daily_generation_runs to service_role;
 grant select on public.daily_puzzles to service_role;
+grant select on public.daily_puzzle_private to service_role;
 
 create function public.protect_daily_candidate_identity() returns trigger
 language plpgsql security invoker set search_path = '' as $$
@@ -71,6 +72,37 @@ revoke all on function public.protect_daily_candidate_identity() from public, an
 create trigger protect_daily_candidate_identity before update on public.daily_certified_candidates
   for each row execute function public.protect_daily_candidate_identity();
 
+-- Certificates are append-only versions. An evaluator upgrade never overwrites
+-- old evidence, changes the candidate, or frees an already consumed candidate.
+create table public.daily_candidate_certificates (
+  candidate_id text not null references public.daily_certified_candidates(id),
+  source_fingerprint text not null check (source_fingerprint ~ '^[a-f0-9]{64}$'),
+  artifact jsonb not null,
+  certified_at timestamptz not null default now(),
+  primary key (candidate_id, source_fingerprint),
+  check ((artifact->>'id') is not distinct from candidate_id),
+  check ((artifact#>>'{certificate,sourceFingerprint}') is not distinct from source_fingerprint)
+);
+alter table public.daily_candidate_certificates enable row level security;
+revoke all on public.daily_candidate_certificates from public, anon, authenticated;
+grant select, insert on public.daily_candidate_certificates to service_role;
+create index daily_candidate_certificates_source on public.daily_candidate_certificates(source_fingerprint, candidate_id);
+
+create function public.validate_daily_candidate_certificate() returns trigger
+language plpgsql security invoker set search_path = '' as $$
+declare original jsonb;
+begin
+  select artifact into original from public.daily_certified_candidates where id = new.candidate_id;
+  if original is null or (original - 'certificate') is distinct from (new.artifact - 'certificate') then
+    raise exception 'Recertification cannot change candidate mechanics, proof, or novelty';
+  end if;
+  return new;
+end;
+$$;
+revoke all on function public.validate_daily_candidate_certificate() from public, anon, authenticated;
+create trigger validate_daily_candidate_certificate before insert on public.daily_candidate_certificates
+  for each row execute function public.validate_daily_candidate_certificate();
+
 create function public.reserve_procedural_daily(
   target_date date, target_difficulty text, target_source_fingerprint text
 ) returns jsonb
@@ -79,6 +111,7 @@ declare
   reserved public.daily_generation_briefs;
   prepared public.daily_certified_candidates;
   existing public.daily_puzzles;
+  certified jsonb;
 begin
   if target_date is null or target_difficulty is null or target_difficulty not in ('easy', 'medium', 'hard')
     or target_source_fingerprint is null or target_source_fingerprint !~ '^[a-f0-9]{64}$' then
@@ -97,12 +130,16 @@ begin
   select * into reserved from public.daily_generation_briefs where published_on = target_date for update;
   if reserved.candidate_id is not null then
     select * into prepared from public.daily_certified_candidates where id = reserved.candidate_id;
-    return jsonb_build_object('date', target_date, 'difficulty', reserved.selected_difficulty, 'artifact', prepared.artifact);
+    select artifact into certified from public.daily_candidate_certificates
+      where candidate_id = prepared.id and source_fingerprint = target_source_fingerprint;
+    return jsonb_build_object('date', target_date, 'difficulty', reserved.selected_difficulty,
+      'candidateId', prepared.id, 'artifact', certified);
   end if;
 
   select candidate.* into prepared from public.daily_certified_candidates candidate
     where candidate.difficulty = reserved.selected_difficulty
-      and candidate.source_fingerprint = target_source_fingerprint
+      and exists (select 1 from public.daily_candidate_certificates certificate
+        where certificate.candidate_id = candidate.id and certificate.source_fingerprint = target_source_fingerprint)
       and candidate.consumed_on is null and candidate.withdrawn_at is null
     order by coalesce((select max(previous.consumed_on) from public.daily_certified_candidates previous
         where previous.strategy_key = candidate.strategy_key and previous.consumed_on < target_date), date '0001-01-01'),
@@ -116,7 +153,10 @@ begin
     brief = brief || jsonb_build_object('method', 'procedural-v1', 'candidateId', prepared.id,
       'sourceFingerprint', target_source_fingerprint)
     where published_on = target_date;
-  return jsonb_build_object('date', target_date, 'difficulty', reserved.selected_difficulty, 'artifact', prepared.artifact);
+  select artifact into certified from public.daily_candidate_certificates
+    where candidate_id = prepared.id and source_fingerprint = target_source_fingerprint;
+  return jsonb_build_object('date', target_date, 'difficulty', reserved.selected_difficulty,
+    'candidateId', prepared.id, 'artifact', certified);
 end;
 $$;
 revoke all on function public.reserve_procedural_daily(date, text, text) from public, anon, authenticated;
@@ -130,6 +170,7 @@ declare
   item jsonb;
   inserted_id text;
   inserted_count integer := 0;
+  existing_candidate public.daily_certified_candidates;
 begin
   if jsonb_typeof(target_artifacts) is distinct from 'array'
     or jsonb_array_length(target_artifacts) not between 1 and 20 then
@@ -142,7 +183,17 @@ begin
     ) values (
       item->>'id', item#>>'{candidate,difficulty}', item#>>'{certificate,sourceFingerprint}',
       item#>>'{novelty,mechanicsHash}', item#>>'{novelty,decisionCoreHash}', item#>>'{novelty,commandPattern}', item
-    ) on conflict do nothing returning id into inserted_id;
+    ) on conflict do nothing;
+    select * into existing_candidate from public.daily_certified_candidates where id = item->>'id';
+    -- A novelty collision with another identity is skipped. Recertification of
+    -- this same identity must match its full immutable payload outside evidence.
+    if not found then continue; end if;
+    if (existing_candidate.artifact - 'certificate') is distinct from (item - 'certificate') then
+      raise exception 'Recertification cannot change an existing candidate';
+    end if;
+    insert into public.daily_candidate_certificates(candidate_id, source_fingerprint, artifact)
+      values (item->>'id', item#>>'{certificate,sourceFingerprint}', item)
+      on conflict do nothing returning candidate_id into inserted_id;
     if inserted_id is not null then inserted_count := inserted_count + 1; end if;
   end loop;
   return jsonb_build_object('inserted', inserted_count, 'skipped', jsonb_array_length(target_artifacts) - inserted_count);
@@ -150,3 +201,28 @@ end;
 $$;
 revoke all on function public.register_procedural_candidates(jsonb) from public, anon, authenticated;
 grant execute on function public.register_procedural_candidates(jsonb) to service_role;
+
+create function public.stale_daily_candidates(target_source_fingerprint text, target_difficulty text, after_id text default '')
+returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare result jsonb;
+begin
+  if target_source_fingerprint is null or target_source_fingerprint !~ '^[a-f0-9]{64}$'
+    or target_difficulty is null or target_difficulty not in ('easy', 'medium', 'hard')
+    or after_id is null or (after_id <> '' and after_id !~ '^[a-f0-9]{64}$') then
+    raise exception 'Invalid stale-candidate query';
+  end if;
+  select coalesce(jsonb_agg(to_jsonb(item) order by item.id), '[]'::jsonb) into result from (
+    select candidate.id, candidate.artifact, candidate.consumed_on as reserved_date
+    from public.daily_certified_candidates candidate
+    where candidate.id > after_id and candidate.difficulty = target_difficulty and candidate.withdrawn_at is null
+      and not exists (select 1 from public.daily_candidate_certificates certificate
+        where certificate.candidate_id = candidate.id and certificate.source_fingerprint = target_source_fingerprint)
+      and (candidate.consumed_on is null or not exists (select 1 from public.daily_puzzles puzzle
+        where puzzle.published_on = candidate.consumed_on and puzzle.is_current))
+    order by candidate.id limit 20
+  ) item;
+  return result;
+end;
+$$;
+revoke all on function public.stale_daily_candidates(text,text,text) from public, anon, authenticated;
+grant execute on function public.stale_daily_candidates(text,text,text) to service_role;

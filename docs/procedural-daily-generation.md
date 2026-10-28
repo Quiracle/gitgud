@@ -56,6 +56,10 @@ The current local medium reserve contains 32 certified cores across ten order-in
 
 The new queue migration passed isolated Postgres tests for privileges, reservation identity, empty-queue refill, source filtering, novelty uniqueness, and registration idempotency. The compiled Edge handler and pure publication pipeline have non-UI tests. Hosted concurrency, actual scheduled refill, and staging publication remain unverified.
 
+Certificates are now append-only records keyed by candidate and evaluator source. The worker prioritizes stale reserved candidates, rechecks them with the current engine/search, and registers new evidence without altering the candidate or its previous certificate. A failed recertification leaves the date reserved and reports an error; it never rerolls difficulty or replaces the puzzle. The real CLI passes SQL-backed tests for fresh uploads, unused-candidate upgrades, repair of an already reserved date even when the reserve is full, and rejection of incompatible proofs. Novelty-algorithm changes that alter identity metadata still require an explicit migration rather than rewriting history.
+
+On 2026-10-28 the project owner played the new medium squash example and the nine-command hard example and confirmed: “The puzzles feel different, not the same recipe.” This is positive human playtest evidence for those examples, not a guarantee about every generated puzzle.
+
 Run the worker locally, then generate spoiler-free public review definitions:
 
 ```text
@@ -63,6 +67,8 @@ node scripts/refill-daily-puzzles.mjs --difficulty medium --target 14
 node scripts/review-procedural-puzzles.mjs
 ```
 
-An optional `--history-file daily-review.local/published-history.private.json` checks a private historical export offline. `--recertify-local` reruns current search on older local candidates; it never simply stamps a new fingerprint onto old evidence. Hosted certificate-upgrade handling remains outstanding. `--upload` requires the private HTTPS endpoint and generation secret, loads history and inventory itself, and registers verified artifacts. Files under `daily-review.local/candidate-reserve/` contain proofs and stay private. `procedural-review.md` links public-only examples using the development-only `?review=` selector.
+An optional `--history-file daily-review.local/published-history.private.json` checks a private historical export offline. `--recertify-local` reruns current search on older local candidates; it never simply stamps a new fingerprint onto old evidence. `--upload` requires the private HTTPS endpoint and generation secret, loads history, inventory and stale candidates itself, and registers verified artifacts. Files under `daily-review.local/candidate-reserve/` contain proofs and stay private. `procedural-review.md` links public-only examples using the development-only `?review=` selector.
 
-Still required before rollout: reliable and diverse hard refill, a simulated season measuring repeated reasoning rather than only hashes or command patterns, staging publication and scheduled refill, certificate-upgrade handling for already queued candidates, and human playtesting of a broad batch. Candidate bindings and queue integration are implemented locally; they have not been deployed. None of these release requirements is satisfied by having eight passing template certificates.
+`node scripts/analyze-daily-season.mjs --days 90 --seasons 1` uses the actual migration and reservation RPC in isolated Postgres. It fixes the seeded difficulty sequence before selecting puzzles, checks retry identity, measures strategy spacing, and fails on shortages or repeated mechanics/decision cores. It models a fixed certified batch, not hosted execution or CI refill throughput.
+
+Still required before rollout: finish the season evaluation, verify staging publication and scheduled refill, and review the remaining release evidence. Candidate bindings, recertification and queue integration are implemented and tested locally; they have not been deployed. The owner has given positive playtest feedback on two procedural examples. None of the operational requirements is satisfied by having eight passing template certificates.

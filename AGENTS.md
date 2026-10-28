@@ -300,6 +300,7 @@ Deterministic templates provide all three locales for title, description, object
 - For pacing, group proofs by their operation multiset so changing command order does not count as a new strategy. Medium/hard reserve readiness requires at least four groups and no group above 35%; these are coarse safeguards, not a complete reasoning-novelty test.
 - The offline refill worker compares candidates against the private inventory and all published versions through authenticated `published-history` and `inventory` endpoints. `register-candidates` verifies artifacts before private insertion. Default local runs make no network calls; `--history-file` allows comparison with a private local historical export.
 - Empty queues return `awaiting-candidate` while preserving the date's difficulty. Never silently recycle a template or reroll the difficulty. Already-published daily and archive puzzles remain available.
+- Evaluator upgrades append a new candidate certificate after current validation and search. Preserve the original candidate, old certificates and any reserved date; incompatible or inconclusive proofs remain unpublished and must be reported, not substituted.
 - The GitHub refill schedule is gated by `DAILY_PROCEDURAL_REFILL_ENABLED`; do not enable production rollout before acceptance. Private artifacts and solution proofs must not be uploaded as public workflow artifacts.
 
 ### Publication, archive, and ranking

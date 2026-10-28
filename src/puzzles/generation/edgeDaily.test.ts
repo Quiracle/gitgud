@@ -39,6 +39,7 @@ class EdgeDatabase {
   runs: Array<Record<string, any>> = [];
   inventory: ProceduralCandidateArtifact[] = [];
   history: Array<{ id: string; definition: unknown; proof: { solution_commands: string[] } }> = [];
+  stale: unknown[] = [];
   reservations = new Map<string, { date: string; difficulty: string; artifact?: ProceduralCandidateArtifact }>();
   published = new Map<string, { id: string; difficulty: string }>();
   publishCalls: Array<Record<string, any>> = [];
@@ -64,6 +65,7 @@ class EdgeDatabase {
       for (const artifact of artifacts) this.inventory.push(structuredClone(artifact));
       return { data: { inserted: artifacts.length, skipped: 0 }, error: null };
     }
+    if (name === "stale_daily_candidates") return { data: this.stale, error: null };
     if (name === "publish_daily_puzzle") {
       this.publishCalls.push(args);
       return { data: args.target_definition.id, error: null };
@@ -235,6 +237,23 @@ describe("compiled procedural daily Edge Function handler", () => {
     hard.forEach((item, index) => { item.novelty.commandPattern = patterns[index < 11 ? 0 : index - 10]; });
     const dominated = await json(await registered(req(JSON.stringify({ mode: "preflight" }), { secret })));
     expect(dominated).toMatchObject({ ready: false, patternCounts: { hard: 4 } });
+  });
+
+  it("queries recertification privately and counts only certificates for the active evaluator", async () => {
+    let registered!: typeof handler;
+    const db = new EdgeDatabase();
+    db.stale = [{ id: artifact.id, artifact, reserved_date: "2099-01-01" }];
+    start(bundleSource, value => { registered = value; }, db, secrets(secret));
+    expect((await registered(req(JSON.stringify({ mode: "stale-candidates", difficulty: "easy" })))).status).toBe(401);
+    expect(db.rpcs).toHaveLength(0);
+    const stale = await json(await registered(req(JSON.stringify({ mode: "stale-candidates", difficulty: "easy" }), { secret })));
+    expect(stale.entries).toEqual(db.stale);
+    expect(db.rpcs[0]).toEqual({ name: "stale_daily_candidates", args: { target_source_fingerprint: SOURCE, target_difficulty: "easy", after_id: "" } });
+    expect((await registered(req(JSON.stringify({ mode: "stale-candidates", difficulty: "invalid" }), { secret }))).status).toBe(400);
+    await registered(req(JSON.stringify({ mode: "preflight" }), { secret }));
+    const query = db.queries.find(item => item.table === "daily_certified_candidates")!;
+    expect(query.operations).toContainEqual(["eq", "certificates.source_fingerprint", SOURCE]);
+    expect(String(query.operations.find(item => item[0] === "select")?.[1])).toContain("daily_candidate_certificates!inner");
   });
 
   it("registers a verified private artifact and returns counters without proof data", async () => {

@@ -30,6 +30,7 @@ try {
       id text primary key, published_on date not null, is_current boolean not null default true,
       difficulty text not null
     );
+    create table public.daily_puzzle_private (puzzle_id text primary key references public.daily_puzzles(id), solution_commands jsonb not null);
   `);
   await db.exec(await readFile(migrationPath, "utf8"));
 
@@ -45,6 +46,7 @@ try {
       (id,difficulty,source_fingerprint,mechanics_hash,decision_core_hash,command_pattern,artifact,created_at)
       values ($1,$2,$3,$4,$5,$6,$7::jsonb,coalesce($8::timestamptz,now()))`,
     [id, difficulty, source, mechanics, core, pattern, JSON.stringify(artifact), createdAt ?? null]);
+    await db.query("insert into public.daily_candidate_certificates(candidate_id,source_fingerprint,artifact) values ($1,$2,$3::jsonb)", [id, source, JSON.stringify(artifact)]);
     return artifact;
   };
   const reserve = async (date, difficulty, source = defaultSource) => {
@@ -165,7 +167,38 @@ try {
     const retryRegistration = (await db.query("select public.register_procedural_candidates($1::jsonb) as result", [JSON.stringify([registration])])).rows[0].result;
     assert.deepEqual(firstRegistration, { inserted: 1, skipped: 0 });
     assert.deepEqual(retryRegistration, { inserted: 0, skipped: 1 });
+
+    // Upgrade evidence without changing identity, losing the old certificate,
+    // or rerolling a date already reserved under an earlier evaluator.
+    const upgradeSource = fp(3000);
+    const upgradeDate = "2099-02-01";
+    const beforeUpgrade = await reserve(upgradeDate, "medium", defaultSource);
+    const candidateId = beforeUpgrade.artifact.id;
+    const waiting = await reserve(upgradeDate, "hard", upgradeSource);
+    assert.equal(waiting.difficulty, "medium");
+    assert.equal(waiting.candidateId, candidateId);
+    assert.equal(waiting.artifact, null);
+    const stale = (await db.query("select public.stale_daily_candidates($1,'medium','') as items", [upgradeSource])).rows[0].items;
+    assert(stale.some(row => row.id === candidateId && row.reserved_date === upgradeDate));
+    const renewed = structuredClone(beforeUpgrade.artifact);
+    renewed.certificate.sourceFingerprint = upgradeSource;
+    const upgraded = (await db.query("select public.register_procedural_candidates($1::jsonb) as result", [JSON.stringify([renewed])])).rows[0].result;
+    assert.deepEqual(upgraded, { inserted: 1, skipped: 0 });
+    assert.deepEqual((await reserve(upgradeDate, "hard", upgradeSource)).artifact, renewed);
+    assert.equal((await db.query("select count(*)::int as count from public.daily_candidate_certificates where candidate_id=$1", [candidateId])).rows[0].count, 2);
+    assert.deepEqual((await reserve(upgradeDate, "medium", defaultSource)).artifact, beforeUpgrade.artifact);
+    const changed = structuredClone(renewed);
+    changed.certificate.sourceFingerprint = fp(3001);
+    changed.candidate.title = "Changed immutable candidate";
+    await assert.rejects(db.query("select public.register_procedural_candidates($1::jsonb)", [JSON.stringify([changed])]));
+    await assert.rejects(db.query("update public.daily_candidate_certificates set artifact='{}'::jsonb where candidate_id=$1", [candidateId]));
+    await assert.rejects(db.query("delete from public.daily_candidate_certificates where candidate_id=$1", [candidateId]));
   });
+
+  for (const role of ["anon", "authenticated"]) {
+    assert.equal((await db.query("select has_table_privilege($1,'public.daily_candidate_certificates','SELECT') as allowed", [role])).rows[0].allowed, false);
+    assert.equal((await db.query("select has_function_privilege($1,'public.stale_daily_candidates(text,text,text)','EXECUTE') as allowed", [role])).rows[0].allowed, false);
+  }
 
   console.log("Procedural SQL migration passed: candidate constraints, immutable identity, source/withdrawal filtering, persisted reservations, fairness ordering, publication short-circuit, and role protections.");
 } finally {

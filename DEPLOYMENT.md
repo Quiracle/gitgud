@@ -31,9 +31,10 @@ For isolated verification of the new reservation SQL without a hosted database, 
 ```powershell
 npm install --prefix daily-review.local/sql-runtime --no-save --package-lock=false @electric-sql/pglite@0.5.12
 node scripts/check-procedural-migration.mjs
+node scripts/check-refill-worker.mjs
 ```
 
-This checks the actual migration against a minimal predecessor schema, including reserve selection, retry identity, legacy reservations, input validation, RLS, and role privileges. It does not test hosted concurrency or replace a staging rollout. It adds no runtime dependency to the game.
+These checks run the actual migration and refill CLI against isolated Postgres, including reserve selection, retry identity, certificate upgrades, incompatible-proof rejection, legacy reservations, input validation, RLS, and role privileges. The worker's network boundary is a local test fixture; these checks do not test hosted concurrency or replace staging. They add no runtime dependency to the game.
 
 ## 2. Create and link Supabase
 
@@ -56,7 +57,7 @@ The migrations enable Row Level Security. Browser clients can read only publishe
 
 ### Rollout order for deterministic daily publication
 
-For an existing deployment, first deploy a frontend that accepts optional `localizations.en`, `.ca`, and `.es` fields and still reads legacy definitions. Then apply the database migration, and deploy the compatible `generate-daily-puzzle` Edge Function. Only after those steps should you prepare the mechanics reserve or enable the schedule. This ordering prevents clients that do not understand localized definitions from receiving them. For a new project, complete the frontend deployment before enabling daily publication.
+For an existing deployment, first deploy a frontend that accepts optional `localizations.en`, `.ca`, and `.es` fields and still reads legacy definitions. Pause the old generation schedule and let in-flight legacy generation finish before importing history or filling the new queue. Then apply the migration and deploy the compatible `generate-daily-puzzle` Edge Function. Fill the reserve and verify it before enabling the schedule again. This prevents a legacy writer from publishing outside the candidate registry during the history comparison. Once cut over, every new daily comes from that registry, whose uniqueness constraints also cover concurrent publication. Do not keep a legacy or manual publisher running alongside it. For a new project, complete the frontend deployment before enabling daily publication.
 
 ### Configure Google and GitHub login
 
@@ -144,6 +145,8 @@ node scripts/refill-daily-puzzles.mjs --difficulty hard --target 21 --upload
 ```
 
 The worker reads every published version and the existing inventory before generation. It preserves certified progress when it reaches a budget, exits unsuccessfully if below target, and never accepts unknown search results. `prepare-reserve` and `seed-fallbacks` are no longer supported by the new publisher. Do not use the old helper.
+
+When deploying a new evaluator fingerprint, the worker reads stale candidates and recertifies their exact stored mechanics and proof. New certificates are appended to `daily_candidate_certificates`; old evidence and candidate/date identity stay intact. Reserved dates are repaired even if the unused reserve already meets its target. An incompatible or inconclusive proof is reported and cannot publish; it must be resolved before rollout. Changes to novelty identity algorithms need their own explicit migration. `--recertify-local` performs the same current search for older local files; the normal upload workflow handles hosted stale candidates automatically.
 
 Generate a staging puzzle manually after the compatible frontend, migration, function and queue are ready:
 

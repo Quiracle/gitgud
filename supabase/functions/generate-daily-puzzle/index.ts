@@ -59,6 +59,13 @@ Deno.serve(async (request) => {
       const entries = (result.data ?? []).map((row: any) => ({ id: row.id, definition: row.definition, solution_commands: row.proof?.solution_commands }));
       return response({ entries, next: entries.length === 50 ? entries.at(-1).id : null, certification });
     }
+    if (body.mode === "stale-candidates") {
+      if (!difficulties.includes(body.difficulty) || (body.after !== undefined && !/^[a-f0-9]{64}$/.test(body.after))) return response({ error: "Invalid recertification query." }, 400);
+      const result = await db.rpc("stale_daily_candidates", { target_source_fingerprint: certification, target_difficulty: body.difficulty, after_id: body.after ?? "" });
+      if (result.error) throw result.error;
+      const entries = result.data ?? [];
+      return response({ entries, next: entries.length === 20 ? entries.at(-1).id : null, certification });
+    }
     if (body.mode !== undefined && body.mode !== "generate") return response({ error: "Unknown mode." }, 400);
     const date = body.date ?? tomorrowDailyDate();
     if (!validDate(date)) return response({ error: "date must be a valid YYYY-MM-DD date." }, 400);
@@ -90,8 +97,8 @@ async function reserveInventory(db: any) {
   const counts = { easy: 0, medium: 0, hard: 0 };
   const patterns = { easy: new Set<string>(), medium: new Set<string>(), hard: new Set<string>() };
   const strategies: Record<Difficulty, Record<string, number>> = { easy: {}, medium: {}, hard: {} };
-  const result = await db.from("daily_certified_candidates").select("difficulty,command_pattern")
-    .eq("source_fingerprint", certification).is("consumed_on", null).is("withdrawn_at", null).limit(1000);
+  const result = await db.from("daily_certified_candidates").select("difficulty,command_pattern,certificates:daily_candidate_certificates!inner(source_fingerprint)")
+    .eq("certificates.source_fingerprint", certification).is("consumed_on", null).is("withdrawn_at", null).limit(1000);
   if (result.error) throw result.error;
   for (const row of result.data ?? []) {
     if (!difficulties.includes(row.difficulty)) continue;
