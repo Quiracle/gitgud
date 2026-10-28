@@ -5,6 +5,8 @@ import { validatePuzzleCandidate } from "../validateCandidate";
 import type { PuzzleCandidate, PuzzleDifficulty } from "../types";
 import { createTemplateLocalizations } from "./editorial";
 import { dailySearchCommands, repositorySearchKey } from "./quality";
+import { snapshotKey } from "./mechanicsState";
+export { snapshotKey } from "./mechanicsState";
 
 const PROPERTIES = ["body", "sunglasses", "scarf", "longLegs", "hat"];
 const COLORS = ["red", "blue", "turquoise", "purple", "gold"];
@@ -135,9 +137,6 @@ export function proposeProceduralCandidate(date: string, difficulty: PuzzleDiffi
   return proposeProceduralCandidates(date, difficulty, `${seed}|${walkIndex}`, 8)[0];
 }
 
-export function snapshotKey(state: Record<string, unknown>): string {
-  return JSON.stringify(Object.entries(state).sort(([a], [b]) => a.localeCompare(b)));
-}
 function snapshotAt(commits: Repository["commits"], initialState: Repository["initialState"], id: string) {
   return getSnapshot({ commits, branches: { main: id }, currentBranch: "main", head: id, initialState, nextGeneratedId: 1 }, id);
 }

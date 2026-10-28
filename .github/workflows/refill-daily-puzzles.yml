@@ -1,0 +1,39 @@
+name: Refill certified daily puzzles
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '27 4 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  refill:
+    if: github.event_name == 'workflow_dispatch' || vars.DAILY_PROCEDURAL_REFILL_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    strategy:
+      fail-fast: false
+      matrix:
+        difficulty: [easy, medium, hard]
+    concurrency:
+      group: procedural-refill-${{ matrix.difficulty }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - run: npm install --global pnpm@11.25.0
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm daily:check
+      - name: Generate, certify, and refill the private queue
+        env:
+          DAILY_GENERATION_URL: ${{ vars.DAILY_GENERATION_URL }}
+          DAILY_GENERATION_SECRET: ${{ secrets.DAILY_GENERATION_SECRET }}
+        run: node scripts/refill-daily-puzzles.mjs --difficulty ${{ matrix.difficulty }} --target 21 --max-seeds 500 --minutes 42 --upload
+      # Private proofs stay in the managed queue. Do not upload them as workflow artifacts.

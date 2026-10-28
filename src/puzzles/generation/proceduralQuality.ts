@@ -1,7 +1,8 @@
 import { executeCommand, getSnapshot, parseGitCommand, type Repository } from "../../engine";
+import { isAncestor } from "../../engine/graph";
 import { validatePuzzleCompletion } from "../completion";
 import type { PuzzleCandidate } from "../types";
-import { snapshotKey } from "./procedural";
+import { snapshotKey } from "./mechanicsState";
 
 /**
  * A secondary rejection check, never the general difficulty certificate.
@@ -41,4 +42,20 @@ export function solutionCommandPattern(candidate: PuzzleCandidate): string {
     if (!parsed.ok) throw new Error("Invalid proof command.");
     return parsed.action.type === "interactive-rebase" && parsed.action.todo?.some(item => item.action === "squash") ? "squash" : parsed.action.type;
   }).join(" → ");
+}
+
+/** Repetitive predecessor-copy routes do not qualify as the preferred daily proof. */
+export function proofHasSequentialCopies(candidate: PuzzleCandidate): boolean {
+  let repository = candidate.initialRepository;
+  let previousPick: string | undefined;
+  for (const command of candidate.solutionCommands) {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) throw new Error("Invalid proof command.");
+    if (parsed.action.type === "cherry-pick" && previousPick && isAncestor(repository, previousPick, parsed.action.commit)) return true;
+    previousPick = parsed.action.type === "cherry-pick" ? parsed.action.commit : undefined;
+    const step = executeCommand(repository, command);
+    if (!step.ok) throw new Error("Invalid proof transition.");
+    repository = step.repository;
+  }
+  return false;
 }

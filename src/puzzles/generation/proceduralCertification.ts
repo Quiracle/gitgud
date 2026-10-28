@@ -4,7 +4,8 @@ import { CHICKEN_V2_SEMANTIC_POLICY } from "../chickenTheme";
 import { validatePuzzleCandidate } from "../validateCandidate";
 import type { PuzzleCandidate } from "../types";
 import { dailySearchCommands, repositorySearchKey, type SearchLimits } from "./quality";
-import { snapshotKey } from "./procedural";
+import { snapshotKey } from "./mechanicsState";
+import { dailyTerminalCommands } from "./terminalCommands";
 
 export interface ProposalVerdict {
   candidate: PuzzleCandidate;
@@ -29,13 +30,14 @@ export function certifyProceduralBatch(candidates: readonly PuzzleCandidate[], l
   let transitions = 0;
   let exploredStates = 0;
   let excludedThroughDepth = 0;
+  const stopped = (reason: "states" | "time" | "transitions" | "interactive-plans") => ({ verdicts, transitions, exploredStates, excludedThroughDepth, reason });
   if (!candidates.length) return { verdicts, transitions, exploredStates, excludedThroughDepth };
   const initial = candidates[0].initialRepository;
   const initialKey = repositorySearchKey(initial);
   for (const candidate of candidates) {
     if (candidate.kind !== "daily" || candidate.target.branch !== "main" || repositorySearchKey(candidate.initialRepository) !== initialKey) throw new Error("Batch targets must share a daily repository.");
     const valid = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-    if (!valid.ok || valid.value.puzzle.parCommands !== limits.maxDepth + 1) throw new Error("Every proposal needs a valid proof exactly one step beyond the excluded depths.");
+    if (!valid.ok || (valid.value.puzzle.parCommands ?? 0) <= limits.maxDepth) throw new Error("Every proposal needs a valid proof beyond the excluded depths.");
   }
   const pending = new Map<string, ProposalVerdict[]>();
   for (const verdict of verdicts) {
@@ -48,12 +50,17 @@ export function certifyProceduralBatch(candidates: readonly PuzzleCandidate[], l
   for (let depth = 1; depth <= limits.maxDepth; depth++) {
     const next: Node[] = [];
     for (const node of frontier) {
-      if (exploredStates >= maxStates || Date.now() >= deadline) return { verdicts, transitions, exploredStates, excludedThroughDepth };
+      if (exploredStates >= maxStates) return stopped("states");
+      if (Date.now() >= deadline) return stopped("time");
       exploredStates++;
-      const enumeration = dailySearchCommands(node.repository, maxInteractivePlans);
-      if (!enumeration.complete) return { verdicts, transitions, exploredStates, excludedThroughDepth };
+      // Terminal representatives preserve new winning snapshots. Intermediate
+      // states still enumerate every squash partition and retain full history.
+      const enumeration = depth === limits.maxDepth
+        ? { commands: dailyTerminalCommands(node.repository), complete: true }
+        : dailySearchCommands(node.repository, maxInteractivePlans);
+      if (!enumeration.complete) return stopped("interactive-plans");
       for (const command of enumeration.commands) {
-        if (transitions >= maxTransitions) return { verdicts, transitions, exploredStates, excludedThroughDepth };
+        if (transitions >= maxTransitions) return stopped("transitions");
         transitions++;
         const step = executeCommand(node.repository, command);
         if (!step.ok || !step.mutated) continue;
@@ -71,7 +78,7 @@ export function certifyProceduralBatch(candidates: readonly PuzzleCandidate[], l
         if (depth === limits.maxDepth) continue;
         const key = repositorySearchKey(step.repository);
         if (seen.has(key)) continue;
-        if (seen.size >= maxStates) return { verdicts, transitions, exploredStates, excludedThroughDepth };
+        if (seen.size >= maxStates) return stopped("states");
         seen.add(key);
         next.push({ repository: step.repository, path });
       }

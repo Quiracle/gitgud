@@ -1,0 +1,171 @@
+import { build } from "esbuild";
+import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID, webcrypto } from "node:crypto";
+import { dailyCertificateSource } from "./daily-certificate-source.mjs";
+
+// Private offline worker. --upload is explicit; default operation has no network.
+if (!globalThis.crypto?.subtle) Object.defineProperty(globalThis, "crypto", { value: webcrypto });
+process.on("uncaughtException", error => { console.error(error.message); process.exit(1); });
+const args = process.argv.slice(2);
+const options = new Map();
+for (let i = 0; i < args.length; i++) {
+  const key = args[i];
+  if (key === "--upload" || key === "--recertify-local") options.set(key, true);
+  else if (["--difficulty", "--target", "--max-seeds", "--minutes", "--start", "--seed-prefix", "--search-seconds", "--history-file"].includes(key) && args[i + 1] !== undefined) options.set(key, args[++i]);
+  else throw new Error("Unknown or incomplete refill argument.");
+}
+const difficulty = options.get("--difficulty") ?? "medium";
+if (!["easy", "medium", "hard"].includes(difficulty)) throw new Error("Unsupported difficulty.");
+function integer(name, fallback, minimum, maximum) {
+  const value = Number(options.get(name) ?? fallback);
+  if (!Number.isInteger(value) || value < minimum || value > maximum) throw new Error(`Invalid ${name}.`);
+  return value;
+}
+const target = integer("--target", 14, 1, 1000);
+const maxSeeds = integer("--max-seeds", 300, 1, 10000);
+const minutes = integer("--minutes", 30, 1, 180);
+const start = integer("--start", 0, 0, 1_000_000);
+const searchSeconds = integer("--search-seconds", difficulty === "hard" ? 180 : 30, 1, 600);
+const seedPrefix = options.get("--seed-prefix") ?? randomUUID();
+const upload = options.has("--upload");
+const directory = "daily-review.local/candidate-reserve";
+const sourceFingerprint = await dailyCertificateSource();
+const manifest = JSON.parse(await readFile("src/puzzles/generation/proceduralManifest.json", "utf8"));
+if (manifest.sourceFingerprint !== sourceFingerprint) throw new Error("Evaluator manifest is stale; do not refill with mismatched certification code.");
+const compiled = await build({ stdin: {
+  contents: "export * from './src/puzzles/generation/synthesis'; export * from './src/puzzles/generation/procedural'; export * from './src/puzzles/generation/proceduralCertification'; export * from './src/puzzles/generation/proceduralQuality'; export * from './src/puzzles/generation/novelty'; export * from './src/puzzles/generation/decisionCore'; export * from './src/puzzles/generation/candidateArtifact'; export * from './src/puzzles/generation/publishedNovelty';",
+  resolveDir: process.cwd(), loader: "ts",
+}, bundle: true, write: false, format: "esm", platform: "node" });
+const domain = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString("base64")}`);
+if (await dailyCertificateSource() !== sourceFingerprint) throw new Error("Evaluator source changed during worker initialization.");
+const endpoint = process.env.DAILY_GENERATION_URL;
+const secret = process.env.DAILY_GENERATION_SECRET;
+if (upload && (!endpoint || !secret || new URL(endpoint).protocol !== "https:")) throw new Error("Upload needs an HTTPS DAILY_GENERATION_URL and DAILY_GENERATION_SECRET.");
+async function api(body) {
+  const response = await fetch(endpoint, {
+    method: "POST", headers: { "content-type": "application/json", "x-generation-secret": secret },
+    body: JSON.stringify(body), signal: AbortSignal.timeout(60_000),
+  });
+  if (!response.ok) throw new Error(`Private candidate service returned HTTP ${response.status}.`);
+  const data = await response.json();
+  if (data.certification !== sourceFingerprint) throw new Error("Worker and deployed evaluator versions differ.");
+  return data;
+}
+const knownMechanics = new Set(), knownCores = new Set();
+const digest = value => createHash("sha256").update(value).digest("hex");
+let publishedHistoryCount = 0;
+function rememberHistory(entries) {
+  for (const entry of entries) {
+    const novelty = domain.publishedPuzzleNovelty(entry.definition, entry.solution_commands);
+    knownMechanics.add(digest(novelty.mechanics));
+    knownCores.add(digest(novelty.decisionCore));
+    publishedHistoryCount++;
+  }
+}
+if (options.has("--history-file")) rememberHistory(JSON.parse(await readFile(options.get("--history-file"), "utf8")));
+let available = 0;
+let strategyCounts = {};
+const strategyKey = candidate => domain.solutionCommandPattern(candidate).split(" → ").sort().join("|");
+const diversityReady = () => difficulty === "easy" || (Object.keys(strategyCounts).length >= Math.min(4, target) &&
+  Math.max(0, ...Object.values(strategyCounts)) <= available * (target < 4 ? 1 / target : 0.35));
+async function refreshReserve() {
+  const inventory = await api({ mode: "preflight" });
+  available = inventory.reserveCounts[difficulty];
+  strategyCounts = inventory.strategyCounts[difficulty];
+}
+if (upload) {
+  let historyAfter;
+  do {
+    const page = await api({ mode: "published-history", ...(historyAfter ? { after: historyAfter } : {}) });
+    rememberHistory(page.entries);
+    historyAfter = page.next;
+  } while (historyAfter);
+  let after;
+  do {
+    const page = await api({ mode: "inventory", ...(after ? { after } : {}) });
+    for (const item of page.entries) { knownMechanics.add(item.mechanics_hash); knownCores.add(item.decision_core_hash); }
+    after = page.next;
+  } while (after);
+  await refreshReserve();
+}
+await mkdir(directory, { recursive: true });
+const staleCandidates = [];
+for (const filename of (await readdir(directory)).sort()) {
+  if (!/^[a-f0-9]{64}\.private\.json$/.test(filename)) continue;
+  const raw = JSON.parse(await readFile(`${directory}/${filename}`, "utf8"));
+  // Older evaluator results remain private records, never silently promoted.
+  if (raw.certificate?.sourceFingerprint !== sourceFingerprint) {
+    if (options.has("--recertify-local") && raw.candidate?.difficulty === difficulty) staleCandidates.push(raw.candidate);
+    continue;
+  }
+  const artifact = await domain.verifyCandidateArtifact(raw, { sourceFingerprint });
+  if (filename !== `${artifact.id}.private.json`) throw new Error("Private artifact filename does not match its bound identity.");
+  if (upload) {
+    if (!knownMechanics.has(artifact.novelty.mechanicsHash) && !knownCores.has(artifact.novelty.decisionCoreHash)) await api({ mode: "register-candidates", artifacts: [artifact] });
+  } else if (artifact.candidate.difficulty === difficulty && !knownMechanics.has(artifact.novelty.mechanicsHash) && !knownCores.has(artifact.novelty.decisionCoreHash)) {
+    available++;
+    const key = strategyKey(artifact.candidate);
+    strategyCounts[key] = (strategyCounts[key] ?? 0) + 1;
+  }
+  knownMechanics.add(artifact.novelty.mechanicsHash);
+  knownCores.add(artifact.novelty.decisionCoreHash);
+}
+if (upload) await refreshReserve();
+const report = { difficulty, sourceFingerprint, publishedHistoryCount, target, initialAvailable: available, attempted: 0, proposed: 0, rejected: 0, unknown: 0, added: 0, available, patterns: {}, searches: [] };
+const deadline = Date.now() + minutes * 60_000;
+const minimum = { easy: 2, medium: 4, hard: 6 }[difficulty];
+for (let index = start; index < start + maxSeeds && (available < target || !diversityReady()) && Date.now() < deadline; index++) {
+  const previous = staleCandidates.shift();
+  const seed = previous ? `recertification-${index}` : `${seedPrefix}-${index}`;
+  report.attempted++;
+  // Broad graphs provide varied medium reasoning; constructive constraints
+  // supply harder interactions. Neither path looks up a complete puzzle template.
+  const candidates = previous ? [previous] : difficulty !== "hard" && index % 2 === 0
+    ? domain.proposeProceduralCandidates("2099-01-01", difficulty, seed, 48)
+    : [domain.synthesizeDailyCandidate("2099-01-01", difficulty, seed, { maxElapsedMs: 12_000, maxTransitions: 60_000 }).candidate].filter(Boolean);
+  report.proposed += candidates.length;
+  const fresh = candidates.filter(candidate => {
+    if (candidate.solutionCommands.length < minimum || candidate.solutionCommands.length > (difficulty === "hard" ? 10 : minimum)) return false;
+    if (difficulty !== "easy" && (strategyCounts[strategyKey(candidate)] ?? 0) >= Math.ceil(Math.max(target, available) / Math.min(4, target))) return false;
+    if (difficulty !== "easy" && !domain.solutionCommandPattern(candidate).split(" → ").some(command => ["merge", "rebase", "interactive-rebase", "squash"].includes(command))) return false;
+    if (difficulty !== "easy" && (domain.proofHasSequentialCopies(candidate) || domain.findCopyOnlySolution(candidate))) return false;
+    return !knownMechanics.has(digest(domain.fingerprintMechanics(candidate.initialRepository, candidate.target).canonical)) &&
+      !knownCores.has(digest(domain.fingerprintDecisionCore(candidate)));
+  });
+  report.rejected += candidates.length - fresh.length;
+  const searchStarted = Date.now();
+  const search = domain.certifyProceduralBatch(fresh, { maxDepth: minimum - 1, maxStates: 150_000, maxTransitions: 3_000_000, maxElapsedMs: searchSeconds * 1000 });
+  if (fresh.length) report.searches.push({ seed, candidates: fresh.length, elapsedMs: Date.now() - searchStarted, transitions: search.transitions,
+    exploredStates: search.exploredStates, excludedThroughDepth: search.excludedThroughDepth, reason: search.reason ?? "complete" });
+  for (const verdict of search.verdicts) {
+    if (verdict.status === "unknown") { report.unknown++; continue; }
+    if (verdict.status !== "certified") { report.rejected++; continue; }
+    if (difficulty !== "easy" && (strategyCounts[strategyKey(verdict.candidate)] ?? 0) >= Math.ceil(Math.max(target, available) / Math.min(4, target))) { report.rejected++; continue; }
+    const artifact = await domain.createCandidateArtifact(verdict, { sourceFingerprint, excludedThroughDepth: search.excludedThroughDepth });
+    if (knownMechanics.has(artifact.novelty.mechanicsHash) || knownCores.has(artifact.novelty.decisionCoreHash)) { report.rejected++; continue; }
+    if (await dailyCertificateSource() !== sourceFingerprint) throw new Error("Evaluator source changed while searching. No further artifacts will be saved or uploaded.");
+    await writeFile(`${directory}/${artifact.id}.private.json`, JSON.stringify(artifact, null, 2) + "\n");
+    if (upload) {
+      const result = await api({ mode: "register-candidates", artifacts: [artifact] });
+      report.added += result.inserted;
+      await refreshReserve();
+    } else {
+      report.added++; available++;
+      const key = strategyKey(artifact.candidate);
+      strategyCounts[key] = (strategyCounts[key] ?? 0) + 1;
+    }
+    knownMechanics.add(artifact.novelty.mechanicsHash);
+    knownCores.add(artifact.novelty.decisionCoreHash);
+    const pattern = artifact.novelty.commandPattern;
+    report.patterns[pattern] = (report.patterns[pattern] ?? 0) + 1;
+    if (available >= target && diversityReady()) break;
+  }
+  report.available = available;
+  console.log(`${difficulty}: seed ${index}; available ${available}/${target}; qualified this run ${report.added}; unknown ${report.unknown}`);
+  await writeFile(`${directory}/report-${difficulty}.local.json`, JSON.stringify(report, null, 2) + "\n");
+}
+report.strategyCounts = strategyCounts;
+report.diversityReady = diversityReady();
+console.log(JSON.stringify({ ...report, searches: undefined }, null, 2));
+await writeFile(`${directory}/report-${difficulty}.local.json`, JSON.stringify(report, null, 2) + "\n");
+if (available < target || !diversityReady()) { console.error("Reserve remains below its count or diversity target. Retained certified progress; no unproven puzzle was accepted."); process.exitCode = 1; }

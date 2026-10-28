@@ -1,6 +1,6 @@
-# Deploy GitGud before the hackathon deadline
+# Deploy GitGud
 
-**Daily-generation rollout is on hold.** The eight-template prototype does not meet the product's variety requirement. Its rollout instructions below describe the current draft implementation, not a release recommendation. Complete the [procedural generation acceptance gates](docs/procedural-daily-generation.md) before deploying this feature.
+**Daily-generation rollout is on hold.** Runtime generation now uses procedurally synthesized, individually certified candidates in a private queue; the eight-template library is retained only for regression fixtures. The replacement is not release-ready. Hard refill reliability, history novelty evaluation, staging publication, season evaluation, and human UI playtests remain outstanding. Do not apply the new candidate-queue migration or enable the gated workflow/schedule in production until the [acceptance gates](docs/procedural-daily-generation.md) are met.
 
 GitGud uses two managed deployments:
 
@@ -22,7 +22,7 @@ pnpm test
 pnpm build
 ```
 
-`pnpm daily:certify` computes offline search certificates for the approved deterministic template registry. Run it when intentionally changing the engine, deterministic generator, or evaluator; review the resulting registry and then run `pnpm daily:check`. The check rejects stale fingerprints, missing certificates, unknown templates, and inconclusive searches. Proposed minimum solution lengths are 2/4/6 commands for easy/medium/hard. They are certification quality thresholds only; the player's command count is not restricted by them.
+`pnpm daily:check` verifies the procedural evaluator's source-bound manifest and rejects stale source. `pnpm daily:certify` updates the legacy template regression registry only; it is not a publication certificate for procedural candidates. The worker binds each private candidate certificate to the exact source fingerprint, candidate mechanics, proof, and evaluator version. Minimum proof lengths are 2/4/6 commands for easy/medium/hard; they are quality thresholds, never player command limits.
 
 The human project owner performs UI checks. These commands do not run browser or visual tests.
 
@@ -30,7 +30,7 @@ For isolated verification of the new reservation SQL without a hosted database, 
 
 ```powershell
 npm install --prefix daily-review.local/sql-runtime --no-save --package-lock=false @electric-sql/pglite@0.5.12
-node scripts/check-daily-migration.mjs
+node scripts/check-procedural-migration.mjs
 ```
 
 This checks the actual migration against a minimal predecessor schema, including reserve selection, retry identity, legacy reservations, input validation, RLS, and role privileges. It does not test hosted concurrency or replace a staging rollout. It adds no runtime dependency to the game.
@@ -79,11 +79,25 @@ For GitHub, create an OAuth App. Use the production Vercel URL as its homepage a
 
 Provider client secrets belong only in the Supabase dashboard. Do not add them to Vercel or any `VITE_` variable. After the migration is applied, each new OAuth user receives a private `profiles` row protected by Row Level Security.
 
-## 3. Configure the daily publisher
+## 3. Procedural daily publisher (rollout hold)
+
+The runtime Edge Function accepts only individually verified procedural artifacts registered in the private candidate queue. It atomically reserves the date's difficulty and an eligible candidate, replays its private proof through the normal validator, and publishes the immutable puzzle. If a candidate is unavailable it returns `awaiting-candidate`; it does not fall back to a bundled template. AI remains optional localized story text and falls back to deterministic copy.
+
+The refill worker is local/offline by default. For example:
+
+```powershell
+node scripts/refill-daily-puzzles.mjs --difficulty medium --target 14
+```
+
+It writes private artifacts and a local report under ignored `daily-review.local/candidate-reserve/`. It makes no network calls unless `--upload` is explicitly supplied. Upload requires `DAILY_GENERATION_URL` (HTTPS) and `DAILY_GENERATION_SECRET`; the service checks that worker and deployed evaluator source fingerprints match. Do not upload solution-bearing artifacts as CI workflow artifacts.
+
+The scheduled GitHub Actions workflow `.github/workflows/refill-daily-puzzles.yml` is gated: scheduled runs require repository variable `DAILY_PROCEDURAL_REFILL_ENABLED=true`; manual dispatch is explicit. It runs separate difficulty jobs and uploads to the private queue. This workflow and the SQL migration are implementation work, not evidence that release gates have passed.
+
+The procedural migration is `supabase/migrations/20261028071144_procedural_daily_candidate_queue.sql`; validate it in staging before any production application. No staging publication or release approval is documented yet. The following configuration and rollout steps are conditional on passing the acceptance gates.
 
 Create one long random value for `DAILY_GENERATION_SECRET`. It is not a Supabase key and must never have a `VITE_` prefix.
 
-The daily publisher always constructs mechanics from the certified deterministic library. AI is used only for optional title and description text in English, Catalan, and Spanish. It receives a limited editorial context and cannot change the repository, target, command allowlist, objectives, hints, or private proof. Story output is strictly checked; any missing, unsafe, malformed, or unavailable response uses the matching deterministic template copy. Existing and newly published puzzles remain playable if the story provider is unavailable.
+AI receives limited editorial context and cannot change the repository, target, command allowlist, objectives, hints, or private proof. Invalid or unavailable story output uses the candidate's deterministic localized copy. Existing puzzles remain playable if generation is unavailable.
 
 Set Edge Function secrets for optional story generation:
 
@@ -97,7 +111,7 @@ pnpm exec supabase secrets set OPENAI_API_KEY=YOUR_OPENAI_KEY OPENAI_PUZZLE_MODE
 
 Do not deploy the daily Edge Function or apply its migration yet. Section 6 deploys the frontend first, then runs the migration and Edge deployment together in the required order.
 
-The daily story request uses low reasoning for reasoning models, a 4,096-token output cap, and a 15-second timeout. Non-reasoning models receive temperature 0.7. The older `OPENAI_PUZZLE_REASONING_EFFORT`, `OPENAI_PUZZLE_MAX_OUTPUT_TOKENS`, and `OPENAI_REQUEST_TIMEOUT_MS` settings still apply to guided generation, but do not control the daily story request. The `preflight` mode reports whether the bundled mechanics registry is present, current reserve counts, and whether story generation is configured. It does not call OpenAI or verify provider availability; story failures fall back to template copy.
+The daily story request uses low reasoning for reasoning models, a 4,096-token output cap, and a 15-second timeout. Non-reasoning models receive temperature 0.7. The older `OPENAI_PUZZLE_REASONING_EFFORT`, `OPENAI_PUZZLE_MAX_OUTPUT_TOKENS`, and `OPENAI_REQUEST_TIMEOUT_MS` settings still apply to guided generation, but do not control the daily story request. `preflight` checks current-source reserve counts (at least 14 per difficulty) and order-independent operation groups (at least four each for medium and hard, none above 35%). It reports story configuration without calling the provider. These operational checks do not establish enjoyment or authorize release.
 
 ### Enable LinkedIn posting (optional)
 
@@ -117,31 +131,33 @@ pnpm exec supabase secrets set LINKEDIN_CLIENT_ID=YOUR_CLIENT_ID LINKEDIN_CLIENT
 
 LinkedIn access tokens last 60 days. When one expires, the share dialog asks the player to connect again.
 
-## 4. Prepare the certified mechanics reserve
+## 4. Candidate reserve and staging checks
 
-After completing section 6, the reserve stores certified deterministic template selections and seeds, not AI-generated repository candidates. It is optional for publication: the daily function can select a certified template directly if the reserve is empty. Prepare the default 14 mechanics per difficulty before enabling the schedule:
+After deploying the migration and compatible function to staging, configure the worker endpoint and private secret in that environment. Fill each difficulty before enabling publication:
 
 ```powershell
-$projectRef = "YOUR_PROJECT_REF"
-$generationSecret = "YOUR_LONG_RANDOM_SECRET"
-& .\scripts\seed-fallbacks.ps1 -ProjectRef $projectRef -GenerationSecret $generationSecret
+$env:DAILY_GENERATION_URL = "https://YOUR_STAGING_PROJECT_REF.supabase.co/functions/v1/generate-daily-puzzle"
+# Set DAILY_GENERATION_SECRET securely in the process environment.
+node scripts/refill-daily-puzzles.mjs --difficulty easy --target 21 --upload
+node scripts/refill-daily-puzzles.mjs --difficulty medium --target 21 --upload
+node scripts/refill-daily-puzzles.mjs --difficulty hard --target 21 --upload
 ```
 
-The helper checks `preflight`, then uses `prepare-reserve` until each difficulty reaches the requested count. `seed-fallbacks` is a compatibility alias for `prepare-reserve`. The helper is resumable and preserves successful rows. Preflight readiness means the mechanics registry is valid; it does not mean AI story generation has been tested or that the reserve is full. The final output displays counts and the `storyAvailable` configuration indicator.
+The worker reads every published version and the existing inventory before generation. It preserves certified progress when it reaches a budget, exits unsuccessfully if below target, and never accepts unknown search results. `prepare-reserve` and `seed-fallbacks` are no longer supported by the new publisher. Do not use the old helper.
 
-Generate today's puzzle manually as a smoke test after the compatible frontend, migration, and Edge Function are deployed:
+Generate a staging puzzle manually after the compatible frontend, migration, function and queue are ready:
 
 ```powershell
 $todayBarcelona = [System.TimeZoneInfo]::ConvertTimeBySystemTimeZoneId([DateTime]::UtcNow, "Romance Standard Time").ToString("yyyy-MM-dd")
-$headers = @{ "x-generation-secret" = $generationSecret; "Content-Type" = "application/json" }
-$url = "https://$projectRef.supabase.co/functions/v1/generate-daily-puzzle"
+$headers = @{ "x-generation-secret" = $env:DAILY_GENERATION_SECRET; "Content-Type" = "application/json" }
+$url = $env:DAILY_GENERATION_URL
 $body = @{ mode = "generate"; date = $todayBarcelona } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri $url -Headers $headers -Body $body
 ```
 
-In **Supabase → Table Editor → daily_puzzles**, confirm there is one row for the date, its `definition` does not contain `solutionCommands`, and it has all three localized text entries. Inspect the linked private `daily_generation_runs` row for the template, mechanics signature, difficulty certificate, and story source. Test story failure on a staging project; it must still publish a validated daily with template copy.
+Confirm one immutable row for the date, no `solutionCommands` in its public definition, and all three localizations. Inspect private candidate/certificate metadata and the run's story source. Test missing story service, simultaneous same-date requests, different-date consumption, empty queue followed by refill, source mismatch, and retry after publication. Story failure must publish the same reserved mechanics with fallback copy. Empty queue must preserve the difficulty and return `awaiting-candidate` without substituting a template.
 
-## 5. Enable the daily schedule after section 6
+## 5. Daily schedule (enable only after acceptance)
 
 After the frontend, migration, Edge Function, and reserve are ready, open [supabase/schedule.sql.example](supabase/schedule.sql.example), replace both placeholders, and paste it into **Supabase → SQL Editor**.
 
@@ -171,7 +187,7 @@ Find the publishable key under **Supabase → Project Settings → API Keys**. T
 
 4. Deploy the frontend first. Confirm this release accepts optional three-locale daily text while remaining compatible with legacy daily definitions. The existing `vercel.json` sends application routes such as `/play` and `/course/...` to Vite's `index.html`.
 
-5. Only after the frontend is live, apply the database migration and deploy the Edge Functions:
+5. Only after acceptance and the compatible frontend is live, apply the database migration and deploy the Edge Functions:
 
 ```powershell
 pnpm supabase:deploy
@@ -193,7 +209,7 @@ Operational checks in Supabase:
 
 - `daily_puzzles` has at most one `is_current` row per date.
 - `daily_puzzle_private` contains the proof solution but is unreadable with the public key.
-- `daily_generation_runs` records reserved difficulty, template ID, mechanics signature, certificate quality metrics, story source, and validation result. Story-provider diagnostics stay private.
+- `daily_generation_runs` records reserved difficulty, candidate ID, mechanics and decision-core hashes, certificate metadata, story source, and validation result. Story-provider diagnostics stay private.
 - A mechanics signature mismatch or proof failure prevents publication. A story failure records template copy and still publishes the reserved certified mechanics.
 - An authenticated daily run creates one active `attempts` row, then a completion updates `progress` and `leaderboard_entries` through `submit_daily_result`.
 - Anonymous users can read the leaderboard RPC but cannot read raw profiles, attempts, transcripts, or progress rows.
@@ -202,4 +218,4 @@ Operational checks in Supabase:
 
 If a daily is missing, invoke `generate` manually with that date (Barcelona calendar) using the PowerShell command above. Repeated calls are safe: once a puzzle exists, the function returns `already-published` and does not replace it.
 
-If OpenAI is unavailable, deterministic template story text is used and certified mechanics still publish; the mechanics reserve is optional. Already-published puzzles continue working even when OpenAI or the scheduled function is down.
+If OpenAI is unavailable, deterministic localized story text is used and reserved certified mechanics still publish. The candidate queue is required: when empty, refill the already selected difficulty and retry the date. Never reroll difficulty or recycle a consumed candidate. Already-published puzzles continue working even when the provider, worker, or scheduled function is down.

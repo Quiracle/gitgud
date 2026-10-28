@@ -2045,593 +2045,6 @@ function toGuidedPuzzle(candidate, lessonId) {
   };
 }
 
-// src/puzzles/generation/certificates.json
-var certificates_default = {
-  sourceFingerprint: "57500edf0c5ad8bdc9e79584facf5c85eb1d2cb76e35db5b4cacf724b723b94a",
-  certificates: [
-    {
-      templateId: "easy-0",
-      difficulty: "easy",
-      family: "dependency-chain",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 2,
-      signature: '{"ids":["c1","c2","c3","c4","c5"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["feature",4]],"target":[[0,1],[1,2],[2,0],[3,0],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 1,
-        exploredStates: 1,
-        transitions: 9
-      }
-    },
-    {
-      templateId: "easy-1",
-      difficulty: "easy",
-      family: "repair-and-assemble",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 2,
-      signature: '{"ids":["c1","c2","c3","c4","c5"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[1],"changes":[[1,0,1]]},{"parents":[2],"changes":[[1,0,2]]}],"currentBranch":"main","head":"c4","nextGeneratedId":1,"mainHead":3,"sideHeads":[["feature",4]],"target":[[0,1],[1,2],[2,0],[3,0],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 1,
-        exploredStates: 1,
-        transitions: 10
-      }
-    },
-    {
-      templateId: "easy-4",
-      difficulty: "easy",
-      family: "bundled-nuisance-cleanup",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 2,
-      signature: '{"ids":["c1","c2","c3","c4"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[1],"changes":[[0,1,0]]},{"parents":[2],"changes":[[0,0,1],[1,0,1]]}],"currentBranch":"main","head":"c1","nextGeneratedId":1,"mainHead":0,"sideHeads":[["feature",3]],"target":[[0,0],[1,1],[2,0],[3,0],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 1,
-        exploredStates: 1,
-        transitions: 10
-      }
-    },
-    {
-      templateId: "medium-4",
-      difficulty: "medium",
-      family: "bundled-nuisance-cleanup",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 4,
-      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[1],"changes":[[0,1,0]]},{"parents":[2],"changes":[[0,0,1],[1,0,1]]},{"parents":[0],"changes":[[2,0,1]]},{"parents":[4],"changes":[[2,1,0]]},{"parents":[5],"changes":[[2,0,1],[3,0,1]]}],"currentBranch":"main","head":"c1","nextGeneratedId":1,"mainHead":0,"sideHeads":[["feature",3],["style",6]],"target":[[0,0],[1,1],[2,0],[3,1],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 3,
-        exploredStates: 111,
-        transitions: 2873
-      }
-    },
-    {
-      templateId: "medium-5",
-      difficulty: "medium",
-      family: "prepare-and-integrate",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 4,
-      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[4],"changes":[[1,2,3]]},{"parents":[5],"changes":[[1,3,4]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["feature",6]],"target":[[0,1],[1,4],[2,0],[3,0],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 3,
-        exploredStates: 23,
-        transitions: 446
-      }
-    },
-    {
-      templateId: "medium-6",
-      difficulty: "medium",
-      family: "clean-room-integration",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 4,
-      signature: '{"ids":["c1","c2","c3","c4","c5","c6"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1],[1,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[0,2,3],[2,0,1]]},{"parents":[3],"changes":[[0,3,0]]},{"parents":[4],"changes":[[1,0,2]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["base",0],["feature",5]],"target":[[0,1],[1,1],[2,1],[3,0],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 3,
-        exploredStates: 37,
-        transitions: 831
-      }
-    },
-    {
-      templateId: "hard-5",
-      difficulty: "hard",
-      family: "prepare-and-integrate",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 6,
-      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[1,0,1]]},{"parents":[3],"changes":[[1,1,2]]},{"parents":[4],"changes":[[1,2,3]]},{"parents":[5],"changes":[[1,3,4]]},{"parents":[1],"changes":[[2,0,1]]},{"parents":[0],"changes":[[0,0,3]]},{"parents":[8],"changes":[[2,0,2]]}],"currentBranch":"main","head":"c8","nextGeneratedId":1,"mainHead":7,"sideHeads":[["feature",6],["repair",9]],"target":[[0,1],[1,4],[2,2],[3,0],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 5,
-        exploredStates: 2562,
-        transitions: 239156
-      }
-    },
-    {
-      templateId: "hard-6",
-      difficulty: "hard",
-      family: "clean-room-integration",
-      generatorVersion: 1,
-      evaluatorVersion: 1,
-      minimumCommands: 6,
-      signature: '{"ids":["c1","c2","c3","c4","c5","c6","c7","c8","c9","c10"],"initialState":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],"commits":[{"parents":[],"changes":[]},{"parents":[0],"changes":[[0,0,1],[1,0,1]]},{"parents":[0],"changes":[[0,0,2]]},{"parents":[2],"changes":[[0,2,3],[2,0,1]]},{"parents":[3],"changes":[[0,3,0]]},{"parents":[4],"changes":[[1,0,2]]},{"parents":[0],"changes":[[0,0,4]]},{"parents":[6],"changes":[[0,4,5],[3,0,1]]},{"parents":[7],"changes":[[0,5,0]]},{"parents":[8],"changes":[[1,0,3]]}],"currentBranch":"main","head":"c2","nextGeneratedId":1,"mainHead":1,"sideHeads":[["base",0],["feature",5],["polish",9]],"target":[[0,1],[1,1],[2,1],[3,1],[4,0],[5,0]]}',
-      search: {
-        status: "exhausted",
-        excludedThroughDepth: 5,
-        exploredStates: 15160,
-        transitions: 827372
-      }
-    }
-  ]
-};
-
-// src/puzzles/generation/deterministic.ts
-var SUPPORTED_ACTION_TYPES2 = SUPPORTED_ACTION_TYPES;
-var DETERMINISTIC_GENERATOR_VERSION = 1;
-var SLOTS = ["sunglasses", "scarf", "longLegs", "hat", "crest"];
-var COLORS = ["red", "blue", "turquoise", "purple", "gold"];
-var COLORS_WITHOUT_BLUE = ["red", "turquoise", "purple", "gold"];
-var MODULE_COUNTS = { easy: 1, medium: 2, hard: 3 };
-var BRANCHES = ["feature", "style", "polish"];
-function createDeterministicCandidate(date, difficulty, seed, variant = 0) {
-  validateInputs(date, difficulty, seed, variant);
-  const moduleCount = MODULE_COUNTS[difficulty];
-  const random = createRandom(`${date}|${difficulty}|${seed}|${variant}`);
-  const slots = selectSlots(moduleCount, random);
-  const colors = shuffled(COLORS, random);
-  const moduleKinds = modulePattern(moduleCount, variant);
-  const blockerColors = shuffled(COLORS_WITHOUT_BLUE, random).slice(0, moduleCount);
-  const commits = {};
-  const addCommit = (id2, parent, message, changes) => {
-    commits[id2] = { id: id2, parents: parent ? [parent] : [], message, changes: changes.map((change) => ({ type: "set", ...change })), provenance: { type: "original", sourceCommits: [] } };
-  };
-  addCommit("c1", void 0, "Create the empty repository", []);
-  addCommit("c2", "c1", "Color the chicken black", [{ property: "body", from: "cream", to: "black" }]);
-  const branches = { main: "c2" };
-  let nextId = 3;
-  let mainHead = "c2";
-  const solutionCommands = [];
-  const targetSnapshot = { ...EMPTY_CHICKEN_STATE, body: "black" };
-  for (let index = 0; index < moduleCount; index += 1) {
-    const slot = slots[index];
-    const desired = colors[index];
-    const branch = BRANCHES[index];
-    const branchBody = blockerColors[index];
-    const poisonId = `c${nextId++}`;
-    addCommit(poisonId, "c1", `Color the chicken ${branchBody} on ${branch}`, [{ property: "body", from: "cream", to: branchBody }]);
-    let branchHead = poisonId;
-    if (moduleKinds[index] === "dependency") {
-      const interim = COLORS.find((color) => color !== desired && color !== branchBody);
-      const firstId = `c${nextId++}`;
-      addCommit(firstId, branchHead, `Add ${interim} ${slot}`, [{ property: slot, from: "none", to: interim }]);
-      branchHead = firstId;
-      const finalId = `c${nextId++}`;
-      addCommit(finalId, branchHead, `Change ${slot} to ${desired}`, [{ property: slot, from: interim, to: desired }]);
-      branchHead = finalId;
-      solutionCommands.push(`git cherry-pick ${firstId}`, `git cherry-pick ${finalId}`);
-    } else {
-      const wrong = COLORS.find((color) => color !== desired && color !== branchBody);
-      const badId = `c${nextId++}`;
-      addCommit(badId, mainHead, `Add the wrong ${slot}`, [{ property: slot, from: "none", to: wrong }]);
-      mainHead = badId;
-      const desiredId = `c${nextId++}`;
-      addCommit(desiredId, branchHead, `Add ${desired} ${slot} on ${branch}`, [{ property: slot, from: "none", to: desired }]);
-      branchHead = desiredId;
-      solutionCommands.push(`git revert ${badId}`, `git cherry-pick ${desiredId}`);
-    }
-    branches[branch] = branchHead;
-    targetSnapshot[slot] = desired;
-  }
-  branches.main = mainHead;
-  const id = `daily-${date}`;
-  const candidate = {
-    schemaVersion: 2,
-    themeId: "chicken-v1",
-    id,
-    version: 1,
-    kind: "daily",
-    slug: id,
-    title: "A Chicken Makeover",
-    description: "Give the chicken its final look by curating work across branches.",
-    difficulty,
-    publishedOn: date,
-    objectives: ["Make main match the illustrated target."],
-    initialRepository: {
-      commits,
-      branches,
-      currentBranch: "main",
-      head: mainHead,
-      initialState: { ...EMPTY_CHICKEN_STATE, body: "cream" },
-      nextGeneratedId: 1
-    },
-    target: { branch: "main", snapshot: targetSnapshot },
-    allowedCommands: [...SUPPORTED_ACTION_TYPES2],
-    hints: ["Each side branch contains useful accessory work.", "Cherry-pick the useful changes onto main.", "Revert any mainline accessory that conflicts with the target."],
-    solutionCommands
-  };
-  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-  if (!validation.ok) {
-    throw new Error(`Deterministic candidate failed validation: ${validation.issues.map((issue2) => `${issue2.code} at ${issue2.path}`).join(", ")}`);
-  }
-  const family = familyForPattern(moduleKinds);
-  const signature = mechanicsSignature(candidate);
-  return { candidate, family, signature, generatorVersion: DETERMINISTIC_GENERATOR_VERSION };
-}
-function createBundledCandidate(date, difficulty, seed) {
-  validateInputs(date, difficulty, seed, 0);
-  const count = MODULE_COUNTS[difficulty];
-  const random = createRandom(`${date}|bundled|${difficulty}|${seed}`);
-  const desiredSlots = shuffled(["sunglasses", "scarf", "longLegs"], random).slice(0, count);
-  const nuisanceSlots = shuffled(["body", "hat", "crest"], random).slice(0, count);
-  const colors = shuffled(COLORS, random);
-  const commits = {};
-  const branches = { main: "c1" };
-  const solutionCommands = [];
-  const targetSnapshot = { ...EMPTY_CHICKEN_STATE, body: "cream" };
-  const addCommit = (id2, parent, message, changes) => {
-    commits[id2] = { id: id2, parents: [parent], message, changes: changes.map((change) => ({ type: "set", ...change })), provenance: { type: "original", sourceCommits: [] } };
-  };
-  commits.c1 = { id: "c1", parents: [], message: "Create the empty repository", changes: [], provenance: { type: "original", sourceCommits: [] } };
-  let nextId = 2;
-  for (let index = 0; index < count; index += 1) {
-    const branch = BRANCHES[index];
-    const nuisance = nuisanceSlots[index];
-    const desiredSlot = desiredSlots[index];
-    const color = colors[index];
-    const nuisanceColor = color;
-    const baseline = nuisance === "body" ? "cream" : "none";
-    const first = `c${nextId++}`;
-    addCommit(first, "c1", `Add a distracting ${nuisance}`, [{ property: nuisance, from: baseline, to: nuisanceColor }]);
-    const cleanup = `c${nextId++}`;
-    addCommit(cleanup, first, `Remove the distracting ${nuisance}`, [{ property: nuisance, from: nuisanceColor, to: baseline }]);
-    const bundled = `c${nextId++}`;
-    addCommit(bundled, cleanup, `Bundle the useful ${desiredSlot} change`, [
-      { property: nuisance, from: baseline, to: nuisanceColor },
-      { property: desiredSlot, from: "none", to: color }
-    ]);
-    branches[branch] = bundled;
-    solutionCommands.push(`git merge ${branch}`, `git revert ${first}`);
-    targetSnapshot[desiredSlot] = color;
-  }
-  const id = `daily-${date}`;
-  const candidate = {
-    schemaVersion: 2,
-    themeId: "chicken-v1",
-    id,
-    version: 1,
-    kind: "daily",
-    slug: id,
-    title: "Useful Work, Extra Baggage",
-    description: "Bring useful accessories onto main and clean up each branch's nuisance change.",
-    difficulty,
-    publishedOn: date,
-    objectives: ["Keep the useful accessories and remove the nuisance changes."],
-    initialRepository: {
-      commits,
-      branches,
-      currentBranch: "main",
-      head: "c1",
-      initialState: { ...EMPTY_CHICKEN_STATE, body: "cream" },
-      nextGeneratedId: 1
-    },
-    target: { branch: "main", snapshot: targetSnapshot },
-    allowedCommands: [...SUPPORTED_ACTION_TYPES2],
-    hints: ["Each branch bundles an accessory with an unwanted change.", "Merge a branch to bring in both changes.", "Clean up its nuisance change while keeping the accessory."],
-    solutionCommands
-  };
-  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-  if (!validation.ok) {
-    throw new Error(`Bundled candidate failed validation: ${validation.issues.map((issue2) => `${issue2.code} at ${issue2.path}`).join(", ")}`);
-  }
-  return {
-    candidate,
-    family: "bundled-nuisance-cleanup",
-    signature: mechanicsSignature(candidate),
-    generatorVersion: DETERMINISTIC_GENERATOR_VERSION
-  };
-}
-function mechanicsSignature(candidate) {
-  return JSON.stringify(mechanicsShape(candidate));
-}
-function validateInputs(date, difficulty, seed, variant) {
-  if (!isCanonicalDate(date)) throw new Error("date must be a valid YYYY-MM-DD calendar date.");
-  if (!(difficulty in MODULE_COUNTS)) throw new Error("difficulty must be easy, medium, or hard.");
-  if (typeof seed !== "string" || seed.trim().length === 0 || seed.length > 256) throw new Error("seed must be a non-empty string of at most 256 characters.");
-  if (!Number.isSafeInteger(variant) || variant < 0) throw new Error("variant must be a non-negative safe integer.");
-}
-function modulePattern(count, variant) {
-  const pattern = variant % 4;
-  if (pattern === 0) return Array.from({ length: count }, () => "dependency");
-  if (pattern === 1) return Array.from({ length: count }, () => "repair");
-  if (pattern === 2) return Array.from({ length: count }, (_, index) => index % 2 === 0 ? "dependency" : "repair");
-  return Array.from({ length: count }, (_, index) => index % 2 === 0 ? "repair" : "dependency");
-}
-function selectSlots(count, random) {
-  const available = shuffled(SLOTS, random);
-  const selected = [];
-  for (const slot of available) {
-    if (slot === "hat" && selected.includes("crest") || slot === "crest" && selected.includes("hat")) continue;
-    selected.push(slot);
-    if (selected.length === count) break;
-  }
-  return selected;
-}
-function familyForPattern(pattern) {
-  const key = pattern.map((kind) => kind === "dependency" ? "d" : "r").join("");
-  if (/^d+$/.test(key)) return "dependency-chain";
-  if (/^r+$/.test(key)) return "repair-and-assemble";
-  if (key.startsWith("d")) return "selective-transfer";
-  return "prepare-integration";
-}
-function mechanicsShape(candidate) {
-  const ids = Object.keys(candidate.initialRepository.commits).sort((left, right) => Number(left.slice(1)) - Number(right.slice(1)));
-  const propertyIds = /* @__PURE__ */ new Map();
-  const valuesByProperty = /* @__PURE__ */ new Map();
-  const getPropertyId = (property) => {
-    if (!propertyIds.has(property)) propertyIds.set(property, propertyIds.size);
-    return propertyIds.get(property);
-  };
-  const getValueId = (property, value) => {
-    const key = JSON.stringify(value);
-    let values = valuesByProperty.get(property);
-    if (!values) valuesByProperty.set(property, values = /* @__PURE__ */ new Map());
-    if (!values.has(key)) values.set(key, values.size);
-    return values.get(key);
-  };
-  for (const id of ids) for (const change of candidate.initialRepository.commits[id].changes) getPropertyId(change.property);
-  for (const property of Object.keys(candidate.initialRepository.initialState)) getPropertyId(property);
-  const state = (snapshot) => [...propertyIds.entries()].sort(([, a], [, b]) => a - b).map(([property, id]) => [id, getValueId(property, snapshot[property])]);
-  const initialState = state(candidate.initialRepository.initialState);
-  const commits = ids.map((id) => {
-    const commit = candidate.initialRepository.commits[id];
-    return {
-      parents: commit.parents.map((parent) => ids.indexOf(parent)),
-      changes: commit.changes.map((change) => [getPropertyId(change.property), getValueId(change.property, change.from), getValueId(change.property, change.to)])
-    };
-  });
-  const target = state(candidate.target.snapshot);
-  return {
-    // IDs are retained because merge-base tie breaking depends on them.
-    ids,
-    initialState,
-    commits,
-    currentBranch: candidate.initialRepository.currentBranch,
-    head: candidate.initialRepository.head,
-    nextGeneratedId: candidate.initialRepository.nextGeneratedId,
-    mainHead: ids.indexOf(candidate.initialRepository.branches.main),
-    sideHeads: Object.entries(candidate.initialRepository.branches).filter(([branch]) => branch !== "main").sort(([a], [b]) => a.localeCompare(b)).map(([branch, head]) => [branch, ids.indexOf(head)]),
-    target
-  };
-}
-function isCanonicalDate(date) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
-  const parsed = /* @__PURE__ */ new Date(`${date}T00:00:00.000Z`);
-  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString().slice(0, 10) === date;
-}
-function createRandom(input) {
-  let state = Number.parseInt(hashString(input), 36) >>> 0;
-  return () => {
-    state = state + 1831565813 >>> 0;
-    let value = state;
-    value = Math.imul(value ^ value >>> 15, value | 1);
-    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
-    return ((value ^ value >>> 14) >>> 0) / 4294967296;
-  };
-}
-function shuffled(values, random) {
-  const result = [...values];
-  for (let index = result.length - 1; index > 0; index -= 1) {
-    const other = Math.floor(random() * (index + 1));
-    [result[index], result[other]] = [result[other], result[index]];
-  }
-  return result;
-}
-function hashString(input) {
-  let hash2 = 2166136261;
-  for (let index = 0; index < input.length; index += 1) hash2 = Math.imul(hash2 ^ input.charCodeAt(index), 16777619);
-  return (hash2 >>> 0).toString(36);
-}
-
-// src/puzzles/generation/integration.ts
-var COLORS2 = ["red", "blue", "turquoise", "purple", "gold"];
-var ACCESSORIES = ["sunglasses", "scarf", "longLegs"];
-function createIntegrationCandidate(date, difficulty, seed) {
-  validateInputs2(date, difficulty, seed);
-  const random = createRandom2(`${date}|prepare-and-integrate|${difficulty}|${seed}`);
-  const accessories = shuffled2(ACCESSORIES, random);
-  const colors = shuffled2(COLORS2, random);
-  const primary = accessories[0];
-  const targetColor = colors[3];
-  const commits = {};
-  const addCommit = (id2, parent, message, changes) => {
-    commits[id2] = { id: id2, parents: [parent], message, changes: changes.map((change) => ({ type: "set", ...change })), provenance: { type: "original", sourceCommits: [] } };
-  };
-  commits.c1 = { id: "c1", parents: [], message: "Create the empty repository", changes: [], provenance: { type: "original", sourceCommits: [] } };
-  addCommit("c2", "c1", "Color the chicken black", [{ property: "body", from: "cream", to: "black" }]);
-  addCommit("c3", "c1", "Add an unwanted red body color", [{ property: "body", from: "cream", to: "red" }]);
-  let previous = "c3";
-  for (let index = 0; index < 4; index += 1) {
-    const id2 = `c${index + 4}`;
-    addCommit(id2, previous, `Set ${primary} to ${colors[index]}`, [
-      { property: primary, from: index === 0 ? "none" : colors[index - 1], to: colors[index] }
-    ]);
-    previous = id2;
-  }
-  const branches = { main: "c2", feature: "c7" };
-  let mainHead = "c2";
-  const solutionCommands = ["git switch feature", "git revert c3", "git switch main", "git merge feature"];
-  const targetSnapshot = { ...EMPTY_CHICKEN_STATE, body: "black", [primary]: targetColor };
-  if (difficulty === "hard") {
-    const secondary = accessories[1];
-    const secondaryTarget = colors[2];
-    const wrong = COLORS2.find((color) => color !== secondaryTarget);
-    addCommit("c8", "c2", `Add the wrong ${secondary}`, [{ property: secondary, from: "none", to: wrong }]);
-    addCommit("c9", "c1", "Color the repair branch blue", [{ property: "body", from: "cream", to: "blue" }]);
-    addCommit("c10", "c9", `Add the desired ${secondary}`, [{ property: secondary, from: "none", to: secondaryTarget }]);
-    branches.main = "c8";
-    branches.repair = "c10";
-    mainHead = "c8";
-    solutionCommands.push("git revert c8", "git cherry-pick c10");
-    targetSnapshot[secondary] = secondaryTarget;
-  }
-  const id = `daily-${date}`;
-  const candidate = {
-    schemaVersion: 2,
-    themeId: "chicken-v1",
-    id,
-    version: 1,
-    kind: "daily",
-    slug: id,
-    title: "Prepare and Integrate",
-    description: "Prepare the accessory on feature, clean its distraction, and integrate the finished work.",
-    difficulty,
-    publishedOn: date,
-    objectives: ["Finish the accessory work on main without the unwanted body color."],
-    initialRepository: {
-      commits,
-      branches,
-      currentBranch: "main",
-      head: mainHead,
-      initialState: { ...EMPTY_CHICKEN_STATE, body: "cream" },
-      nextGeneratedId: 1
-    },
-    target: { branch: "main", snapshot: targetSnapshot },
-    allowedCommands: [...SUPPORTED_ACTION_TYPES2],
-    hints: ["The feature branch has a distraction before its useful work.", "Remove the distraction before integrating feature.", "On hard, repair the second accessory separately."],
-    solutionCommands
-  };
-  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-  if (!validation.ok) {
-    throw new Error(`Integration candidate failed validation: ${validation.issues.map((issue2) => `${issue2.code} at ${issue2.path}`).join(", ")}`);
-  }
-  return {
-    candidate,
-    family: "prepare-and-integrate",
-    signature: mechanicsSignature(candidate),
-    generatorVersion: DETERMINISTIC_GENERATOR_VERSION
-  };
-}
-function validateInputs2(date, difficulty, seed) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(`${date}T00:00:00Z`)) || (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).toISOString().slice(0, 10) !== date) {
-    throw new Error("date must be a valid YYYY-MM-DD calendar date.");
-  }
-  if (difficulty !== "medium" && difficulty !== "hard") throw new Error("difficulty must be medium or hard.");
-  if (typeof seed !== "string" || seed.trim().length === 0 || seed.length > 256) throw new Error("seed must be a non-empty string of at most 256 characters.");
-}
-function createRandom2(input) {
-  let state = Number.parseInt(hashString2(input), 36) >>> 0;
-  return () => {
-    state = state + 1831565813 >>> 0;
-    let value = state;
-    value = Math.imul(value ^ value >>> 15, value | 1);
-    value ^= value + Math.imul(value ^ value >>> 7, value | 61);
-    return ((value ^ value >>> 14) >>> 0) / 4294967296;
-  };
-}
-function shuffled2(values, random) {
-  const result = [...values];
-  for (let index = result.length - 1; index > 0; index -= 1) {
-    const other = Math.floor(random() * (index + 1));
-    [result[index], result[other]] = [result[other], result[index]];
-  }
-  return result;
-}
-function hashString2(input) {
-  let hash2 = 2166136261;
-  for (let index = 0; index < input.length; index += 1) hash2 = Math.imul(hash2 ^ input.charCodeAt(index), 16777619);
-  return (hash2 >>> 0).toString(36);
-}
-
-// src/puzzles/generation/workshop.ts
-function createWorkshopCandidate(date, difficulty, seed) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !Number.isFinite(Date.parse(`${date}T00:00:00Z`)) || (/* @__PURE__ */ new Date(`${date}T00:00:00Z`)).toISOString().slice(0, 10) !== date) throw new Error("Invalid workshop date.");
-  if (difficulty !== "medium" && difficulty !== "hard") throw new Error("Invalid workshop difficulty.");
-  if (typeof seed !== "string" || !seed.trim() || seed.length > 256) throw new Error("Invalid workshop seed.");
-  let random = 2166136261;
-  for (const char of `${date}|${seed}`) random = Math.imul(random ^ char.charCodeAt(0), 16777619);
-  const colors = ["red", "blue", "turquoise", "purple", "gold"];
-  const slots = (random >>> 0) % 2 ? ["scarf", "longLegs"] : ["longLegs", "scarf"];
-  const desiredColors = [colors[(random >>> 0) % colors.length], colors[(random >>> 3) % colors.length]];
-  const commits = {};
-  const add3 = (id2, parent, edits) => {
-    commits[id2] = {
-      id: id2,
-      parents: parent ? [parent] : [],
-      message: id2,
-      changes: edits.map(([property, from, to]) => ({ type: "set", property, from, to })),
-      provenance: { type: "original", sourceCommits: [] }
-    };
-  };
-  add3("c1", void 0, []);
-  add3("c2", "c1", [["body", "cream", "black"], ["sunglasses", "none", "blue"]]);
-  const branches = { main: "c2", base: "c1" };
-  const target = { ...EMPTY_CHICKEN_STATE, body: "black", sunglasses: "blue" };
-  const solutionCommands = ["git revert c2"];
-  for (let index = 0; index < (difficulty === "hard" ? 2 : 1); index += 1) {
-    const first = 3 + index * 4;
-    const branch = index ? "polish" : "feature";
-    const temporary = index ? "purple" : "red";
-    const intermediate = index ? "turquoise" : "gold";
-    const nuisance = index ? "gold" : "red";
-    add3(`c${first}`, "c1", [["body", "cream", temporary]]);
-    add3(`c${first + 1}`, `c${first}`, [["body", temporary, intermediate], [slots[index], "none", desiredColors[index]]]);
-    add3(`c${first + 2}`, `c${first + 1}`, [["body", intermediate, "cream"]]);
-    add3(`c${first + 3}`, `c${first + 2}`, [["sunglasses", "none", nuisance]]);
-    branches[branch] = `c${first + 3}`;
-    target[slots[index]] = desiredColors[index];
-    solutionCommands.push(`git merge ${branch}`, `git revert c${first + 3}`);
-  }
-  solutionCommands.push("git revert g1");
-  const id = `daily-${date}`;
-  const candidate = {
-    schemaVersion: 2,
-    themeId: "chicken-v1",
-    id,
-    slug: id,
-    version: 1,
-    kind: "daily",
-    difficulty,
-    publishedOn: date,
-    title: "A Clean Workshop",
-    description: "Bring the finished work together and preserve the original finishing touches.",
-    objectives: ["Match the illustrated target on main."],
-    hints: ["Some useful work is bundled with temporary changes.", "A correct change may need to be temporarily undone before integration.", "Restore the finishing touches after the branches are clean."],
-    initialRepository: { commits, branches, currentBranch: "main", head: "c2", initialState: { ...EMPTY_CHICKEN_STATE, body: "cream" }, nextGeneratedId: 1 },
-    target: { branch: "main", snapshot: target },
-    allowedCommands: [...SUPPORTED_ACTION_TYPES2],
-    solutionCommands
-  };
-  const validated = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-  if (!validated.ok) throw new Error(`Invalid workshop candidate: ${validated.issues.map((i) => i.code).join(", ")}`);
-  return { candidate, family: "clean-room-integration", signature: mechanicsSignature(candidate), generatorVersion: DETERMINISTIC_GENERATOR_VERSION };
-}
-
-// src/puzzles/generation/templates.ts
-var DAILY_TEMPLATE_IDS = ["easy-0", "easy-1", "easy-4", "medium-4", "medium-5", "medium-6", "hard-5", "hard-6"];
-function createTemplateCandidate(templateId, date, seed) {
-  if (!DAILY_TEMPLATE_IDS.includes(templateId)) throw new Error("Unapproved daily template.");
-  const [level, version] = templateId.split("-");
-  const difficulty = level;
-  const variant = Number(version);
-  if (variant === 6 && difficulty !== "easy") return createWorkshopCandidate(date, difficulty, seed);
-  if (variant === 5 && difficulty !== "easy") return createIntegrationCandidate(date, difficulty, seed);
-  if (variant === 4) return createBundledCandidate(date, difficulty, seed);
-  return createDeterministicCandidate(date, difficulty, seed, variant);
-}
-function hasStrategicProof(candidate) {
-  return candidate.solutionCommands.some((command) => {
-    const parsed = parseGitCommand(command);
-    return parsed.ok && ["merge", "rebase", "interactive-rebase"].includes(parsed.action.type);
-  });
-}
-
 // src/puzzles/generation/editorial.ts
 var LOCALES2 = ["en", "ca", "es"];
 var THEMES = {
@@ -2828,97 +2241,363 @@ function hash(value) {
   return (result >>> 0) % THEMES.en.length;
 }
 
-// src/puzzles/generation/certified.ts
-var DAILY_STORY_PROMPT_VERSION = 3;
-var DAILY_MINIMUM_COMMANDS = { easy: 2, medium: 4, hard: 6 };
-var registry = certificates_default.certificates;
-var DAILY_CERTIFICATION = {
-  sourceFingerprint: certificates_default.sourceFingerprint,
-  templates: registry.map(({ templateId, difficulty, family, minimumCommands }) => ({ templateId, difficulty, family, minimumCommands }))
-};
-function selectDailyTemplate(difficulty, seed, recent = []) {
-  const candidates = registry.filter((c) => c.difficulty === difficulty);
-  if (!candidates.length) throw new Error("No certified templates for the reserved difficulty.");
-  const rank = (c) => recent.slice(0, 14).reduce((penalty, entry, index) => penalty + (entry.signature === c.signature ? 1e3 : entry.family === c.family ? 100 : 0) * (14 - index), 0);
-  candidates.sort((a, b) => rank(a) - rank(b) || seedRank(`${seed}:${a.templateId}`) - seedRank(`${seed}:${b.templateId}`) || a.templateId.localeCompare(b.templateId));
-  return candidates[0].templateId;
-}
-function createCertifiedDaily(date, difficulty, seed, templateId) {
-  const certificate = registry.find((c) => c.templateId === templateId && c.difficulty === difficulty);
-  if (!certificate || certificate.generatorVersion !== DETERMINISTIC_GENERATOR_VERSION || certificate.search.status !== "exhausted" || certificate.minimumCommands !== DAILY_MINIMUM_COMMANDS[difficulty] || certificate.search.excludedThroughDepth < certificate.minimumCommands - 1) {
-    throw new Error("Missing or incomplete daily difficulty certificate.");
-  }
-  const generated = createTemplateCandidate(templateId, date, seed);
-  if (mechanicsSignature(generated.candidate) !== certificate.signature) throw new Error("Generated mechanics differ from the certified template.");
-  const localizations = createTemplateLocalizations(generated.candidate, generated.family, seed);
-  const candidate = {
-    ...generated.candidate,
-    title: localizations.en.title,
-    description: localizations.en.description,
-    objectives: localizations.en.objectives,
-    hints: localizations.en.hints,
-    initialRepository: {
-      ...generated.candidate.initialRepository,
-      commits: Object.fromEntries(Object.entries(generated.candidate.initialRepository.commits).map(([id, commit]) => [id, { ...commit, message: localizations.en.commitMessages[id] }]))
-    },
-    localizations
-  };
-  const validation = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-  if (!validation.ok || validation.value.puzzle.parCommands !== certificate.minimumCommands || difficulty !== "easy" && !hasStrategicProof(candidate)) {
-    throw new Error("Certified daily failed its normal publication validator.");
-  }
-  return {
-    ...generated,
-    candidate,
-    templateId,
-    quality: {
-      evaluatorVersion: certificate.evaluatorVersion,
-      minimumCommands: certificate.minimumCommands,
-      excludedThroughDepth: certificate.search.excludedThroughDepth,
-      proofCommands: validation.value.puzzle.parCommands,
-      certification: certificates_default.sourceFingerprint,
-      strategicProof: hasStrategicProof(candidate)
+// src/puzzles/generation/novelty.ts
+function fingerprintMechanics(repository, target) {
+  const nodes = [];
+  const add3 = (color) => (nodes.push({ color, edges: [] }), nodes.length - 1);
+  const link = (from, label, to) => nodes[from].edges.push({ label, to });
+  const commitIds = Object.keys(repository.commits);
+  const commits = /* @__PURE__ */ new Map();
+  for (const id of commitIds) commits.set(id, add3("commit"));
+  const stateNodes = /* @__PURE__ */ new Map();
+  const branchNodes = /* @__PURE__ */ new Map();
+  const propertyNodes = /* @__PURE__ */ new Map();
+  const valueNodes = /* @__PURE__ */ new Map();
+  const state = (name, data, color) => {
+    const root = add3(color);
+    for (const [property, value] of Object.entries(data)) {
+      const prop = getProperty(property);
+      const val = getValue(property, value);
+      const entry = add3("state-entry");
+      link(root, "entry", entry);
+      link(entry, "property", prop);
+      link(entry, "value", val);
     }
+    stateNodes.set(name, root);
+    return root;
   };
+  const getProperty = (key) => {
+    let id = propertyNodes.get(key);
+    if (id === void 0) {
+      id = add3("property");
+      propertyNodes.set(key, id);
+    }
+    return id;
+  };
+  const valueKey = (property, value) => `${property}\0${stable(value)}`;
+  const getValue = (property, value) => {
+    const key = valueKey(property, value);
+    let id = valueNodes.get(key);
+    if (id === void 0) {
+      id = add3("value");
+      valueNodes.set(key, id);
+    }
+    return id;
+  };
+  state("initial", repository.initialState, "initial-state");
+  state("target", target.snapshot, "target-state");
+  let changeCount = 0;
+  let bundleCount = 0;
+  let parentCount = 0;
+  for (const id of commitIds) {
+    const commit = repository.commits[id];
+    const cnode = commits.get(id);
+    commit.parents.forEach((parent, index) => {
+      const p = commits.get(parent);
+      if (p !== void 0) {
+        link(cnode, `parent:${index}`, p);
+        parentCount++;
+      }
+    });
+    if (commit.changes.length > 1) bundleCount++;
+    for (const change of commit.changes) {
+      const event = add3("change");
+      link(cnode, "change", event);
+      link(event, "property", getProperty(change.property));
+      link(event, "from", getValue(change.property, change.from));
+      link(event, "to", getValue(change.property, change.to));
+      changeCount++;
+    }
+  }
+  const mainHead = repository.branches.main;
+  for (const [name, commit] of repository.branches ? Object.entries(repository.branches) : []) {
+    const branch = add3(name === "main" ? name === repository.currentBranch ? "branch:main-current" : "branch:main" : name === repository.currentBranch ? "branch:current" : "branch:other");
+    branchNodes.set(name, branch);
+    const c = commits.get(commit);
+    if (c !== void 0) link(branch, "points-to", c);
+  }
+  const head = commits.get(repository.head);
+  if (head !== void 0) nodes[head].color += "|head";
+  const targetBranchNode = branchNodes.get(target.branch);
+  if (targetBranchNode !== void 0) link(stateNodes.get("target"), "target-branch", targetBranchNode);
+  const mainNode = commits.get(mainHead);
+  if (mainNode !== void 0) nodes[mainNode].color += "|main-branch-head";
+  const currentHead = commits.get(repository.branches[repository.currentBranch]);
+  if (currentHead !== void 0) nodes[currentHead].color += "|current-branch-head";
+  let colors = nodes.map((node) => node.color);
+  for (let round = 0; round <= nodes.length; round++) {
+    const signatures = nodes.map((node, index) => stable({ self: colors[index], adjacent: node.edges.map((edge) => [edge.label, colors[edge.to]]).sort((a, b) => stable(a).localeCompare(stable(b))) }));
+    const palette = [...new Set(signatures)].sort();
+    const next = signatures.map((signature) => `c${palette.indexOf(signature)}`);
+    if (next.every((value, index) => value === colors[index])) break;
+    colors = next;
+  }
+  const edgeCounts = /* @__PURE__ */ new Map();
+  nodes.forEach((node, from) => node.edges.forEach((edge) => {
+    const key = stable([colors[from], edge.label, colors[edge.to]]);
+    edgeCounts.set(key, (edgeCounts.get(key) ?? 0) + 1);
+  }));
+  const canonical = stable({ nodes: countColors(colors), edges: [...edgeCounts].sort(([a], [b]) => a.localeCompare(b)), rounds: nodes.length });
+  return { canonical, summary: { commits: commitIds.length, branches: Object.keys(repository.branches).length, properties: propertyNodes.size, changes: changeCount, parents: parentCount, bundles: bundleCount } };
 }
-function seedRank(value) {
-  let result = 2166136261;
-  for (const char of value) result = Math.imul(result ^ char.charCodeAt(0), 16777619);
-  return result >>> 0;
+function countColors(colors) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const color of colors) counts.set(color, (counts.get(color) ?? 0) + 1);
+  return [...counts].sort(([a], [b]) => a.localeCompare(b));
+}
+function stable(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`;
 }
 
-// src/puzzles/generation/publication.ts
-async function publishDeterministicDaily(date, dependencies) {
+// src/puzzles/generation/decisionCore.ts
+function fingerprintDecisionCore(candidate) {
+  const initial = candidate.initialRepository;
+  const usedBranches = /* @__PURE__ */ new Set(["main", initial.currentBranch]);
+  const originalIds = /* @__PURE__ */ new Set();
+  const includeHistory = (repository2, start2) => {
+    const pending = [start2], seen = /* @__PURE__ */ new Set();
+    while (pending.length) {
+      const id = pending.pop();
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const commit = repository2.commits[id];
+      if (!commit) throw new Error("Proof references missing history.");
+      if (initial.commits[id]) originalIds.add(id);
+      pending.push(...commit.parents, ...commit.provenance?.sourceCommits ?? []);
+    }
+  };
+  let repository = initial;
+  includeHistory(repository, repository.head);
+  for (const command of candidate.solutionCommands) {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) throw new Error("Invalid proof command.");
+    const action = parsed.action;
+    if (action.type === "switch" || action.type === "merge") {
+      usedBranches.add(action.branch);
+      includeHistory(repository, repository.branches[action.branch]);
+    } else if (action.type === "rebase" || action.type === "interactive-rebase") {
+      usedBranches.add(action.onto);
+      includeHistory(repository, repository.branches[action.onto]);
+    } else if (action.type === "cherry-pick" || action.type === "revert") {
+      includeHistory(repository, action.commit);
+    }
+    const step = executeCommand(repository, command);
+    if (!step.ok) throw new Error("Invalid proof transition.");
+    repository = step.repository;
+  }
+  const start = getSnapshot(initial, initial.branches.main);
+  const relevant = new Set(Object.keys(candidate.target.snapshot).filter((property) => JSON.stringify(start[property]) !== JSON.stringify(candidate.target.snapshot[property])));
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const id of originalIds) {
+      const changes = initial.commits[id].changes;
+      if (!changes.some((change) => relevant.has(change.property))) continue;
+      for (const change of changes) if (!relevant.has(change.property)) {
+        relevant.add(change.property);
+        grew = true;
+      }
+    }
+  }
+  const commits = Object.fromEntries([...originalIds].map((id) => [id, {
+    ...initial.commits[id],
+    changes: initial.commits[id].changes.filter((change) => relevant.has(change.property))
+  }]));
+  const resolve = (id) => {
+    const commit = commits[id];
+    if (!commit) throw new Error("Incomplete decision core.");
+    return !commit.changes.length && commit.parents.length === 1 ? resolve(commit.parents[0]) : id;
+  };
+  const kept = Object.fromEntries(Object.entries(commits).filter(([id]) => resolve(id) === id).map(([id, commit]) => [id, { ...commit, parents: commit.parents.map(resolve) }]));
+  const branches = Object.fromEntries([...usedBranches].map((branch) => [branch, resolve(initial.branches[branch])]));
+  const restrict = (state) => Object.fromEntries(Object.entries(state).filter(([property]) => relevant.has(property)));
+  return fingerprintMechanics(
+    { ...initial, commits: kept, branches, head: resolve(initial.head), initialState: restrict(initial.initialState) },
+    { branch: "main", snapshot: restrict(candidate.target.snapshot) }
+  ).canonical;
+}
+
+// src/puzzles/generation/mechanicsState.ts
+function snapshotKey(state) {
+  return JSON.stringify(Object.entries(state).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+// src/puzzles/generation/proceduralQuality.ts
+function findCopyOnlySolution(candidate, maxDepth = candidate.solutionCommands.length) {
+  if (candidate.kind !== "daily" || candidate.initialRepository.currentBranch !== "main") throw new Error("Expected a daily starting on main.");
+  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > 20) throw new Error("Invalid copy-only search depth.");
+  const commands2 = Object.keys(candidate.initialRepository.commits).sort().map((id) => `git cherry-pick ${id}`);
+  let frontier = [{ repository: candidate.initialRepository, path: [] }];
+  const seen = /* @__PURE__ */ new Set([snapshotKey(getSnapshot(candidate.initialRepository))]);
+  if (validatePuzzleCompletion(candidate, candidate.initialRepository, []).solved) return [];
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    const next = [];
+    for (const node of frontier) for (const command of commands2) {
+      const step = executeCommand(node.repository, command);
+      if (!step.ok || !step.mutated) continue;
+      const path = [...node.path, command];
+      if (validatePuzzleCompletion(candidate, step.repository, []).solved) return path;
+      const key = snapshotKey(getSnapshot(step.repository));
+      if (seen.has(key)) continue;
+      seen.add(key);
+      next.push({ repository: step.repository, path });
+    }
+    frontier = next;
+    if (!frontier.length) return void 0;
+  }
+  return void 0;
+}
+function solutionCommandPattern(candidate) {
+  return candidate.solutionCommands.map((command) => {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) throw new Error("Invalid proof command.");
+    return parsed.action.type === "interactive-rebase" && parsed.action.todo?.some((item) => item.action === "squash") ? "squash" : parsed.action.type;
+  }).join(" \u2192 ");
+}
+function proofHasSequentialCopies(candidate) {
+  let repository = candidate.initialRepository;
+  let previousPick;
+  for (const command of candidate.solutionCommands) {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) throw new Error("Invalid proof command.");
+    if (parsed.action.type === "cherry-pick" && previousPick && isAncestor(repository, previousPick, parsed.action.commit)) return true;
+    previousPick = parsed.action.type === "cherry-pick" ? parsed.action.commit : void 0;
+    const step = executeCommand(repository, command);
+    if (!step.ok) throw new Error("Invalid proof transition.");
+    repository = step.repository;
+  }
+  return false;
+}
+
+// src/puzzles/generation/candidateArtifact.ts
+var MINIMUM_COMMANDS = { easy: 2, medium: 4, hard: 6 };
+var MAXIMUM_PROOF_COMMANDS = { easy: 2, medium: 4, hard: 10 };
+var FINGERPRINT = /^[a-f0-9]{64}$/;
+async function verifyCandidateArtifact(value, trusted) {
+  validateCertificateInputs(trusted?.sourceFingerprint, 0);
+  if (!isRecord2(value) || value.formatVersion !== 1 || typeof value.id !== "string" || !isRecord2(value.candidate) || !isRecord2(value.certificate) || !isRecord2(value.novelty)) {
+    throw new Error("Malformed candidate artifact.");
+  }
+  const artifact = value;
+  const { candidate, certificate } = artifact;
+  validateCertificateInputs(certificate.sourceFingerprint, certificate.excludedThroughDepth);
+  if (certificate.sourceFingerprint !== trusted.sourceFingerprint) throw new Error("Candidate artifact source fingerprint is not trusted.");
+  if (certificate.evaluatorVersion !== 1 || !Number.isInteger(certificate.minimumCommands) || !Number.isInteger(certificate.proofCommands)) throw new Error("Malformed candidate certificate metadata.");
+  const validated = validateCandidate(candidate);
+  const minimumCommands = MINIMUM_COMMANDS[candidate.difficulty];
+  if (certificate.minimumCommands !== minimumCommands || certificate.excludedThroughDepth < minimumCommands - 1 || certificate.excludedThroughDepth >= candidate.solutionCommands.length || certificate.proofCommands !== candidate.solutionCommands.length || candidate.solutionCommands.length < minimumCommands || candidate.solutionCommands.length > MAXIMUM_PROOF_COMMANDS[candidate.difficulty] || validated.value.puzzle.parCommands !== candidate.solutionCommands.length) {
+    throw new Error("Candidate artifact certificate does not match its proof or difficulty.");
+  }
+  if (certificate.copyOnlyExcludedThroughDepth !== (candidate.difficulty === "easy" ? 0 : candidate.solutionCommands.length)) throw new Error("Missing offline copy-only exclusion.");
+  verifyStrategicAndCopyPolicy(candidate, candidate.solutionCommands.length, false);
+  const mechanicsDigest = await sha256(canonicalJson(mechanicsProjection(candidate)));
+  if (artifact.id !== mechanicsDigest || certificate.mechanicsDigest !== mechanicsDigest) throw new Error("Candidate artifact mechanics digest mismatch.");
+  const novelty = await makeNovelty(candidate);
+  if (!isRecord2(artifact.novelty) || artifact.novelty.mechanicsHash !== novelty.mechanicsHash || artifact.novelty.decisionCoreHash !== novelty.decisionCoreHash || artifact.novelty.commandPattern !== novelty.commandPattern) {
+    throw new Error("Candidate artifact novelty metadata mismatch.");
+  }
+  return artifact;
+}
+function canonicalJson(value) {
+  return JSON.stringify(sortRecursively(value));
+}
+async function makeNovelty(candidate) {
+  const mechanics = fingerprintMechanics(candidate.initialRepository, candidate.target).canonical;
+  const core = fingerprintDecisionCore(candidate);
+  return {
+    mechanicsHash: await sha256(mechanics),
+    decisionCoreHash: await sha256(core),
+    commandPattern: solutionCommandPattern(candidate)
+  };
+}
+function mechanicsProjection(candidate) {
+  const commits = Object.fromEntries(Object.entries(candidate.initialRepository.commits).map(([id, commit]) => {
+    const { message: _excludedMessage, ...mechanics } = commit;
+    return [id, mechanics];
+  }));
+  return {
+    schemaVersion: candidate.schemaVersion,
+    themeId: candidate.themeId,
+    difficulty: candidate.difficulty,
+    initialRepository: { ...candidate.initialRepository, commits },
+    target: candidate.target,
+    allowedCommands: candidate.allowedCommands,
+    solutionCommands: candidate.solutionCommands
+  };
+}
+function validateCandidate(candidate) {
+  if (!candidate || candidate.kind !== "daily" || !candidate.solutionCommands || !Array.isArray(candidate.solutionCommands)) {
+    throw new Error("Artifact candidate must be a daily puzzle with a private proof.");
+  }
+  const result = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+  if (!result.ok) throw new Error(`Candidate failed normal puzzle validation: ${result.issues.map((issue2) => issue2.code).join(", ")}`);
+  return result;
+}
+function verifyStrategicAndCopyPolicy(candidate, minimumCommands, search) {
+  if (candidate.difficulty === "easy") return;
+  if (!solutionCommandPattern(candidate).split(" \u2192 ").some((type) => ["merge", "rebase", "interactive-rebase", "squash"].includes(type))) throw new Error("Medium and hard candidates need an integration or rebase proof.");
+  if (proofHasSequentialCopies(candidate)) throw new Error("Candidate proof repeats predecessor cherry-picks.");
+  const copyOnly = search ? findCopyOnlySolution(candidate, minimumCommands) : void 0;
+  if (copyOnly && copyOnly.length <= minimumCommands) throw new Error("Candidate has an equally short copy-only solution.");
+}
+function validateCertificateInputs(sourceFingerprint, excludedThroughDepth) {
+  if (typeof sourceFingerprint !== "string" || !FINGERPRINT.test(sourceFingerprint)) throw new Error("Invalid candidate source fingerprint.");
+  if (!Number.isInteger(excludedThroughDepth) || excludedThroughDepth < 0) throw new Error("Invalid certified search depth.");
+}
+function sortRecursively(value) {
+  if (Array.isArray(value)) return value.map(sortRecursively);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortRecursively(value[key])]));
+  }
+  return value;
+}
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+function isRecord2(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+// src/puzzles/generation/proceduralPublication.ts
+async function publishProceduralDaily(date, dependencies) {
+  if (!isDate(date)) throw new Error("date must be a valid YYYY-MM-DD date.");
   const { store } = dependencies;
-  const published = await store.published(date);
-  if (published) return { status: "already-published", ...published };
-  const recent = await store.recent(date);
-  const difficulty = dependencies.chooseDifficulty();
-  const seed = dependencies.createSeed();
-  const reservation = await store.reserve({ date, difficulty, seed, templateId: selectDailyTemplate(difficulty, seed, recent) });
+  const existing = await store.published(date);
+  if (existing) return { status: "already-published", ...existing };
+  const reservation = await store.reserve({ date, difficulty: dependencies.chooseDifficulty(), sourceFingerprint: dependencies.sourceFingerprint });
   if (reservation.date !== date) throw new Error("Reservation date does not match the requested daily.");
-  const templateId = reservation.templateId ?? selectDailyTemplate(reservation.difficulty, reservation.seed, recent);
-  const generated = createCertifiedDaily(date, reservation.difficulty, reservation.seed, templateId);
+  if (reservation.publishedId) return { status: "already-published", id: reservation.publishedId, difficulty: reservation.difficulty };
+  if (!reservation.artifact) return { status: "awaiting-candidate", date, difficulty: reservation.difficulty };
+  const artifact = await verifyCandidateArtifact(reservation.artifact, { sourceFingerprint: dependencies.sourceFingerprint });
+  if (artifact.candidate.difficulty !== reservation.difficulty) throw new Error("Reserved artifact difficulty does not match the persisted daily difficulty.");
+  const candidate = {
+    ...structuredClone(artifact.candidate),
+    id: `daily-${date}`,
+    slug: `daily-${date}`,
+    publishedOn: date,
+    version: 1
+  };
   const runId = await store.startRun({
     date,
     difficulty: reservation.difficulty,
-    templateId,
-    family: generated.family,
-    signature: generated.signature,
-    generatorVersion: generated.generatorVersion,
-    promptVersion: DAILY_STORY_PROMPT_VERSION,
-    quality: generated.quality
+    candidateId: artifact.id,
+    certificate: structuredClone(artifact.certificate),
+    novelty: structuredClone(artifact.novelty)
   });
   try {
-    let candidate = generated.candidate;
+    let publishCandidate = candidate;
     let storySource = "template";
     let storyFailure;
     if (dependencies.story) {
       try {
-        const prose = await dependencies.story({ theme: candidate.title, target: structuredClone(candidate.target.snapshot) });
-        const edited = applyStoryText(candidate, prose);
+        const story = await dependencies.story({ theme: candidate.title, target: structuredClone(candidate.target.snapshot) });
+        const edited = applyStoryText(candidate, story);
         if (edited) {
-          candidate = edited;
+          publishCandidate = edited;
           storySource = "ai";
         } else storyFailure = "story-invalid";
       } catch {
@@ -2926,24 +2605,34 @@ async function publishDeterministicDaily(date, dependencies) {
       }
     }
     await store.recordStory(runId, storySource, storyFailure);
-    const validated = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
-    if (!validated.ok) throw new Error("Final daily publication validation failed.");
+    const validated = validatePuzzleCandidate(publishCandidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+    if (!validated.ok) throw new Error("Final procedural daily validation failed.");
     const id = await store.publish(runId, validated.value);
-    return { status: "published", id, difficulty: reservation.difficulty, source: "deterministic", storySource };
+    return { status: "published", id, difficulty: reservation.difficulty, source: "procedural", storySource };
   } catch (error) {
     await store.failed(runId, "publication-failed");
     throw error;
   }
 }
+function isDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && (/* @__PURE__ */ new Date(`${value}T00:00:00Z`)).toISOString().slice(0, 10) === value;
+}
+
+// src/puzzles/generation/proceduralManifest.json
+var proceduralManifest_default = {
+  formatVersion: 1,
+  evaluatorVersion: 1,
+  sourceFingerprint: "bb0c37554bbfed2604c81d64cc7c5d95a99d080db485b81c60a7c8108ab4036b"
+};
 export {
   CHICKEN_V2_SEMANTIC_POLICY,
-  DAILY_CERTIFICATION,
-  createCertifiedDaily,
+  proceduralManifest_default as PROCEDURAL_CERTIFICATION,
   createGenerationBrief,
   createGuidedBrief,
   normalizeGuidedGoal,
-  publishDeterministicDaily,
+  publishProceduralDaily,
   toGuidedPuzzle,
   validateCandidateAgainstBrief,
-  validatePuzzleCandidate
+  validatePuzzleCandidate,
+  verifyCandidateArtifact
 };

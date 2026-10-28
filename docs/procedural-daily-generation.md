@@ -21,6 +21,10 @@ The product objective is a new reasoning problem each day: which work belongs to
 - `novelty.ts`: a conservative graph fingerprint invariant to consistent renaming. It is not complete graph isomorphism and does not yet detect every repeated reasoning pattern. A match means reject for novelty; a difference alone does not mean the puzzle is enjoyable.
 - `decisionCore.ts`: a second conservative fingerprint removes untouched branches and independent canceled decoration from the proof's relevant work. Tests cover distracting branches and reordered independent tasks. It is an initial reasoning-duplicate heuristic, not a complete solution-space comparison.
 - `scripts/explore-procedural-dailies.mjs`: reproducible local batches, rejection counts, coarse command patterns, and private proof artifacts. No provider, database, publication, or UI calls.
+- `constructiveGraph.ts` and `synthesis.ts`: compose bundled work, temporary regressions, contaminated tails and variable branch forks, then search for a proof. They do not select a complete authored puzzle. Discovery is heuristic; only the separate exhaustive evaluator can certify difficulty.
+- `candidateArtifact.ts` and `proceduralPublication.ts`: individually bound private artifacts, runtime proof verification, and publication with optional AI story. The Edge entrypoint now uses this path in the draft, not the eight-template publisher. Production has not been changed.
+- `daily_certified_candidates` migration and `scripts/refill-daily-puzzles.mjs`: private queue, atomic date/category reservation, no candidate reuse, novelty uniqueness, and offline replenishment. The gated GitHub workflow is not enabled or verified in production. Empty queues preserve difficulty and return `awaiting-candidate`; there is no template fallback.
+- `publishedNovelty.ts`: compares every historical version using its stored private proof through the first current-rule win. The upload worker loads published history before proposing candidates. Unreadable history fails the comparison instead of silently being omitted. This does not rewrite historical definitions or results.
 
 Run, for example:
 
@@ -40,4 +44,25 @@ With the composition and decision-core checks, a fresh 20-graph medium run (seed
 
 The batch oracle has differential tests against the existing single-target oracle, a certified workshop positive control, and budget-exhaustion checks. Proposal proofs and localization are validated. This verifies machinery, not fun.
 
-Still required before rollout: reliable hard-puzzle generation, broader evaluation of solution-dependency novelty, comparisons against historical and queued puzzles, reserve/refill integration, candidate-bound certificates, staging publication, and human playtesting of a broad batch. None of these is satisfied by having eight passing template certificates.
+## Current replacement evidence
+
+The constructive generator has now produced certified hard puzzles; the earlier random-graph failures above are retained as research history. A local worker run certified seeds `synthesis-403` and `synthesis-404` through five-command exclusion. Other hard candidates still exhaust search budgets and are not accepted. Terminal search pruning uses representatives that preserve every new final daily-winning snapshot; all intermediate histories still enumerate squash partitions. Differential tests compare with unrestricted enumeration and the original oracle.
+
+Hard proofs may now contain six to ten commands while the evaluator still excludes every solution through five commands. The certificate records the lower bound and proof length separately; a nine-command proof is not claimed to be shortest. This admits richer compositions instead of requiring all hard puzzles to have exactly six-command solutions. Copy-only exclusion extends through the entire accepted proof length.
+
+A fresh medium refill (`verify-history`, seeds 0–35) produced 14 distinct accepted cores across seven command patterns, after checking all 22 stored historical definitions fetched read-only on 2026-10-28. It rejected 146 of 160 proposals; none were accepted on incomplete search evidence. Seven accepted proofs still share the source-preparation command pattern. This is measurable progress, not proof of season-long variety.
+
+The current local medium reserve contains 32 certified cores across ten order-independent operation groups. Refill added four puzzles beyond its 28-count target to bring the largest group below 35%. Readiness now requires at least four such groups in medium/hard, with none exceeding 35%; reservation prioritizes the least recently used group. Reordered operations count together. These groups are a coarse pacing safeguard, not proof of distinct reasoning or enjoyment.
+
+The new queue migration passed isolated Postgres tests for privileges, reservation identity, empty-queue refill, source filtering, novelty uniqueness, and registration idempotency. The compiled Edge handler and pure publication pipeline have non-UI tests. Hosted concurrency, actual scheduled refill, and staging publication remain unverified.
+
+Run the worker locally, then generate spoiler-free public review definitions:
+
+```text
+node scripts/refill-daily-puzzles.mjs --difficulty medium --target 14
+node scripts/review-procedural-puzzles.mjs
+```
+
+An optional `--history-file daily-review.local/published-history.private.json` checks a private historical export offline. `--recertify-local` reruns current search on older local candidates; it never simply stamps a new fingerprint onto old evidence. Hosted certificate-upgrade handling remains outstanding. `--upload` requires the private HTTPS endpoint and generation secret, loads history and inventory itself, and registers verified artifacts. Files under `daily-review.local/candidate-reserve/` contain proofs and stay private. `procedural-review.md` links public-only examples using the development-only `?review=` selector.
+
+Still required before rollout: reliable and diverse hard refill, a simulated season measuring repeated reasoning rather than only hashes or command patterns, staging publication and scheduled refill, certificate-upgrade handling for already queued candidates, and human playtesting of a broad batch. Candidate bindings and queue integration are implemented locally; they have not been deployed. None of these release requirements is satisfied by having eight passing template certificates.

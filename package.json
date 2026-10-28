@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "daily:certify": "node scripts/certify-daily-mechanics.mjs",
-    "daily:check": "node scripts/certify-daily-mechanics.mjs --check",
+    "daily:check": "node scripts/certify-daily-mechanics.mjs --check && node scripts/check-procedural-source.mjs",
     "daily:review": "pnpm daily:check && node scripts/review-daily-puzzles.mjs",
+    "daily:refill": "node scripts/refill-daily-puzzles.mjs",
     "dev": "vite",
     "build": "pnpm daily:check && tsc -b && vite build",
     "supabase:bundle": "pnpm daily:check && node scripts/bundle-edge-domain.mjs",

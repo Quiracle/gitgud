@@ -270,16 +270,17 @@ Rules:
 
 The daily challenge is core; its mechanics do not depend on an AI provider. AI may author localized title and description text only. It never chooses or changes the graph, target, difficulty, command allowlist, objectives, hints, commit messages, proof, IDs, or publication metadata.
 
-Exactly one immutable official puzzle is published for each canonical date. Every player receives the same stored puzzle, difficulty, mechanics, and leaderboard for that date. A scheduled Supabase Edge Function selects and reserves the difficulty, certified template, and seed once. Refreshes and retries reuse that reservation; archive entries are never regenerated.
+Exactly one immutable official puzzle is published for each canonical date. Every player receives the same stored puzzle, difficulty, mechanics, and leaderboard for that date. A scheduled Supabase Edge Function reserves the difficulty and an individually certified procedural candidate once. Refreshes and retries reuse that reservation; archive entries are never regenerated. The procedural replacement remains under a rollout hold pending the acceptance evidence in `docs/procedural-daily-generation.md`.
 
 ### Offline certification and runtime checks
 
-- `pnpm daily:certify` searches candidate mechanics with the actual simulator and records a source fingerprint plus search results in the certificate registry.
-- `pnpm daily:check` is offline and conservative. It rejects stale source fingerprints, unknown template IDs, missing or incomplete certificates, and inconclusive/budget-exhausted searches. Do not bypass the check or hand-edit certificates.
+- `pnpm daily:refill` proposes repository structures and targets, discovers private proofs, and exhaustively excludes shorter solutions using the actual simulator. Individual artifacts bind the mechanics, proof, novelty metadata, and evaluator source fingerprint. Default execution is offline; uploading requires explicit `--upload` and private service configuration.
+- `pnpm daily:check` checks the evaluator source manifest and the legacy template regression registry. `pnpm daily:certify` updates that legacy registry only. Neither command certifies newly proposed procedural candidates. Incomplete searches remain unknown; never fabricate or hand-edit search evidence.
 - The proposed minimum certified solution lengths are 2 commands for easy, 4 for medium, and 6 for hard. These are quality thresholds, not game command limits, scoring inputs, or completion requirements.
-- At publication, the Edge Function instantiates a certified template and verifies its mechanics signature against the registry. It replays the private solution proof through the ordinary engine and completion validator and confirms the certified threshold before publishing.
+- Hard private proofs may have six to ten commands; certification still excludes all solutions through five commands. Report the proven lower bound and known proof length separately instead of claiming a longer proof is shortest.
+- At publication, the Edge Function verifies the reserved artifact's source and mechanics binding, then replays its private proof through the ordinary engine and completion validator. Expensive exhaustive search happens in the offline worker.
 - `parCommands` is derived from the private proof through its first win and remains advisory only.
-- Medium/hard templates must have a shortest verified proof that uses integration or rebase; a sequence of predecessor cherry-picks does not establish interesting difficulty. `src/puzzles/generation/templates.ts` owns the approved library. Keep all player solutions valid under the daily state-only rules; never enforce the generator's proof strategy on players.
+- Medium/hard proposals need an integration or rebase proof, no predecessor-copy chain in that proof, and no equally short copy-only solution. The eight templates in `src/puzzles/generation/templates.ts` are regression fixtures, not the daily content supply. Keep all player solutions valid under the daily state-only rules; never enforce the generator's proof strategy on players.
 - Difficulty selection is shared and persisted with the date before story generation; a story retry or outage never rerolls it.
 - Select easy, medium, or hard uniformly unless the user approves a weighted policy. Consecutive days with the same difficulty are valid. Difficulty changes puzzle complexity, never eligibility to play.
 
@@ -295,13 +296,15 @@ Deterministic templates provide all three locales for title, description, object
 
 ### Reserve operations
 
-- `preflight` reports whether the certificate registry is ready, `reserveCounts`, and `storyAvailable`. It does not call the AI provider and does not verify provider credentials, billing, or availability.
-- `prepare-reserve` prepares deterministic certified mechanics seeds/templates. `seed-fallbacks` remains a compatibility alias. The reserve is an optimization; publication can select a certified bundled template when it is empty.
-- The reserve preparation helper defaults to 14 entries per difficulty and may be safely resumed.
+- `preflight` reports current-source unused candidate counts, command-pattern counts, and optional story configuration. Its reserve readiness check is not proof of enjoyment or release approval.
+- For pacing, group proofs by their operation multiset so changing command order does not count as a new strategy. Medium/hard reserve readiness requires at least four groups and no group above 35%; these are coarse safeguards, not a complete reasoning-novelty test.
+- The offline refill worker compares candidates against the private inventory and all published versions through authenticated `published-history` and `inventory` endpoints. `register-candidates` verifies artifacts before private insertion. Default local runs make no network calls; `--history-file` allows comparison with a private local historical export.
+- Empty queues return `awaiting-candidate` while preserving the date's difficulty. Never silently recycle a template or reroll the difficulty. Already-published daily and archive puzzles remain available.
+- The GitHub refill schedule is gated by `DAILY_PROCEDURAL_REFILL_ENABLED`; do not enable production rollout before acceptance. Private artifacts and solution proofs must not be uploaded as public workflow artifacts.
 
 ### Publication, archive, and ranking
 
-- Persist each accepted daily puzzle with canonical date, difficulty, schema version, immutable definition, template/signature, generation metadata, validation result, and story source.
+- Persist each accepted daily puzzle with canonical date, difficulty, schema version, immutable definition, candidate identity, certificate and novelty metadata, validation result, and story source.
 - Enforce one published daily puzzle per canonical date with a database uniqueness constraint.
 - Add each published puzzle to the archive immediately and retain it permanently.
 - Use its stable puzzle ID and version for progress, streaks, achievements, sharing, and leaderboard entries.
