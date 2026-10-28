@@ -388,7 +388,6 @@ export const ca: Messages = {
   "goals.checklist": "Llista d'objectius",
   "goals.done": "(assolit)",
   "goals.notDone": "(pendent)",
-  "goals.note": "El trencaclosques es resol quan tots els objectius estan marcats.",
 
   "terminal.solved": "Trencaclosques resolt!",
   "terminal.inputLabel": "Ordre de Git",

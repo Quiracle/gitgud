@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasSeenWelcome, markWelcomeSeen } from "./onboarding";
+import { hasSeenDailyGoals, hasSeenWelcome, markDailyGoalsSeen, markWelcomeSeen } from "./onboarding";
 
 class MemoryStorage {
   private readonly values = new Map<string, string>();
@@ -22,5 +22,27 @@ describe("welcome tutorial flag", () => {
     };
     expect(hasSeenWelcome(blocked)).toBe(true);
     expect(() => markWelcomeSeen(blocked)).not.toThrow();
+  });
+});
+
+describe("daily goals flag", () => {
+  it("opens the goals on the first daily only", () => {
+    const storage = new MemoryStorage();
+    expect(hasSeenDailyGoals(() => false, storage)).toBe(false);
+    markDailyGoalsSeen(storage);
+    expect(hasSeenDailyGoals(() => false, storage)).toBe(true);
+  });
+
+  it("counts a daily solved before the flag existed as seen", () => {
+    expect(hasSeenDailyGoals(() => true, new MemoryStorage())).toBe(true);
+  });
+
+  it("treats blocked storage as seen instead of throwing", () => {
+    const blocked = {
+      getItem: () => { throw new Error("blocked"); },
+      setItem: () => { throw new Error("blocked"); },
+    };
+    expect(hasSeenDailyGoals(() => false, blocked)).toBe(true);
+    expect(() => markDailyGoalsSeen(blocked)).not.toThrow();
   });
 });

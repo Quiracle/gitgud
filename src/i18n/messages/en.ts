@@ -391,7 +391,6 @@ export const en = {
   "goals.checklist": "Goal checklist",
   "goals.done": "(done)",
   "goals.notDone": "(not done yet)",
-  "goals.note": "The puzzle is solved when every goal is ticked.",
 
   "terminal.solved": "Puzzle solved!",
   "terminal.inputLabel": "Git command",

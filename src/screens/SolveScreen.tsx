@@ -31,6 +31,8 @@ import { Rich } from "../i18n/Rich";
 import type { TranslationKey } from "../i18n/translate";
 import { isSupabaseConfigured } from "../services/supabase";
 import { localizePuzzle, resolvePuzzleRules, type PublicPuzzleDefinition } from "../puzzles";
+import { openProgressStore } from "../storage/browserProgress";
+import { hasSeenDailyGoals, markDailyGoalsSeen } from "../storage/onboarding";
 import type { CompletionRecord } from "../storage/progress";
 
 interface SolveScreenProps {
@@ -151,10 +153,16 @@ export function SolveScreen({
   const openHelp = () => setPanel(intro ? "intro" : "help");
 
   // Explain the lesson (or list the goals) once the canvas has settled, unless the run is already under way.
+  // Daily goals open by themselves only on a player's first daily; after that the goal card is enough.
   useEffect(() => {
     const first: Panel | undefined = intro ? (intro.autoOpen ? "intro" : undefined) : "goals";
     if (!first || solved || session.commandCount > 0) return;
-    const timer = window.setTimeout(() => setPanel((current) => (current === "none" ? first : current)), origin ? 750 : 400);
+    const firstDaily = puzzle.kind === "daily" && first === "goals";
+    if (firstDaily && hasSeenDailyGoals(() => openProgressStore().completions().some((c) => c.kind === "daily"))) return;
+    const timer = window.setTimeout(() => {
+      if (firstDaily) markDailyGoalsSeen();
+      setPanel((current) => (current === "none" ? first : current));
+    }, origin ? 750 : 400);
     return () => window.clearTimeout(timer);
     // Only on arrival: later commands or restarts must not reopen it.
   }, []);
@@ -475,6 +483,7 @@ export function SolveScreen({
       )}
 
       <Dialog size="wide" open={panel === "goals"} title={t("goals.title")} onClose={closePanel}>
+        <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={240} className="self-center rounded sm:size-80" />
         <div className="flex flex-col gap-4 text-sm">
           {puzzle.kind === "daily" && <h3 className="text-base text-grey-50">{puzzle.title}</h3>}
           <p className="text-grey-50">{puzzle.description}</p>
@@ -493,7 +502,6 @@ export function SolveScreen({
               );
             })}
           </ul>
-          <p className="text-xs text-grey-400">{t("goals.note")}</p>
         </div>
         <div className="flex flex-col gap-2">
           <Button onClick={closePanel}>
