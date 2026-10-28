@@ -481,7 +481,7 @@ export function SolveScreen({
       )}
 
       <Dialog size="wide" open={panel === "goals"} title={t("goals.title")} onClose={closePanel}>
-        <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={160} className="self-center rounded" />
+        <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={240} className="self-center rounded sm:size-80" />
         <div className="flex flex-col gap-4 text-sm">
           <p className="text-grey-50">{puzzle.kind === "daily" ? t("daily.stateOnlyHelp") : puzzle.description}</p>
           <ul className="flex flex-col gap-2" aria-label={t("goals.checklist")}>
@@ -498,7 +498,6 @@ export function SolveScreen({
               );
             })}
           </ul>
-          <p className="text-xs text-grey-400">{t("goals.note")}</p>
         </div>
         <div className="flex flex-col gap-2">
           <Button onClick={closePanel}>

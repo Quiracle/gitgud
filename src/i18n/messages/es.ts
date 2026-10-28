@@ -388,7 +388,6 @@ export const es: Messages = {
   "goals.checklist": "Lista de objetivos",
   "goals.done": "(cumplido)",
   "goals.notDone": "(pendiente)",
-  "goals.note": "El puzzle se resuelve cuando todos los objetivos están marcados.",
 
   "terminal.solved": "¡Puzzle resuelto!",
   "terminal.inputLabel": "Comando de Git",
