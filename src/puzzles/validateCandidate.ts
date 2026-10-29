@@ -148,6 +148,21 @@ function validateText(candidate: PuzzleCandidate, limits: PuzzleLimits, issues: 
   text(candidate.description, limits.maxDescriptionLength, "$.description", issues);
   boundedStrings(candidate.hints, limits.maxHints, limits.maxHintLength, "$.hints", issues, "content.hints-too-large");
   boundedStrings(candidate.objectives ?? [], limits.maxObjectives, limits.maxObjectiveLength, "$.objectives", issues, "content.objectives-too-large");
+  if (candidate.localizations) {
+    const commitIds = Object.keys(candidate.initialRepository.commits).sort();
+    for (const locale of ["en", "ca", "es"] as const) {
+      const localized = candidate.localizations[locale];
+      const path = `$.localizations.${locale}`;
+      text(localized.title, limits.maxTitleLength, `${path}.title`, issues);
+      text(localized.description, limits.maxDescriptionLength, `${path}.description`, issues);
+      boundedStrings(localized.hints, limits.maxHints, limits.maxHintLength, `${path}.hints`, issues, "content.hints-too-large");
+      boundedStrings(localized.objectives, limits.maxObjectives, limits.maxObjectiveLength, `${path}.objectives`, issues, "content.objectives-too-large");
+      for (const [id, message] of Object.entries(localized.commitMessages)) text(message, limits.maxCommitMessageLength, `${path}.commitMessages.${id}`, issues);
+      if (Object.keys(localized.commitMessages).sort().join("\0") !== commitIds.join("\0")) add(issues, "localization.commit-ids", "Localized commit messages must match the repository commit IDs exactly.", `${path}.commitMessages`);
+      if (localized.objectives.length !== (candidate.objectives ?? []).length) add(issues, "localization.objective-count", "Localized objectives must preserve the canonical count.", `${path}.objectives`);
+      if (localized.hints.length !== candidate.hints.length) add(issues, "localization.hint-count", "Localized hints must preserve the canonical count.", `${path}.hints`);
+    }
+  }
   boundedStrings(candidate.solutionCommands, limits.maxSolutionCommands, limits.maxSolutionCommandLength, "$.solutionCommands", issues, "content.solution-too-large");
 }
 

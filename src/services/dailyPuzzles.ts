@@ -4,6 +4,7 @@ import { createDailyFixture } from "../puzzles/dailyFixture";
 import { parsePublicPuzzleDefinition } from "../puzzles/schema";
 import type { PublicPuzzleDefinition } from "../puzzles/types";
 import { requireSupabaseClient } from "./supabase";
+import { ReviewDailyPuzzleSource } from "./reviewDailyPuzzles";
 
 export interface DailyPuzzleSource {
   getByDate(date: string): Promise<PublicPuzzleDefinition>;
@@ -62,6 +63,9 @@ export class SupabaseDailyPuzzleSource implements DailyPuzzleSource {
 
 export function createDailyPuzzleSource(): DailyPuzzleSource {
   const mode = import.meta.env.VITE_DAILY_PUZZLE_SOURCE ?? "fixture";
+  if (import.meta.env.DEV && mode === "review") return new ReviewDailyPuzzleSource(
+    new URLSearchParams(globalThis.location?.search ?? "").get("review") ?? import.meta.env.VITE_DAILY_REVIEW_TEMPLATE ?? "medium-5",
+  );
   if (mode === "fixture") return new FixtureDailyPuzzleSource();
   if (mode !== "supabase") throw new Error(`Unknown daily puzzle source '${mode}'.`);
 

@@ -158,16 +158,16 @@ function sample(random, values, count) {
   return result;
 }
 function seededRandom(seed) {
-  let hash = 1779033703 ^ seed.length;
+  let hash2 = 1779033703 ^ seed.length;
   for (let index = 0; index < seed.length; index += 1) {
-    hash = Math.imul(hash ^ seed.charCodeAt(index), 3432918353);
-    hash = hash << 13 | hash >>> 19;
+    hash2 = Math.imul(hash2 ^ seed.charCodeAt(index), 3432918353);
+    hash2 = hash2 << 13 | hash2 >>> 19;
   }
   return () => {
-    hash = Math.imul(hash ^ hash >>> 16, 2246822507);
-    hash = Math.imul(hash ^ hash >>> 13, 3266489909);
-    hash ^= hash >>> 16;
-    let value = hash += 1831565813;
+    hash2 = Math.imul(hash2 ^ hash2 >>> 16, 2246822507);
+    hash2 = Math.imul(hash2 ^ hash2 >>> 13, 3266489909);
+    hash2 ^= hash2 >>> 16;
+    let value = hash2 += 1831565813;
     value = Math.imul(value ^ value >>> 15, value | 1);
     value ^= value + Math.imul(value ^ value >>> 7, value | 61);
     return ((value ^ value >>> 14) >>> 0) / 4294967296;
@@ -993,6 +993,12 @@ var DEFAULT_DIFFICULTY_POLICY = {
   }
 };
 
+// src/i18n/locales.ts
+var LOCALES = ["en", "es", "ca"];
+function isLocale(value) {
+  return typeof value === "string" && LOCALES.includes(value);
+}
+
 // src/puzzles/schema.ts
 var kinds = /* @__PURE__ */ new Set(["daily", "lesson", "generated"]);
 var difficulties = /* @__PURE__ */ new Set(["easy", "medium", "hard"]);
@@ -1029,7 +1035,8 @@ function parsePuzzleCandidate(input) {
       "solutionCommands",
       "themeId",
       "publishedOn",
-      "parCommands"
+      "parCommands",
+      "localizations"
     ],
     "$",
     issues
@@ -1052,6 +1059,7 @@ function parsePuzzleCandidate(input) {
   const hints = stringArray(root.hints, "$.hints", issues, false);
   const actionRequirements = root.actionRequirements === void 0 ? void 0 : parseActionRequirements(root.actionRequirements, "$.actionRequirements", issues);
   const solutionCommands = stringArray(root.solutionCommands, "$.solutionCommands", issues, false);
+  const localizations = root.localizations === void 0 ? void 0 : parseLocalizations(root.localizations, "$.localizations", issues);
   if (schemaVersion !== void 0 && schemaVersion !== 1 && schemaVersion !== 2) {
     issue(issues, "schema.unsupported-version", "Only puzzle schema versions 1 and 2 are supported.", "$.schemaVersion");
   }
@@ -1061,7 +1069,7 @@ function parsePuzzleCandidate(input) {
   if (publishedOn !== void 0 && !/^\d{4}-\d{2}-\d{2}$/.test(publishedOn)) {
     issue(issues, "schema.invalid-date", "publishedOn must use YYYY-MM-DD UTC format.", "$.publishedOn");
   }
-  if (issues.length > 0 || schemaVersion !== 1 && schemaVersion !== 2 || id === void 0 || version === void 0 || kind === void 0 || slug === void 0 || title === void 0 || description === void 0 || difficulty === void 0 || repository === void 0 || target === void 0 || allowedCommands === void 0 || hints === void 0 || solutionCommands === void 0 || root.actionRequirements !== void 0 && actionRequirements === void 0) {
+  if (issues.length > 0 || schemaVersion !== 1 && schemaVersion !== 2 || id === void 0 || version === void 0 || kind === void 0 || slug === void 0 || title === void 0 || description === void 0 || difficulty === void 0 || repository === void 0 || target === void 0 || allowedCommands === void 0 || hints === void 0 || solutionCommands === void 0 || root.actionRequirements !== void 0 && actionRequirements === void 0 || root.localizations !== void 0 && localizations === void 0) {
     return { issues };
   }
   return {
@@ -1084,9 +1092,33 @@ function parsePuzzleCandidate(input) {
       allowedCommands,
       hints,
       ...actionRequirements ? { actionRequirements } : {},
+      ...localizations ? { localizations } : {},
       solutionCommands
     }
   };
+}
+function parseLocalizations(value, path, issues) {
+  const source = record(value, path, issues);
+  if (!source) return void 0;
+  rejectUnknownKeys(source, [...LOCALES], path, issues);
+  for (const locale of LOCALES) if (!Object.hasOwn(source, locale)) issue(issues, "schema.missing-localization", `Missing '${locale}' localization.`, `${path}.${locale}`);
+  const result = {};
+  for (const [key, raw] of Object.entries(source)) {
+    if (!isLocale(key)) continue;
+    const localePath = `${path}.${key}`;
+    const entry = record(raw, localePath, issues);
+    if (!entry) continue;
+    rejectUnknownKeys(entry, ["title", "description", "objectives", "hints", "commitMessages"], localePath, issues);
+    const title = string(entry.title, `${localePath}.title`, issues);
+    const description = string(entry.description, `${localePath}.description`, issues);
+    const objectives = stringArray(entry.objectives, `${localePath}.objectives`, issues, false);
+    const hints = stringArray(entry.hints, `${localePath}.hints`, issues, false);
+    const commitMessages = stringRecord(entry.commitMessages, `${localePath}.commitMessages`, issues);
+    if (title !== void 0 && description !== void 0 && objectives !== void 0 && hints !== void 0 && commitMessages !== void 0) {
+      result[key] = { title, description, objectives, hints, commitMessages };
+    }
+  }
+  return LOCALES.every((locale) => result[locale]) ? result : void 0;
 }
 function parseRepository(value, path, issues) {
   const source = record(value, path, issues);
@@ -1538,6 +1570,21 @@ function validateText(candidate, limits, issues) {
   text(candidate.description, limits.maxDescriptionLength, "$.description", issues);
   boundedStrings(candidate.hints, limits.maxHints, limits.maxHintLength, "$.hints", issues, "content.hints-too-large");
   boundedStrings(candidate.objectives ?? [], limits.maxObjectives, limits.maxObjectiveLength, "$.objectives", issues, "content.objectives-too-large");
+  if (candidate.localizations) {
+    const commitIds = Object.keys(candidate.initialRepository.commits).sort();
+    for (const locale of ["en", "ca", "es"]) {
+      const localized = candidate.localizations[locale];
+      const path = `$.localizations.${locale}`;
+      text(localized.title, limits.maxTitleLength, `${path}.title`, issues);
+      text(localized.description, limits.maxDescriptionLength, `${path}.description`, issues);
+      boundedStrings(localized.hints, limits.maxHints, limits.maxHintLength, `${path}.hints`, issues, "content.hints-too-large");
+      boundedStrings(localized.objectives, limits.maxObjectives, limits.maxObjectiveLength, `${path}.objectives`, issues, "content.objectives-too-large");
+      for (const [id, message] of Object.entries(localized.commitMessages)) text(message, limits.maxCommitMessageLength, `${path}.commitMessages.${id}`, issues);
+      if (Object.keys(localized.commitMessages).sort().join("\0") !== commitIds.join("\0")) add(issues, "localization.commit-ids", "Localized commit messages must match the repository commit IDs exactly.", `${path}.commitMessages`);
+      if (localized.objectives.length !== (candidate.objectives ?? []).length) add(issues, "localization.objective-count", "Localized objectives must preserve the canonical count.", `${path}.objectives`);
+      if (localized.hints.length !== candidate.hints.length) add(issues, "localization.hint-count", "Localized hints must preserve the canonical count.", `${path}.hints`);
+    }
+  }
   boundedStrings(candidate.solutionCommands, limits.maxSolutionCommands, limits.maxSolutionCommandLength, "$.solutionCommands", issues, "content.solution-too-large");
 }
 function validateDailyPolicy(candidate, issues) {
@@ -1997,12 +2044,595 @@ function toGuidedPuzzle(candidate, lessonId) {
     solutionCommands
   };
 }
+
+// src/puzzles/generation/editorial.ts
+var LOCALES2 = ["en", "ca", "es"];
+var THEMES = {
+  en: [
+    { title: "Studio Day", subject: "studio portrait" },
+    { title: "Festival Lights", subject: "festival display" },
+    { title: "Garden Portrait", subject: "garden portrait" },
+    { title: "The Big Premiere", subject: "premiere night portrait" },
+    { title: "Colorful Postcard", subject: "art fair postcard" },
+    { title: "The Workshop", subject: "makers' workshop display" },
+    { title: "A Little Celebration", subject: "celebration keepsake" },
+    { title: "Gallery Opening", subject: "gallery opening portrait" }
+  ],
+  ca: [
+    { title: "Dia d'estudi", subject: "retrat d'estudi" },
+    { title: "Llums de festa", subject: "muntatge de festa" },
+    { title: "Retrat al jard\xED", subject: "retrat de jard\xED" },
+    { title: "La gran estrena", subject: "retrat de nit d'estrena" },
+    { title: "Postal acolorida", subject: "postal de fira d'art" },
+    { title: "El taller", subject: "muntatge de taller creatiu" },
+    { title: "Una petita celebraci\xF3", subject: "record de celebraci\xF3" },
+    { title: "Obertura de la galeria", subject: "retrat d'obertura de galeria" }
+  ],
+  es: [
+    { title: "D\xEDa de estudio", subject: "retrato de estudio" },
+    { title: "Luces de festival", subject: "montaje de festival" },
+    { title: "Retrato en el jard\xEDn", subject: "retrato de jard\xEDn" },
+    { title: "El gran estreno", subject: "retrato de noche de estreno" },
+    { title: "Postal colorida", subject: "postal de feria de arte" },
+    { title: "El taller", subject: "montaje de taller creativo" },
+    { title: "Una peque\xF1a celebraci\xF3n", subject: "recuerdo de celebraci\xF3n" },
+    { title: "Apertura de la galer\xEDa", subject: "retrato de apertura de galer\xEDa" }
+  ]
+};
+var PROPERTY_NAMES = {
+  body: { en: "body", ca: "cos", es: "cuerpo" },
+  sunglasses: { en: "sunglasses", ca: "ulleres de sol", es: "gafas de sol" },
+  hat: { en: "hat", ca: "barret", es: "sombrero" },
+  scarf: { en: "scarf", ca: "mocador", es: "pa\xF1uelo" },
+  crest: { en: "crest", ca: "cresta", es: "cresta" },
+  longLegs: { en: "long legs", ca: "cames llargues", es: "patas largas" }
+};
+var VALUE_NAMES = {
+  none: { en: "none", ca: "cap", es: "ninguno" },
+  cream: { en: "cream", ca: "crema", es: "crema" },
+  black: { en: "black", ca: "negre", es: "negro" },
+  red: { en: "red", ca: "vermell", es: "rojo" },
+  blue: { en: "blue", ca: "blau", es: "azul" },
+  turquoise: { en: "turquoise", ca: "turquesa", es: "turquesa" },
+  purple: { en: "purple", ca: "porpra", es: "morado" },
+  gold: { en: "gold", ca: "daurat", es: "dorado" },
+  outline: { en: "outline", ca: "contorn", es: "contorno" }
+};
+function createTemplateLocalizations(candidate, family, seed) {
+  const themeIndex = hash(`${family}|${seed}`) % THEMES.en.length;
+  const firstSolutionCommand = candidate.solutionCommands[0];
+  const parsedFirstCommand = firstSolutionCommand ? parseGitCommand(firstSolutionCommand) : void 0;
+  const firstCommitReference = parsedFirstCommand?.ok && (parsedFirstCommand.action.type === "cherry-pick" || parsedFirstCommand.action.type === "revert") ? parsedFirstCommand.action.commit : void 0;
+  const step = firstSolutionCommand ?? "git log";
+  const hintStyle = getHintStyle(candidate, family);
+  const empty = (locale) => ({
+    en: "the repository's existing work",
+    ca: "la feina que ja hi ha al repositori",
+    es: "el trabajo existente del repositorio"
+  })[locale];
+  const title = (locale) => THEMES[locale][themeIndex].title;
+  const description = (locale) => ({
+    en: `The ${THEMES.en[themeIndex].subject} is being prepared. Use the illustrated target as your reference while reviewing ${empty("en")}.`,
+    ca: `Preparem el ${THEMES.ca[themeIndex].subject} amb un \xFAltim retoc. Fes servir la il\xB7lustraci\xF3 objectiu com a refer\xE8ncia mentre revises ${empty("ca")}.`,
+    es: `Preparamos el ${THEMES.es[themeIndex].subject} con un \xFAltimo retoque. Usa la ilustraci\xF3n objetivo como referencia mientras revisas ${empty("es")}.`
+  })[locale];
+  const objectives = (locale) => ({
+    en: ["Make main match the illustrated target."],
+    ca: ["Fes que main coincideixi amb la il\xB7lustraci\xF3 objectiu."],
+    es: ["Haz que main coincida con la ilustraci\xF3n objetivo."]
+  })[locale];
+  const hints = (locale) => {
+    const first = {
+      dependency: {
+        en: "Inspect the linked changes in order; a later change may depend on an earlier value.",
+        ca: "Revisa els canvis relacionats per ordre; un canvi posterior pot dependre d'un valor anterior.",
+        es: "Inspecciona los cambios relacionados en orden; un cambio posterior puede depender de un valor anterior."
+      },
+      repair: {
+        en: "Compare main with the target and identify any current change that needs repair.",
+        ca: "Compara main amb l'objectiu i identifica si cal corregir algun canvi actual.",
+        es: "Compara main con el objetivo e identifica si hay alg\xFAn cambio actual que corregir."
+      },
+      bundle: {
+        en: "Review the useful changes across the branches and compare them with the target.",
+        ca: "Revisa els canvis \xFAtils de les branques i compara'ls amb l'objectiu.",
+        es: "Revisa los cambios \xFAtiles de las ramas y comp\xE1ralos con el objetivo."
+      },
+      "prepare-and-integrate": {
+        en: "You can prepare work on another branch before integrating it; also check main for any unwanted change.",
+        ca: "Pots preparar feina en una altra branca abans d'integrar-la; comprova tamb\xE9 si hi ha cap canvi no desitjat a main.",
+        es: "Puedes preparar trabajo en otra rama antes de integrarlo; comprueba tambi\xE9n si hay alg\xFAn cambio no deseado en main."
+      },
+      "clean-room-integration": {
+        en: "Useful work is bundled with temporary changes. Consider what a whole branch contributes, and what must be restored afterward.",
+        ca: "La feina \xFAtil est\xE0 agrupada amb canvis temporals. Considera qu\xE8 aporta una branca sencera i qu\xE8 cal restaurar despr\xE9s.",
+        es: "El trabajo \xFAtil est\xE1 agrupado con cambios temporales. Considera qu\xE9 aporta una rama entera y qu\xE9 debes restaurar despu\xE9s."
+      }
+    }[hintStyle][locale];
+    const second = firstCommitReference ? { en: `Inspect the changes in commit ${firstCommitReference} and compare them with the target.`, ca: `Revisa els canvis del commit ${firstCommitReference} i compara'ls amb l'objectiu.`, es: `Inspecciona los cambios del commit ${firstCommitReference} y comp\xE1ralos con el objetivo.` }[locale] : { en: "Compare the changes on each branch with the target state.", ca: "Compara els canvis de cada branca amb l'estat objectiu.", es: "Compara los cambios de cada rama con el estado objetivo." }[locale];
+    const third = {
+      en: `One possible route begins with ${step}; this may not be the only way to reach the target.`,
+      ca: `Una ruta possible comen\xE7a amb ${step}; potser no \xE9s l'\xFAnica manera d'arribar a l'objectiu.`,
+      es: `Una ruta posible empieza con ${step}; quiz\xE1 no sea la \xFAnica forma de alcanzar el objetivo.`
+    }[locale];
+    return [first, second, third];
+  };
+  const commitMessages = (locale) => Object.fromEntries(Object.entries(candidate.initialRepository.commits).map(([id, commit]) => {
+    if (commit.changes.length === 0) {
+      return [id, { en: "Start the repository", ca: "Inicia el repositori", es: "Inicia el repositorio" }[locale]];
+    }
+    const facts = commit.changes.map((change) => {
+      const property = PROPERTY_NAMES[change.property]?.[locale] ?? change.property;
+      const from = VALUE_NAMES[String(change.from)]?.[locale] ?? String(change.from);
+      const to = VALUE_NAMES[String(change.to)]?.[locale] ?? String(change.to);
+      return { en: `set ${property} from ${from} to ${to}`, ca: `canvia ${property} de ${from} a ${to}`, es: `cambia ${property} de ${from} a ${to}` }[locale];
+    });
+    return [id, { en: facts.join("; "), ca: facts.join("; "), es: facts.join("; ") }[locale]];
+  }));
+  const build = (locale) => ({
+    title: title(locale),
+    description: description(locale),
+    objectives: objectives(locale),
+    hints: hints(locale),
+    commitMessages: commitMessages(locale)
+  });
+  return { en: build("en"), ca: build("ca"), es: build("es") };
+}
+function applyStoryText(candidate, input) {
+  if (!plainRecord(input) || !exactKeys(input, LOCALES2)) return void 0;
+  const localizedText = {};
+  for (const locale of LOCALES2) {
+    const entry = input[locale];
+    if (!plainRecord(entry) || !exactKeys(entry, ["title", "description"])) return void 0;
+    if (!safeStoryString(entry.title, DEFAULT_PUZZLE_LIMITS.maxTitleLength) || !safeStoryString(entry.description, DEFAULT_PUZZLE_LIMITS.maxDescriptionLength)) return void 0;
+    localizedText[locale] = { title: entry.title, description: entry.description };
+  }
+  const localizations = candidate.localizations ? structuredClone(candidate.localizations) : createTemplateLocalizations(candidate, "daily", candidate.id);
+  for (const locale of LOCALES2) {
+    localizations[locale] = { ...localizations[locale], ...localizedText[locale] };
+  }
+  const english = localizedText.en;
+  return { ...candidate, title: english.title, description: english.description, localizations };
+}
+function safeStoryString(value, maximum) {
+  return typeof value === "string" && value.trim().length > 0 && value.length <= maximum && !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(value) && !/(?:https?:\/\/|www\.|<\/?[a-z][^>]*>|```|`|\b(?:git|cherry-pick|revert|rebase|merge|checkout|switch|branch|commit)\b|\b[A-Za-z][A-Za-z0-9_-]{0,47}\b\s*(?:;|&&|\|))/i.test(value) && !/[<>`{}[\]\\]/.test(value);
+}
+function getHintStyle(candidate, family) {
+  if (family === "clean-room-integration") return "clean-room-integration";
+  const normalizedFamily = family.toLowerCase();
+  if (normalizedFamily.includes("prepare-and-integrate") || normalizedFamily.includes("prepare-integration")) return "prepare-and-integrate";
+  if (normalizedFamily.includes("bundled")) return "bundle";
+  const hasRevert = candidate.solutionCommands.some((command) => {
+    const parsed = parseGitCommand(command);
+    return parsed.ok && parsed.action.type === "revert";
+  });
+  if (normalizedFamily.includes("repair") || hasRevert) return "repair";
+  if (normalizedFamily.includes("dependency")) return "dependency";
+  const pickedIds = candidate.solutionCommands.flatMap((command) => {
+    const parsed = parseGitCommand(command);
+    return parsed.ok && parsed.action.type === "cherry-pick" ? [parsed.action.commit] : [];
+  });
+  const commits = candidate.initialRepository.commits;
+  const hasDependency = pickedIds.some((id) => pickedIds.some((other) => other !== id && isAncestor3(other, id, commits)));
+  return hasDependency ? "dependency" : "bundle";
+}
+function isAncestor3(ancestor, descendant, commits) {
+  const pending = [...commits[descendant]?.parents ?? []];
+  const visited = /* @__PURE__ */ new Set();
+  while (pending.length > 0) {
+    const current = pending.pop();
+    if (current === ancestor) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    pending.push(...commits[current]?.parents ?? []);
+  }
+  return false;
+}
+function plainRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value) && (Object.getPrototypeOf(value) === Object.prototype || Object.getPrototypeOf(value) === null);
+}
+function exactKeys(value, keys) {
+  const actual = Object.keys(value).sort();
+  return actual.length === keys.length && actual.every((key, index) => key === [...keys].sort()[index]);
+}
+function hash(value) {
+  let result = 2166136261;
+  for (let index = 0; index < value.length; index += 1) result = Math.imul(result ^ value.charCodeAt(index), 16777619);
+  return (result >>> 0) % THEMES.en.length;
+}
+
+// src/puzzles/generation/novelty.ts
+function fingerprintMechanics(repository, target) {
+  const nodes = [];
+  const add3 = (color) => (nodes.push({ color, edges: [] }), nodes.length - 1);
+  const link = (from, label, to) => nodes[from].edges.push({ label, to });
+  const commitIds = Object.keys(repository.commits);
+  const commits = /* @__PURE__ */ new Map();
+  for (const id of commitIds) commits.set(id, add3("commit"));
+  const stateNodes = /* @__PURE__ */ new Map();
+  const branchNodes = /* @__PURE__ */ new Map();
+  const propertyNodes = /* @__PURE__ */ new Map();
+  const valueNodes = /* @__PURE__ */ new Map();
+  const state = (name, data, color) => {
+    const root = add3(color);
+    for (const [property, value] of Object.entries(data)) {
+      const prop = getProperty(property);
+      const val = getValue(property, value);
+      const entry = add3("state-entry");
+      link(root, "entry", entry);
+      link(entry, "property", prop);
+      link(entry, "value", val);
+    }
+    stateNodes.set(name, root);
+    return root;
+  };
+  const getProperty = (key) => {
+    let id = propertyNodes.get(key);
+    if (id === void 0) {
+      id = add3("property");
+      propertyNodes.set(key, id);
+    }
+    return id;
+  };
+  const valueKey = (property, value) => `${property}\0${stable(value)}`;
+  const getValue = (property, value) => {
+    const key = valueKey(property, value);
+    let id = valueNodes.get(key);
+    if (id === void 0) {
+      id = add3("value");
+      valueNodes.set(key, id);
+    }
+    return id;
+  };
+  state("initial", repository.initialState, "initial-state");
+  state("target", target.snapshot, "target-state");
+  let changeCount = 0;
+  let bundleCount = 0;
+  let parentCount = 0;
+  for (const id of commitIds) {
+    const commit = repository.commits[id];
+    const cnode = commits.get(id);
+    commit.parents.forEach((parent, index) => {
+      const p = commits.get(parent);
+      if (p !== void 0) {
+        link(cnode, `parent:${index}`, p);
+        parentCount++;
+      }
+    });
+    if (commit.changes.length > 1) bundleCount++;
+    for (const change of commit.changes) {
+      const event = add3("change");
+      link(cnode, "change", event);
+      link(event, "property", getProperty(change.property));
+      link(event, "from", getValue(change.property, change.from));
+      link(event, "to", getValue(change.property, change.to));
+      changeCount++;
+    }
+  }
+  const mainHead = repository.branches.main;
+  for (const [name, commit] of repository.branches ? Object.entries(repository.branches) : []) {
+    const branch = add3(name === "main" ? name === repository.currentBranch ? "branch:main-current" : "branch:main" : name === repository.currentBranch ? "branch:current" : "branch:other");
+    branchNodes.set(name, branch);
+    const c = commits.get(commit);
+    if (c !== void 0) link(branch, "points-to", c);
+  }
+  const head = commits.get(repository.head);
+  if (head !== void 0) nodes[head].color += "|head";
+  const targetBranchNode = branchNodes.get(target.branch);
+  if (targetBranchNode !== void 0) link(stateNodes.get("target"), "target-branch", targetBranchNode);
+  const mainNode = commits.get(mainHead);
+  if (mainNode !== void 0) nodes[mainNode].color += "|main-branch-head";
+  const currentHead = commits.get(repository.branches[repository.currentBranch]);
+  if (currentHead !== void 0) nodes[currentHead].color += "|current-branch-head";
+  let colors = nodes.map((node) => node.color);
+  for (let round = 0; round <= nodes.length; round++) {
+    const signatures = nodes.map((node, index) => stable({ self: colors[index], adjacent: node.edges.map((edge) => [edge.label, colors[edge.to]]).sort((a, b) => stable(a).localeCompare(stable(b))) }));
+    const palette = [...new Set(signatures)].sort();
+    const next = signatures.map((signature) => `c${palette.indexOf(signature)}`);
+    if (next.every((value, index) => value === colors[index])) break;
+    colors = next;
+  }
+  const edgeCounts = /* @__PURE__ */ new Map();
+  nodes.forEach((node, from) => node.edges.forEach((edge) => {
+    const key = stable([colors[from], edge.label, colors[edge.to]]);
+    edgeCounts.set(key, (edgeCounts.get(key) ?? 0) + 1);
+  }));
+  const canonical = stable({ nodes: countColors(colors), edges: [...edgeCounts].sort(([a], [b]) => a.localeCompare(b)), rounds: nodes.length });
+  return { canonical, summary: { commits: commitIds.length, branches: Object.keys(repository.branches).length, properties: propertyNodes.size, changes: changeCount, parents: parentCount, bundles: bundleCount } };
+}
+function countColors(colors) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const color of colors) counts.set(color, (counts.get(color) ?? 0) + 1);
+  return [...counts].sort(([a], [b]) => a.localeCompare(b));
+}
+function stable(value) {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
+  return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stable(value[key])}`).join(",")}}`;
+}
+
+// src/puzzles/generation/decisionCore.ts
+function fingerprintDecisionCore(candidate) {
+  const initial = candidate.initialRepository;
+  const usedBranches = /* @__PURE__ */ new Set(["main", initial.currentBranch]);
+  const originalIds = /* @__PURE__ */ new Set();
+  const includeHistory = (repository2, start2) => {
+    const pending = [start2], seen = /* @__PURE__ */ new Set();
+    while (pending.length) {
+      const id = pending.pop();
+      if (seen.has(id)) continue;
+      seen.add(id);
+      const commit = repository2.commits[id];
+      if (!commit) throw new Error("Proof references missing history.");
+      if (initial.commits[id]) originalIds.add(id);
+      pending.push(...commit.parents, ...commit.provenance?.sourceCommits ?? []);
+    }
+  };
+  let repository = initial;
+  includeHistory(repository, repository.head);
+  for (const command of candidate.solutionCommands) {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) throw new Error("Invalid proof command.");
+    const action = parsed.action;
+    if (action.type === "switch" || action.type === "merge") {
+      usedBranches.add(action.branch);
+      includeHistory(repository, repository.branches[action.branch]);
+    } else if (action.type === "rebase" || action.type === "interactive-rebase") {
+      usedBranches.add(action.onto);
+      includeHistory(repository, repository.branches[action.onto]);
+    } else if (action.type === "cherry-pick" || action.type === "revert") {
+      includeHistory(repository, action.commit);
+    }
+    const step = executeCommand(repository, command);
+    if (!step.ok) throw new Error("Invalid proof transition.");
+    repository = step.repository;
+  }
+  const start = getSnapshot(initial, initial.branches.main);
+  const relevant = new Set(Object.keys(candidate.target.snapshot).filter((property) => JSON.stringify(start[property]) !== JSON.stringify(candidate.target.snapshot[property])));
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const id of originalIds) {
+      const changes = initial.commits[id].changes;
+      if (!changes.some((change) => relevant.has(change.property))) continue;
+      for (const change of changes) if (!relevant.has(change.property)) {
+        relevant.add(change.property);
+        grew = true;
+      }
+    }
+  }
+  const commits = Object.fromEntries([...originalIds].map((id) => [id, {
+    ...initial.commits[id],
+    changes: initial.commits[id].changes.filter((change) => relevant.has(change.property))
+  }]));
+  const resolve = (id) => {
+    const commit = commits[id];
+    if (!commit) throw new Error("Incomplete decision core.");
+    return !commit.changes.length && commit.parents.length === 1 ? resolve(commit.parents[0]) : id;
+  };
+  const kept = Object.fromEntries(Object.entries(commits).filter(([id]) => resolve(id) === id).map(([id, commit]) => [id, { ...commit, parents: commit.parents.map(resolve) }]));
+  const branches = Object.fromEntries([...usedBranches].map((branch) => [branch, resolve(initial.branches[branch])]));
+  const restrict = (state) => Object.fromEntries(Object.entries(state).filter(([property]) => relevant.has(property)));
+  return fingerprintMechanics(
+    { ...initial, commits: kept, branches, head: resolve(initial.head), initialState: restrict(initial.initialState) },
+    { branch: "main", snapshot: restrict(candidate.target.snapshot) }
+  ).canonical;
+}
+
+// src/puzzles/generation/mechanicsState.ts
+function snapshotKey(state) {
+  return JSON.stringify(Object.entries(state).sort(([a], [b]) => a.localeCompare(b)));
+}
+
+// src/puzzles/generation/proceduralQuality.ts
+function findCopyOnlySolution(candidate, maxDepth = candidate.solutionCommands.length) {
+  if (candidate.kind !== "daily" || candidate.initialRepository.currentBranch !== "main") throw new Error("Expected a daily starting on main.");
+  if (!Number.isInteger(maxDepth) || maxDepth < 0 || maxDepth > 20) throw new Error("Invalid copy-only search depth.");
+  const commands2 = Object.keys(candidate.initialRepository.commits).sort().map((id) => `git cherry-pick ${id}`);
+  let frontier = [{ repository: candidate.initialRepository, path: [] }];
+  const seen = /* @__PURE__ */ new Set([snapshotKey(getSnapshot(candidate.initialRepository))]);
+  if (validatePuzzleCompletion(candidate, candidate.initialRepository, []).solved) return [];
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    const next = [];
+    for (const node of frontier) for (const command of commands2) {
+      const step = executeCommand(node.repository, command);
+      if (!step.ok || !step.mutated) continue;
+      const path = [...node.path, command];
+      if (validatePuzzleCompletion(candidate, step.repository, []).solved) return path;
+      const key = snapshotKey(getSnapshot(step.repository));
+      if (seen.has(key)) continue;
+      seen.add(key);
+      next.push({ repository: step.repository, path });
+    }
+    frontier = next;
+    if (!frontier.length) return void 0;
+  }
+  return void 0;
+}
+function solutionCommandPattern(candidate) {
+  return candidate.solutionCommands.map((command) => {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) throw new Error("Invalid proof command.");
+    return parsed.action.type === "interactive-rebase" && parsed.action.todo?.some((item) => item.action === "squash") ? "squash" : parsed.action.type;
+  }).join(" \u2192 ");
+}
+function proofHasSequentialCopies(candidate) {
+  let repository = candidate.initialRepository;
+  let previousPick;
+  for (const command of candidate.solutionCommands) {
+    const parsed = parseGitCommand(command);
+    if (!parsed.ok) throw new Error("Invalid proof command.");
+    if (parsed.action.type === "cherry-pick" && previousPick && isAncestor(repository, previousPick, parsed.action.commit)) return true;
+    previousPick = parsed.action.type === "cherry-pick" ? parsed.action.commit : void 0;
+    const step = executeCommand(repository, command);
+    if (!step.ok) throw new Error("Invalid proof transition.");
+    repository = step.repository;
+  }
+  return false;
+}
+
+// src/puzzles/generation/candidateArtifact.ts
+var MINIMUM_COMMANDS = { easy: 2, medium: 4, hard: 6 };
+var MAXIMUM_PROOF_COMMANDS = { easy: 2, medium: 4, hard: 10 };
+var FINGERPRINT = /^[a-f0-9]{64}$/;
+async function verifyCandidateArtifact(value, trusted) {
+  validateCertificateInputs(trusted?.sourceFingerprint, 0);
+  if (!isRecord2(value) || value.formatVersion !== 1 || typeof value.id !== "string" || !isRecord2(value.candidate) || !isRecord2(value.certificate) || !isRecord2(value.novelty)) {
+    throw new Error("Malformed candidate artifact.");
+  }
+  const artifact = value;
+  const { candidate, certificate } = artifact;
+  validateCertificateInputs(certificate.sourceFingerprint, certificate.excludedThroughDepth);
+  if (certificate.sourceFingerprint !== trusted.sourceFingerprint) throw new Error("Candidate artifact source fingerprint is not trusted.");
+  if (certificate.evaluatorVersion !== 1 || !Number.isInteger(certificate.minimumCommands) || !Number.isInteger(certificate.proofCommands)) throw new Error("Malformed candidate certificate metadata.");
+  const validated = validateCandidate(candidate);
+  const minimumCommands = MINIMUM_COMMANDS[candidate.difficulty];
+  if (certificate.minimumCommands !== minimumCommands || certificate.excludedThroughDepth < minimumCommands - 1 || certificate.excludedThroughDepth >= candidate.solutionCommands.length || certificate.proofCommands !== candidate.solutionCommands.length || candidate.solutionCommands.length < minimumCommands || candidate.solutionCommands.length > MAXIMUM_PROOF_COMMANDS[candidate.difficulty] || validated.value.puzzle.parCommands !== candidate.solutionCommands.length) {
+    throw new Error("Candidate artifact certificate does not match its proof or difficulty.");
+  }
+  if (certificate.copyOnlyExcludedThroughDepth !== (candidate.difficulty === "easy" ? 0 : candidate.solutionCommands.length)) throw new Error("Missing offline copy-only exclusion.");
+  verifyStrategicAndCopyPolicy(candidate, candidate.solutionCommands.length, false);
+  const mechanicsDigest = await sha256(canonicalJson(mechanicsProjection(candidate)));
+  if (artifact.id !== mechanicsDigest || certificate.mechanicsDigest !== mechanicsDigest) throw new Error("Candidate artifact mechanics digest mismatch.");
+  const novelty = await makeNovelty(candidate);
+  if (!isRecord2(artifact.novelty) || artifact.novelty.mechanicsHash !== novelty.mechanicsHash || artifact.novelty.decisionCoreHash !== novelty.decisionCoreHash || artifact.novelty.commandPattern !== novelty.commandPattern) {
+    throw new Error("Candidate artifact novelty metadata mismatch.");
+  }
+  return artifact;
+}
+function canonicalJson(value) {
+  return JSON.stringify(sortRecursively(value));
+}
+async function makeNovelty(candidate) {
+  const mechanics = fingerprintMechanics(candidate.initialRepository, candidate.target).canonical;
+  const core = fingerprintDecisionCore(candidate);
+  return {
+    mechanicsHash: await sha256(mechanics),
+    decisionCoreHash: await sha256(core),
+    commandPattern: solutionCommandPattern(candidate)
+  };
+}
+function mechanicsProjection(candidate) {
+  const commits = Object.fromEntries(Object.entries(candidate.initialRepository.commits).map(([id, commit]) => {
+    const { message: _excludedMessage, ...mechanics } = commit;
+    return [id, mechanics];
+  }));
+  return {
+    schemaVersion: candidate.schemaVersion,
+    themeId: candidate.themeId,
+    difficulty: candidate.difficulty,
+    initialRepository: { ...candidate.initialRepository, commits },
+    target: candidate.target,
+    allowedCommands: candidate.allowedCommands,
+    solutionCommands: candidate.solutionCommands
+  };
+}
+function validateCandidate(candidate) {
+  if (!candidate || candidate.kind !== "daily" || !candidate.solutionCommands || !Array.isArray(candidate.solutionCommands)) {
+    throw new Error("Artifact candidate must be a daily puzzle with a private proof.");
+  }
+  const result = validatePuzzleCandidate(candidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+  if (!result.ok) throw new Error(`Candidate failed normal puzzle validation: ${result.issues.map((issue2) => issue2.code).join(", ")}`);
+  return result;
+}
+function verifyStrategicAndCopyPolicy(candidate, minimumCommands, search) {
+  if (candidate.difficulty === "easy") return;
+  if (!solutionCommandPattern(candidate).split(" \u2192 ").some((type) => ["merge", "rebase", "interactive-rebase", "squash"].includes(type))) throw new Error("Medium and hard candidates need an integration or rebase proof.");
+  if (proofHasSequentialCopies(candidate)) throw new Error("Candidate proof repeats predecessor cherry-picks.");
+  const copyOnly = search ? findCopyOnlySolution(candidate, minimumCommands) : void 0;
+  if (copyOnly && copyOnly.length <= minimumCommands) throw new Error("Candidate has an equally short copy-only solution.");
+}
+function validateCertificateInputs(sourceFingerprint, excludedThroughDepth) {
+  if (typeof sourceFingerprint !== "string" || !FINGERPRINT.test(sourceFingerprint)) throw new Error("Invalid candidate source fingerprint.");
+  if (!Number.isInteger(excludedThroughDepth) || excludedThroughDepth < 0) throw new Error("Invalid certified search depth.");
+}
+function sortRecursively(value) {
+  if (Array.isArray(value)) return value.map(sortRecursively);
+  if (value && typeof value === "object") {
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, sortRecursively(value[key])]));
+  }
+  return value;
+}
+async function sha256(value) {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+function isRecord2(value) {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+// src/puzzles/generation/proceduralPublication.ts
+async function publishProceduralDaily(date, dependencies) {
+  if (!isDate(date)) throw new Error("date must be a valid YYYY-MM-DD date.");
+  const { store } = dependencies;
+  const existing = await store.published(date);
+  if (existing) return { status: "already-published", ...existing };
+  const reservation = await store.reserve({ date, difficulty: dependencies.chooseDifficulty(), sourceFingerprint: dependencies.sourceFingerprint });
+  if (reservation.date !== date) throw new Error("Reservation date does not match the requested daily.");
+  if (reservation.publishedId) return { status: "already-published", id: reservation.publishedId, difficulty: reservation.difficulty };
+  if (!reservation.artifact) return { status: "awaiting-candidate", date, difficulty: reservation.difficulty };
+  const artifact = await verifyCandidateArtifact(reservation.artifact, { sourceFingerprint: dependencies.sourceFingerprint });
+  if (artifact.candidate.difficulty !== reservation.difficulty) throw new Error("Reserved artifact difficulty does not match the persisted daily difficulty.");
+  const candidate = {
+    ...structuredClone(artifact.candidate),
+    id: `daily-${date}`,
+    slug: `daily-${date}`,
+    publishedOn: date,
+    version: 1
+  };
+  const runId = await store.startRun({
+    date,
+    difficulty: reservation.difficulty,
+    candidateId: artifact.id,
+    certificate: structuredClone(artifact.certificate),
+    novelty: structuredClone(artifact.novelty)
+  });
+  try {
+    let publishCandidate = candidate;
+    let storySource = "template";
+    let storyFailure;
+    if (dependencies.story) {
+      try {
+        const story = await dependencies.story({ theme: candidate.title, target: structuredClone(candidate.target.snapshot) });
+        const edited = applyStoryText(candidate, story);
+        if (edited) {
+          publishCandidate = edited;
+          storySource = "ai";
+        } else storyFailure = "story-invalid";
+      } catch {
+        storyFailure = "story-unavailable";
+      }
+    }
+    await store.recordStory(runId, storySource, storyFailure);
+    const validated = validatePuzzleCandidate(publishCandidate, { semantic: CHICKEN_V2_SEMANTIC_POLICY });
+    if (!validated.ok) throw new Error("Final procedural daily validation failed.");
+    const id = await store.publish(runId, validated.value);
+    return { status: "published", id, difficulty: reservation.difficulty, source: "procedural", storySource };
+  } catch (error) {
+    await store.failed(runId, "publication-failed");
+    throw error;
+  }
+}
+function isDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`)) && (/* @__PURE__ */ new Date(`${value}T00:00:00Z`)).toISOString().slice(0, 10) === value;
+}
+
+// src/puzzles/generation/proceduralManifest.json
+var proceduralManifest_default = {
+  formatVersion: 1,
+  evaluatorVersion: 1,
+  sourceFingerprint: "bb0c37554bbfed2604c81d64cc7c5d95a99d080db485b81c60a7c8108ab4036b"
+};
 export {
   CHICKEN_V2_SEMANTIC_POLICY,
+  proceduralManifest_default as PROCEDURAL_CERTIFICATION,
   createGenerationBrief,
   createGuidedBrief,
   normalizeGuidedGoal,
+  publishProceduralDaily,
   toGuidedPuzzle,
   validateCandidateAgainstBrief,
-  validatePuzzleCandidate
+  validatePuzzleCandidate,
+  verifyCandidateArtifact
 };

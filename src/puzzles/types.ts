@@ -1,4 +1,14 @@
 import type { GitAction, PuzzleTarget, Repository } from "../engine";
+import type { Locale } from "../i18n/locales";
+
+export interface PuzzleLocalization {
+  title: string;
+  description: string;
+  objectives: string[];
+  hints: string[];
+  commitMessages: Record<string, string>;
+}
+export type PuzzleLocalizations = Record<Locale, PuzzleLocalization>;
 
 /** Values that can cross the puzzle publication boundary without coercion. */
 export type JsonPrimitive = string | number | boolean | null;
@@ -55,6 +65,8 @@ export interface PublicPuzzleDefinition {
   parCommands?: number;
   hints: string[];
   actionRequirements?: ActionRequirement[];
+  /** Optional translated player facing story text. Repository identity and mechanics stay canonical. */
+  localizations?: PuzzleLocalizations;
 }
 
 /** Private data retained by a publisher for an explicit future solution reveal. */

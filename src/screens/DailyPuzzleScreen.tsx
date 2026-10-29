@@ -3,6 +3,7 @@ import { Button } from "../components/Button/Button";
 import { useDailyCompletion } from "../hooks/useDailyCompletion";
 import { useDailyPuzzle } from "../hooks/useDailyPuzzle";
 import { useI18n } from "../i18n/I18nProvider";
+import { localizePuzzle } from "../puzzles/localization";
 import { SolveScreen } from "./SolveScreen";
 
 interface DailyPuzzleScreenProps {
@@ -10,7 +11,7 @@ interface DailyPuzzleScreenProps {
 }
 
 export function DailyPuzzleScreen({ onNavigate }: DailyPuzzleScreenProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const daily = useDailyPuzzle();
   const synced = useDailyCompletion(daily.status === "ready" ? daily.puzzle : undefined);
 
@@ -20,7 +21,7 @@ export function DailyPuzzleScreen({ onNavigate }: DailyPuzzleScreenProps) {
     return (
       <SolveScreen
         key={`${daily.puzzle.id}:${daily.puzzle.version}`}
-        puzzle={daily.puzzle}
+        puzzle={localizePuzzle(daily.puzzle, locale)}
         syncedCompletion={synced.completion}
         onNavigate={onNavigate}
       />
