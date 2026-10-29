@@ -9,7 +9,7 @@ import { resolve } from "node:path";
 const localRequire = createRequire(resolve("daily-review.local/sql-runtime/package.json"));
 const { PGlite } = localRequire("@electric-sql/pglite");
 const db = new PGlite();
-const migrationPath = resolve("supabase/migrations/20261028071144_procedural_daily_candidate_queue.sql");
+const migrationPath = resolve("supabase/migrations/20261029162003_procedural_daily_candidate_queue.sql");
 const fp = number => Number(number).toString(16).padStart(64, "0");
 const defaultSource = fp(1000);
 

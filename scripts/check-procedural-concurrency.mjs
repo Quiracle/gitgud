@@ -36,8 +36,8 @@ const migrationFiles = [
   "202610090001_ai_daily_generation.sql",
   "202610100001_generation_quality_metrics.sql",
   "202610110002_daily_par_commands.sql",
-  "20261027000007_deterministic_daily_generation.sql",
-  "20261028071144_procedural_daily_candidate_queue.sql",
+  "20261029161959_deterministic_daily_generation.sql",
+  "20261029162003_procedural_daily_candidate_queue.sql",
 ];
 
 try {

@@ -22,7 +22,7 @@ try {
     );
     create table public.daily_generation_runs (id uuid primary key default gen_random_uuid(), published_on date not null, status text not null);
   `);
-  await db.exec(await readFile(resolve("supabase/migrations/20261027000007_deterministic_daily_generation.sql"), "utf8"));
+  await db.exec(await readFile(resolve("supabase/migrations/20261029161959_deterministic_daily_generation.sql"), "utf8"));
   const fingerprint = "a".repeat(64);
   const reserve = async (date, difficulty, seed, template, certificate = fingerprint) => {
     const result = await db.query("select public.reserve_deterministic_daily($1::date,$2,$3,$4,$5) as reservation", [date, difficulty, seed, template, certificate]);

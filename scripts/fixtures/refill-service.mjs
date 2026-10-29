@@ -21,7 +21,7 @@ await db.exec([
   "create table public.daily_puzzles (id text primary key, published_on date not null, is_current boolean not null default true, difficulty text not null);",
   "create table public.daily_puzzle_private (puzzle_id text primary key references public.daily_puzzles(id), solution_commands jsonb not null);",
 ].join("\n"));
-await db.exec(await readFile("supabase/migrations/20261028071144_procedural_daily_candidate_queue.sql", "utf8"));
+await db.exec(await readFile("supabase/migrations/20261029162003_procedural_daily_candidate_queue.sql", "utf8"));
 await db.exec("set role service_role");
 if (mode !== "fresh") await db.query("select public.register_procedural_candidates($1::jsonb)", [JSON.stringify([old])]);
 if (reserved) {

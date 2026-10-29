@@ -47,7 +47,7 @@ if (manifest.sourceFingerprint !== sourceFingerprint) throw new Error("Procedura
 const localRequire = createRequire(resolve("daily-review.local/sql-runtime/package.json"));
 const { PGlite } = localRequire("@electric-sql/pglite");
 const db = new PGlite();
-const migration = await readFile("supabase/migrations/20261028071144_procedural_daily_candidate_queue.sql", "utf8");
+const migration = await readFile("supabase/migrations/20261029162003_procedural_daily_candidate_queue.sql", "utf8");
 await db.exec(`create role anon; create role authenticated; create role service_role bypassrls;
   create table public.daily_generation_briefs (
     published_on date primary key, selected_difficulty text not null, seed text not null,
