@@ -37,6 +37,8 @@ node scripts/check-procedural-publication.mjs
 
 These checks run the actual migration and refill CLI against isolated Postgres, including reserve selection, retry identity, certificate upgrades, incompatible-proof rejection, legacy reservations, input validation, RLS, and role privileges. The publication check applies the daily migration chain and exercises the real publisher/store adapter and publication RPC, checking public/private separation, par metadata, run metadata, fallback story, retries, and refill after an empty queue. The worker's network boundary and the publication check's database client are local adapters; these checks do not test hosted concurrency or replace staging. They add no runtime dependency to the game.
 
+The public-repository-only `.github/workflows/check-daily-generation.yml` runs these checks on pull requests without provider or Supabase secrets. It also starts PostgreSQL already installed on the disposable runner and runs `scripts/check-procedural-concurrency.mjs`, which verifies real concurrent reservation/publication transactions. That script accepts only a fresh local database named `gitgud_generation_check` through `DAILY_SQL_TEST_URL`; never point it at an application database. This CI check passed on 2026-10-29. It verifies SQL coordination, not hosted Supabase/PostgREST deployment or sustained reserve replenishment.
+
 ## 2. Create and link Supabase
 
 1. In Supabase, create a project in a nearby region and save its database password.
