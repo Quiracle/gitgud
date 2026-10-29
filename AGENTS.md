@@ -270,7 +270,7 @@ Rules:
 
 The daily challenge is core; its mechanics do not depend on an AI provider. AI may author localized title and description text only. It never chooses or changes the graph, target, difficulty, command allowlist, objectives, hints, commit messages, proof, IDs, or publication metadata.
 
-Exactly one immutable official puzzle is published for each canonical date. Every player receives the same stored puzzle, difficulty, mechanics, and leaderboard for that date. A scheduled Supabase Edge Function reserves the difficulty and an individually certified procedural candidate once. Refreshes and retries reuse that reservation; archive entries are never regenerated. The procedural replacement remains under a rollout hold pending the acceptance evidence in `docs/procedural-daily-generation.md`.
+Exactly one immutable official puzzle is published for each canonical date. Every player receives the same stored puzzle, difficulty, mechanics, and leaderboard for that date. A scheduled Supabase Edge Function reserves the difficulty and an individually certified procedural candidate once. Refreshes and retries reuse that reservation; archive entries are never regenerated. The procedural replacement was deployed with owner approval on 2026-10-29; evidence and operational limitations are recorded in `docs/procedural-daily-generation.md`.
 
 ### Offline certification and runtime checks
 

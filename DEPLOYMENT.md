@@ -1,6 +1,6 @@
 # Deploy GitGud
 
-**Daily-generation rollout is on hold.** Runtime generation now uses procedurally synthesized, individually certified candidates in a private queue; the eight-template library is retained only for regression fixtures. Historical comparison, a local 90-day season, and owner playtests of two procedural examples have passed. Hosted publication, concurrency, and sustained scheduled refill remain unverified. Do not apply the new candidate-queue migration or enable the gated workflow/schedule in production until the [acceptance gates](docs/procedural-daily-generation.md) are met.
+**Deployed with owner approval on 2026-10-29.** The procedural publisher passed a controlled production smoke test on existing infrastructure: 150 candidates registered, tomorrow's puzzle published and loaded publicly, retry identity verified, earlier definitions unchanged, and daily jobs restored. Automatic refill is enabled and its first hosted run passed. See the [rollout evidence and limitations](docs/procedural-daily-generation.md). Do not rerun already-applied migrations.
 
 GitGud uses two managed deployments:
 
@@ -83,7 +83,7 @@ For GitHub, create an OAuth App. Use the production Vercel URL as its homepage a
 
 Provider client secrets belong only in the Supabase dashboard. Do not add them to Vercel or any `VITE_` variable. After the migration is applied, each new OAuth user receives a private `profiles` row protected by Row Level Security.
 
-## 3. Procedural daily publisher (rollout hold)
+## 3. Procedural daily publisher
 
 The runtime Edge Function accepts only individually verified procedural artifacts registered in the private candidate queue. It atomically reserves the date's difficulty and an eligible candidate, replays its private proof through the normal validator, and publishes the immutable puzzle. If a candidate is unavailable it returns `awaiting-candidate`; it does not fall back to a bundled template. AI remains optional localized story text and falls back to deterministic copy.
 
@@ -103,7 +103,7 @@ Automatic refill uses standard GitHub Actions Ubuntu runners. `Quiracle/gitgud` 
 
 The workflow has three jobs capped at 50 minutes each (up to 150 runner-minutes per invocation, including setup); the worker stops starting new searches after 42 minutes per job and exits earlier when its reserve is ready. Public logs contain aggregate health counts; candidate identities, seeds, operation patterns, and reserved dates stay in private reports. With the enable variable absent or false, scheduled refill jobs do not run. Manual dispatch still starts jobs on a public repository. A manually run local worker is also supported. Changing the runner type or removing the public-repository guard needs a fresh cost review.
 
-The procedural migration is `supabase/migrations/20261028071144_procedural_daily_candidate_queue.sql`; validate it in staging before any production application. No staging publication or release approval is documented yet. The following configuration and rollout steps are conditional on passing the acceptance gates.
+The applied procedural migration is `supabase/migrations/20261029162003_procedural_daily_candidate_queue.sql`, preceded by `20261029161959_deterministic_daily_generation.sql`. These filenames match the timestamps assigned by the connected deployment tool; SQL contents are unchanged from the reviewed migrations. The owner approved a controlled production rollout instead of provisioning a paid staging branch. The steps below document configuration and deployment order for future installations.
 
 Create one long random value for `DAILY_GENERATION_SECRET`. It is not a Supabase key and must never have a `VITE_` prefix.
 
