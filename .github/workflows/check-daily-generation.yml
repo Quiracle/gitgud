@@ -20,7 +20,7 @@ jobs:
   verify:
     # Keep this standard-runner check free if repository visibility changes.
     if: github.event.repository.private == false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     concurrency:
       group: daily-generation-check-${{ github.event.pull_request.number }}
@@ -38,11 +38,20 @@ jobs:
       - run: pnpm test
       - run: pnpm build
       - name: Install isolated SQL test runtime
-        run: npm install --prefix daily-review.local/sql-runtime --no-save --package-lock=false @electric-sql/pglite@0.5.12
+        run: npm install --prefix daily-review.local/sql-runtime --no-save --package-lock=false @electric-sql/pglite@0.5.12 pg@8.13.1
       - name: Check queue migration and privileges
         run: node scripts/check-procedural-migration.mjs
       - name: Check refill CLI and private log boundary
         run: node scripts/check-refill-worker.mjs
       - name: Check publication through the migration chain
         run: node scripts/check-procedural-publication.mjs
+      - name: Start disposable PostgreSQL on the runner
+        run: |
+          sudo systemctl start postgresql.service
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "ALTER USER postgres PASSWORD 'local-ci-only';"
+          sudo -u postgres createdb gitgud_generation_check
+      - name: Check concurrent reservations and publication
+        env:
+          DAILY_SQL_TEST_URL: postgresql://postgres:local-ci-only@127.0.0.1:5432/gitgud_generation_check
+        run: node scripts/check-procedural-concurrency.mjs
       # No hosted database, provider credentials, caches, or artifact uploads.
