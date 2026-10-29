@@ -10,7 +10,9 @@ permissions:
 
 jobs:
   refill:
-    if: github.event_name == 'workflow_dispatch' || vars.DAILY_PROCEDURAL_REFILL_ENABLED == 'true'
+    # Standard hosted runners are free for public repositories. Stop if the
+    # repository becomes private; changing the compute arrangement needs review.
+    if: github.event.repository.private == false && (github.event_name == 'workflow_dispatch' || vars.DAILY_PROCEDURAL_REFILL_ENABLED == 'true')
     runs-on: ubuntu-latest
     timeout-minutes: 50
     strategy:

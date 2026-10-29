@@ -1,6 +1,6 @@
 # Deploy GitGud
 
-**Daily-generation rollout is on hold.** Runtime generation now uses procedurally synthesized, individually certified candidates in a private queue; the eight-template library is retained only for regression fixtures. The replacement is not release-ready. Hard refill reliability, history novelty evaluation, staging publication, season evaluation, and human UI playtests remain outstanding. Do not apply the new candidate-queue migration or enable the gated workflow/schedule in production until the [acceptance gates](docs/procedural-daily-generation.md) are met.
+**Daily-generation rollout is on hold.** Runtime generation now uses procedurally synthesized, individually certified candidates in a private queue; the eight-template library is retained only for regression fixtures. Historical comparison, a local 90-day season, and owner playtests of two procedural examples have passed. Hosted publication, concurrency, and sustained scheduled refill remain unverified. Do not apply the new candidate-queue migration or enable the gated workflow/schedule in production until the [acceptance gates](docs/procedural-daily-generation.md) are met.
 
 GitGud uses two managed deployments:
 
@@ -32,9 +32,10 @@ For isolated verification of the new reservation SQL without a hosted database, 
 npm install --prefix daily-review.local/sql-runtime --no-save --package-lock=false @electric-sql/pglite@0.5.12
 node scripts/check-procedural-migration.mjs
 node scripts/check-refill-worker.mjs
+node scripts/check-procedural-publication.mjs
 ```
 
-These checks run the actual migration and refill CLI against isolated Postgres, including reserve selection, retry identity, certificate upgrades, incompatible-proof rejection, legacy reservations, input validation, RLS, and role privileges. The worker's network boundary is a local test fixture; these checks do not test hosted concurrency or replace staging. They add no runtime dependency to the game.
+These checks run the actual migration and refill CLI against isolated Postgres, including reserve selection, retry identity, certificate upgrades, incompatible-proof rejection, legacy reservations, input validation, RLS, and role privileges. The publication check applies the daily migration chain and exercises the real publisher/store adapter and publication RPC, checking public/private separation, par metadata, run metadata, fallback story, retries, and refill after an empty queue. The worker's network boundary and the publication check's database client are local adapters; these checks do not test hosted concurrency or replace staging. They add no runtime dependency to the game.
 
 ## 2. Create and link Supabase
 
@@ -93,6 +94,12 @@ node scripts/refill-daily-puzzles.mjs --difficulty medium --target 14
 It writes private artifacts and a local report under ignored `daily-review.local/candidate-reserve/`. It makes no network calls unless `--upload` is explicitly supplied. Upload requires `DAILY_GENERATION_URL` (HTTPS) and `DAILY_GENERATION_SECRET`; the service checks that worker and deployed evaluator source fingerprints match. Do not upload solution-bearing artifacts as CI workflow artifacts.
 
 The scheduled GitHub Actions workflow `.github/workflows/refill-daily-puzzles.yml` is gated: scheduled runs require repository variable `DAILY_PROCEDURAL_REFILL_ENABLED=true`; manual dispatch is explicit. It runs separate difficulty jobs and uploads to the private queue. This workflow and the SQL migration are implementation work, not evidence that release gates have passed.
+
+Local generation needs no paid staging branch or AI calls. Uploads use the configured existing Supabase project's function and database capacity. A separate hosted staging branch is optional infrastructure and must not be created without approval of its quoted cost. Local SQL and handler tests do not verify hosted concurrency or deployment configuration.
+
+Automatic refill uses standard GitHub Actions Ubuntu runners. `Quiracle/gitgud` was verified public on 2026-10-28; [GitHub documents standard hosted runners as free for public repositories](https://docs.github.com/en/actions/concepts/billing-and-usage). The workflow refuses to run if the repository becomes private, including on manual dispatch, so a visibility change cannot silently switch this worker to billed runner minutes. It does not upload artifacts or enable dependency caches. AI story tokens and usage of the existing Supabase project are separate.
+
+The workflow has three jobs capped at 50 minutes each (up to 150 runner-minutes per invocation, including setup); the worker stops starting new searches after 42 minutes per job and exits earlier when its reserve is ready. Public logs contain aggregate health counts; candidate identities, seeds, operation patterns, and reserved dates stay in private reports. With the enable variable absent or false, scheduled refill jobs do not run. Manual dispatch still starts jobs on a public repository. A manually run local worker is also supported. Changing the runner type or removing the public-repository guard needs a fresh cost review.
 
 The procedural migration is `supabase/migrations/20261028071144_procedural_daily_candidate_queue.sql`; validate it in staging before any production application. No staging publication or release approval is documented yet. The following configuration and rollout steps are conditional on passing the acceptance gates.
 

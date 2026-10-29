@@ -39,6 +39,11 @@ for (const mode of ["unused", "reserved", "fresh", "incompatible"]) {
   assert.equal(child.status, mode === "incompatible" ? 1 : 0, child.stderr || child.stdout);
   const report = JSON.parse(await readFile(resolve(output, "report-easy.local.json"), "utf8"));
   const service = JSON.parse(await readFile(resolve(output, "service-result.private.json"), "utf8"));
+  const publicLog = child.stdout + child.stderr;
+  for (const privateValue of [old.id, spare.id, "f".repeat(64), "worker-fresh", "2099-02-01", '"patterns"', '"strategyCounts"', '"reservedDate"']) {
+    assert(!publicLog.includes(privateValue), "Worker logs must not expose private candidate diagnostics: " + privateValue);
+  }
+  for (const pattern of Object.keys(report.patterns)) assert(!publicLog.includes(pattern));
   assert.equal(report.available, 1);
   if (mode === "incompatible") {
     assert.equal(report.recertified, 0);

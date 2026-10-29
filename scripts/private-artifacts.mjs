@@ -26,7 +26,7 @@ export async function readPrivateJson(directory, name) {
     if (!(error instanceof SyntaxError)) throw error;
     const retained = name + ".invalid-" + randomUUID();
     await rename(target, localFile(directory, retained));
-    console.warn("Retained interrupted private artifact as " + retained + "; continuing refill.");
+    console.warn("Retained interrupted private artifact for local diagnosis; continuing refill.");
     return undefined;
   }
 }

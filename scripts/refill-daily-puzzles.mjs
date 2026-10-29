@@ -193,12 +193,17 @@ for (let index = start; index < start + maxSeeds && (available < target || !dive
     if (available >= target && diversityReady() && !staleCandidates.some(item => item.reservedDate)) break;
   }
   report.available = available;
-  console.log(`${difficulty}: seed ${index}; available ${available}/${target}; qualified this run ${report.added}; unknown ${report.unknown}`);
+  console.log(`${difficulty}: attempted ${report.attempted}; available ${available}/${target}; qualified this run ${report.added}; unknown ${report.unknown}`);
   await writePrivateJson(directory, "report-" + difficulty + ".local.json", report);
 }
 report.strategyCounts = strategyCounts;
 report.diversityReady = diversityReady();
-console.log(JSON.stringify({ ...report, searches: undefined }, null, 2));
+// Public CI logs get aggregate health only. Candidate identities, source seeds,
+// operation patterns and reserved dates stay in the private local report.
+console.log(JSON.stringify({ difficulty, target, available, attempted: report.attempted,
+  added: report.added, rejected: report.rejected, unknown: report.unknown,
+  recertified: report.recertified, recertificationFailures: report.recertificationFailures.length,
+  diversityReady: report.diversityReady }, null, 2));
 await writePrivateJson(directory, "report-" + difficulty + ".local.json", report);
 if (available < target || !diversityReady() || report.recertificationFailures.some(item => item.reservedDate) || staleCandidates.some(item => item.reservedDate)) {
   console.error("Reserve is below target or a reserved date still needs certification. Retained certified progress; no unproven puzzle was accepted."); process.exitCode = 1;
