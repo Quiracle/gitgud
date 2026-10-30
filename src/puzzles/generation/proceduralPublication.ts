@@ -1,4 +1,4 @@
-import { applyStoryText } from "./editorial";
+import { applyStoryText, refreshTemplateHints } from "./editorial";
 import { verifyCandidateArtifact, type CandidateCertificate, type CandidateNovelty, type ProceduralCandidateArtifact } from "./candidateArtifact";
 import { validatePuzzleCandidate } from "../validateCandidate";
 import { CHICKEN_V2_SEMANTIC_POLICY } from "../chickenTheme";
@@ -52,13 +52,14 @@ export async function publishProceduralDaily(date: string, dependencies: Procedu
   const artifact = await verifyCandidateArtifact(reservation.artifact, { sourceFingerprint: dependencies.sourceFingerprint });
   if (artifact.candidate.difficulty !== reservation.difficulty) throw new Error("Reserved artifact difficulty does not match the persisted daily difficulty.");
 
-  const candidate: PuzzleCandidate = {
+  // Reserved artifacts keep the hints they were certified with; hints sit outside the mechanics digest.
+  const candidate: PuzzleCandidate = refreshTemplateHints({
     ...structuredClone(artifact.candidate),
     id: `daily-${date}`,
     slug: `daily-${date}`,
     publishedOn: date,
     version: 1,
-  };
+  }, "procedural");
   const runId = await store.startRun({
     date,
     difficulty: reservation.difficulty,

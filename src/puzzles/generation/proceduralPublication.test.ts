@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { PuzzleCandidate, ValidatedPuzzle, PuzzleDifficulty } from "../types";
 import { createTemplateCandidate } from "./templates";
+import { createTemplateLocalizations } from "./editorial";
 import { createCandidateArtifact, type ProceduralCandidateArtifact } from "./candidateArtifact";
 import { publishProceduralDaily, type ProceduralPublicationStore, type ProceduralReservation, type ProceduralRunMetadata } from "./proceduralPublication";
 
@@ -83,6 +84,22 @@ function mechanics(value: ValidatedPuzzle["puzzle"] | PuzzleCandidate) {
 }
 
 describe("procedural daily publication", () => {
+  it("rebuilds the hints of a reserved artifact and never publishes its final command", async () => {
+    const artifact = await fixture();
+    artifact.candidate.hints = ["Compare main with the target."];
+    const localizations = createTemplateLocalizations(artifact.candidate, "procedural", "publication-fixture");
+    for (const locale of ["en", "ca", "es"] as const) localizations[locale].hints = ["stale"];
+    artifact.candidate.localizations = localizations;
+    const store = new MemoryStore();
+    store.pool.set("medium", artifact);
+    await publishProceduralDaily(DATE, dependencies(store));
+    const { puzzle } = store.publishedRows[0].value;
+    expect(puzzle.hints.join(" ")).toContain("One route starts with");
+    expect(puzzle.hints.join(" ")).not.toContain(artifact.candidate.solutionCommands.at(-1)!);
+    expect(puzzle.localizations!.ca.hints).toHaveLength(puzzle.hints.length);
+    expect(puzzle.localizations!.es.hints[0]).not.toBe("stale");
+  });
+
   it("uses the persisted candidate and difficulty on retry, and keeps its proof private", async () => {
     const artifact = await fixture();
     const store = new MemoryStore();

@@ -2098,13 +2098,58 @@ var VALUE_NAMES = {
   gold: { en: "gold", ca: "daurat", es: "dorado" },
   outline: { en: "outline", ca: "contorn", es: "contorno" }
 };
+var STRATEGY_HINTS = {
+  dependency: {
+    en: "Inspect the linked changes in order; a later change may depend on an earlier value.",
+    ca: "Revisa els canvis relacionats per ordre; un canvi posterior pot dependre d'un valor anterior.",
+    es: "Inspecciona los cambios relacionados en orden; un cambio posterior puede depender de un valor anterior."
+  },
+  "prepare-and-integrate": {
+    en: "You can prepare work on another branch before integrating it; also check main for any unwanted change.",
+    ca: "Pots preparar feina en una altra branca abans d'integrar-la; comprova tamb\xE9 si hi ha cap canvi no desitjat a main.",
+    es: "Puedes preparar trabajo en otra rama antes de integrarlo; comprueba tambi\xE9n si hay alg\xFAn cambio no deseado en main."
+  },
+  "clean-room-integration": {
+    en: "Useful work is bundled with temporary changes. Consider what a whole branch contributes, and what must be restored afterward.",
+    ca: "La feina \xFAtil est\xE0 agrupada amb canvis temporals. Considera qu\xE8 aporta una branca sencera i qu\xE8 cal restaurar despr\xE9s.",
+    es: "El trabajo \xFAtil est\xE1 agrupado con cambios temporales. Considera qu\xE9 aporta una rama entera y qu\xE9 debes restaurar despu\xE9s."
+  }
+};
+var HINT_COPY = {
+  en: {
+    inspectCommit: (reference) => `Inspect the changes in commit ${reference} and compare them with the target.`,
+    inspectBranch: (reference) => `Inspect the changes on branch ${reference} and compare them with the target.`,
+    start: (commands2) => `One route starts with ${commands2}.`,
+    next: (commands2) => `Next: ${commands2}.`,
+    then: ", then ",
+    on: (branch, facts) => `On ${branch}: ${facts}.`,
+    last: "One last step finishes the route.",
+    needs: (branch, facts) => `${branch} still needs: ${facts}.`
+  },
+  ca: {
+    inspectCommit: (reference) => `Revisa els canvis del commit ${reference} i compara'ls amb l'objectiu.`,
+    inspectBranch: (reference) => `Revisa els canvis de la branca ${reference} i compara'ls amb l'objectiu.`,
+    start: (commands2) => `Una ruta comen\xE7a amb ${commands2}.`,
+    next: (commands2) => `Despr\xE9s: ${commands2}.`,
+    then: ", despr\xE9s ",
+    on: (branch, facts) => `A ${branch}: ${facts}.`,
+    last: "Un \xFAltim pas acaba la ruta.",
+    needs: (branch, facts) => `A ${branch} encara li falta: ${facts}.`
+  },
+  es: {
+    inspectCommit: (reference) => `Inspecciona los cambios del commit ${reference} y comp\xE1ralos con el objetivo.`,
+    inspectBranch: (reference) => `Inspecciona los cambios de la rama ${reference} y comp\xE1ralos con el objetivo.`,
+    start: (commands2) => `Una ruta empieza con ${commands2}.`,
+    next: (commands2) => `Despu\xE9s: ${commands2}.`,
+    then: ", despu\xE9s ",
+    on: (branch, facts) => `En ${branch}: ${facts}.`,
+    last: "Un \xFAltimo paso termina la ruta.",
+    needs: (branch, facts) => `A ${branch} a\xFAn le falta: ${facts}.`
+  }
+};
 function createTemplateLocalizations(candidate, family, seed) {
   const themeIndex = hash(`${family}|${seed}`) % THEMES.en.length;
-  const firstSolutionCommand = candidate.solutionCommands[0];
-  const parsedFirstCommand = firstSolutionCommand ? parseGitCommand(firstSolutionCommand) : void 0;
-  const firstCommitReference = parsedFirstCommand?.ok && (parsedFirstCommand.action.type === "cherry-pick" || parsedFirstCommand.action.type === "revert") ? parsedFirstCommand.action.commit : void 0;
-  const step = firstSolutionCommand ?? "git log";
-  const hintStyle = getHintStyle(candidate, family);
+  const hints = createHints(candidate, family);
   const empty = (locale) => ({
     en: "the repository's existing work",
     ca: "la feina que ja hi ha al repositori",
@@ -2121,42 +2166,6 @@ function createTemplateLocalizations(candidate, family, seed) {
     ca: ["Fes que main coincideixi amb la il\xB7lustraci\xF3 objectiu."],
     es: ["Haz que main coincida con la ilustraci\xF3n objetivo."]
   })[locale];
-  const hints = (locale) => {
-    const first = {
-      dependency: {
-        en: "Inspect the linked changes in order; a later change may depend on an earlier value.",
-        ca: "Revisa els canvis relacionats per ordre; un canvi posterior pot dependre d'un valor anterior.",
-        es: "Inspecciona los cambios relacionados en orden; un cambio posterior puede depender de un valor anterior."
-      },
-      repair: {
-        en: "Compare main with the target and identify any current change that needs repair.",
-        ca: "Compara main amb l'objectiu i identifica si cal corregir algun canvi actual.",
-        es: "Compara main con el objetivo e identifica si hay alg\xFAn cambio actual que corregir."
-      },
-      bundle: {
-        en: "Review the useful changes across the branches and compare them with the target.",
-        ca: "Revisa els canvis \xFAtils de les branques i compara'ls amb l'objectiu.",
-        es: "Revisa los cambios \xFAtiles de las ramas y comp\xE1ralos con el objetivo."
-      },
-      "prepare-and-integrate": {
-        en: "You can prepare work on another branch before integrating it; also check main for any unwanted change.",
-        ca: "Pots preparar feina en una altra branca abans d'integrar-la; comprova tamb\xE9 si hi ha cap canvi no desitjat a main.",
-        es: "Puedes preparar trabajo en otra rama antes de integrarlo; comprueba tambi\xE9n si hay alg\xFAn cambio no deseado en main."
-      },
-      "clean-room-integration": {
-        en: "Useful work is bundled with temporary changes. Consider what a whole branch contributes, and what must be restored afterward.",
-        ca: "La feina \xFAtil est\xE0 agrupada amb canvis temporals. Considera qu\xE8 aporta una branca sencera i qu\xE8 cal restaurar despr\xE9s.",
-        es: "El trabajo \xFAtil est\xE1 agrupado con cambios temporales. Considera qu\xE9 aporta una rama entera y qu\xE9 debes restaurar despu\xE9s."
-      }
-    }[hintStyle][locale];
-    const second = firstCommitReference ? { en: `Inspect the changes in commit ${firstCommitReference} and compare them with the target.`, ca: `Revisa els canvis del commit ${firstCommitReference} i compara'ls amb l'objectiu.`, es: `Inspecciona los cambios del commit ${firstCommitReference} y comp\xE1ralos con el objetivo.` }[locale] : { en: "Compare the changes on each branch with the target state.", ca: "Compara els canvis de cada branca amb l'estat objectiu.", es: "Compara los cambios de cada rama con el estado objetivo." }[locale];
-    const third = {
-      en: `One possible route begins with ${step}; this may not be the only way to reach the target.`,
-      ca: `Una ruta possible comen\xE7a amb ${step}; potser no \xE9s l'\xFAnica manera d'arribar a l'objectiu.`,
-      es: `Una ruta posible empieza con ${step}; quiz\xE1 no sea la \xFAnica forma de alcanzar el objetivo.`
-    }[locale];
-    return [first, second, third];
-  };
   const commitMessages = (locale) => Object.fromEntries(Object.entries(candidate.initialRepository.commits).map(([id, commit]) => {
     if (commit.changes.length === 0) {
       return [id, { en: "Start the repository", ca: "Inicia el repositori", es: "Inicia el repositorio" }[locale]];
@@ -2173,10 +2182,15 @@ function createTemplateLocalizations(candidate, family, seed) {
     title: title(locale),
     description: description(locale),
     objectives: objectives(locale),
-    hints: hints(locale),
+    hints: hints[locale],
     commitMessages: commitMessages(locale)
   });
   return { en: build("en"), ca: build("ca"), es: build("es") };
+}
+function refreshTemplateHints(candidate, family) {
+  const hints = createHints(candidate, family);
+  const localizations = candidate.localizations && Object.fromEntries(LOCALES2.map((locale) => [locale, { ...candidate.localizations[locale], hints: hints[locale] }]));
+  return { ...candidate, hints: hints.en, ...localizations ? { localizations } : {} };
 }
 function applyStoryText(candidate, input) {
   if (!plainRecord(input) || !exactKeys(input, LOCALES2)) return void 0;
@@ -2196,6 +2210,97 @@ function applyStoryText(candidate, input) {
 }
 function safeStoryString(value, maximum) {
   return typeof value === "string" && value.trim().length > 0 && value.length <= maximum && !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(value) && !/(?:https?:\/\/|www\.|<\/?[a-z][^>]*>|```|`|\b(?:git|cherry-pick|revert|rebase|merge|checkout|switch|branch|commit)\b|\b[A-Za-z][A-Za-z0-9_-]{0,47}\b\s*(?:;|&&|\|))/i.test(value) && !/[<>`{}[\]\\]/.test(value);
+}
+function createHints(candidate, family) {
+  const route = traceRoute(candidate);
+  let shown = route.length;
+  while (shown > 0 && route[shown - 1].setup) shown -= 1;
+  shown = Math.max(0, shown - 1);
+  const strategy = STRATEGY_HINTS[getHintStyle(candidate, family)];
+  const reference = firstReference(candidate);
+  const reservedHints = (strategy ? 1 : 0) + (reference ? 1 : 0) + 1;
+  const steps = groupRouteSteps(route.slice(0, shown), DEFAULT_PUZZLE_LIMITS.maxHints - reservedHints);
+  const lastShownState = steps.at(-1)?.at(-1)?.targetBranchState ?? getSnapshot(candidate.initialRepository, candidate.initialRepository.branches[candidate.target.branch]);
+  const remaining = diffSnapshots(lastShownState, candidate.target.snapshot).filter((change) => change.to !== void 0);
+  return Object.fromEntries(LOCALES2.map((locale) => {
+    const copy = HINT_COPY[locale];
+    const inspect = reference && (reference.kind === "commit" ? copy.inspectCommit(reference.id) : copy.inspectBranch(reference.id));
+    const finish = remaining.length > 0 ? `${copy.last} ${copy.needs(candidate.target.branch, describeChanges(remaining, locale))}` : copy.last;
+    return [locale, [
+      ...strategy ? [strategy[locale]] : [],
+      ...inspect ? [inspect] : [],
+      ...steps.map((step, index) => describeRouteStep(step, index, locale)),
+      withinHintLimit(finish, copy.last)
+    ]];
+  }));
+}
+function traceRoute(candidate) {
+  let repository = cloneRepository(candidate.initialRepository);
+  return candidate.solutionCommands.map((command) => {
+    const branch = repository.currentBranch;
+    const result = executeCommand(repository, command);
+    const changes = result.ok ? diffSnapshots(getSnapshot(repository, repository.branches[branch]), getSnapshot(result.repository, result.repository.branches[branch])) : [];
+    if (result.ok) repository = result.repository;
+    const parsed = parseGitCommand(command);
+    return {
+      command,
+      branch,
+      changes,
+      setup: parsed.ok && (parsed.action.type === "switch" || parsed.action.type === "log"),
+      targetBranchState: getSnapshot(repository, repository.branches[candidate.target.branch])
+    };
+  });
+}
+function firstReference(candidate) {
+  const parsed = candidate.solutionCommands[0] ? parseGitCommand(candidate.solutionCommands[0]) : void 0;
+  if (!parsed?.ok) return void 0;
+  const { action } = parsed;
+  if (action.type === "cherry-pick" || action.type === "revert") return { kind: "commit", id: action.commit };
+  if (action.type === "switch" || action.type === "merge") return { kind: "branch", id: action.branch };
+  if (action.type === "rebase" || action.type === "interactive-rebase") return { kind: "branch", id: action.onto };
+  return void 0;
+}
+function groupRouteSteps(route, maxSteps) {
+  const steps = [];
+  for (const item of route) {
+    const previous = steps.at(-1);
+    if (previous?.at(-1)?.setup) previous.push(item);
+    else steps.push([item]);
+  }
+  while (steps.length > maxSteps) {
+    let smallest = 0;
+    for (let index = 1; index < steps.length - 1; index += 1) {
+      if (steps[index].length + steps[index + 1].length < steps[smallest].length + steps[smallest + 1].length) smallest = index;
+    }
+    steps.splice(smallest, 2, [...steps[smallest], ...steps[smallest + 1]]);
+  }
+  return steps;
+}
+function describeRouteStep(step, index, locale) {
+  const copy = HINT_COPY[locale];
+  const commands2 = step.map(({ command }) => formatRouteCommand(command)).join(copy.then);
+  const sentence = index === 0 ? copy.start(commands2) : copy.next(commands2);
+  const byBranch = /* @__PURE__ */ new Map();
+  for (const { branch, changes } of step) {
+    const net = byBranch.get(branch) ?? /* @__PURE__ */ new Map();
+    for (const change of changes) net.set(change.property, change);
+    byBranch.set(branch, net);
+  }
+  const effects = [...byBranch].filter(([, net]) => net.size > 0).map(([branch, net]) => copy.on(branch, describeChanges([...net.values()], locale)));
+  return withinHintLimit([sentence, ...effects].join(" "), sentence);
+}
+function describeChanges(changes, locale) {
+  return changes.slice(0, 3).map(({ property, to }) => {
+    const name = PROPERTY_NAMES[property]?.[locale] ?? property;
+    return `${name} \u2192 ${VALUE_NAMES[String(to)]?.[locale] ?? String(to)}`;
+  }).join(", ");
+}
+function formatRouteCommand(command) {
+  const [first, ...todo] = command.split("\n");
+  return todo.length > 0 ? `${first} (${todo.join(", ")})` : first;
+}
+function withinHintLimit(text2, fallback) {
+  return text2.length <= DEFAULT_PUZZLE_LIMITS.maxHintLength ? text2 : fallback;
 }
 function getHintStyle(candidate, family) {
   if (family === "clean-room-integration") return "clean-room-integration";
@@ -2574,13 +2679,13 @@ async function publishProceduralDaily(date, dependencies) {
   if (!reservation.artifact) return { status: "awaiting-candidate", date, difficulty: reservation.difficulty };
   const artifact = await verifyCandidateArtifact(reservation.artifact, { sourceFingerprint: dependencies.sourceFingerprint });
   if (artifact.candidate.difficulty !== reservation.difficulty) throw new Error("Reserved artifact difficulty does not match the persisted daily difficulty.");
-  const candidate = {
+  const candidate = refreshTemplateHints({
     ...structuredClone(artifact.candidate),
     id: `daily-${date}`,
     slug: `daily-${date}`,
     publishedOn: date,
     version: 1
-  };
+  }, "procedural");
   const runId = await store.startRun({
     date,
     difficulty: reservation.difficulty,
