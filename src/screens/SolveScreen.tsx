@@ -511,7 +511,7 @@ export function SolveScreen({
       )}
 
       <Dialog size="wide" open={panel === "goals"} title={t("goals.title")} onClose={closePanel}>
-        <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={240} className="self-center rounded sm:size-80" />
+        <PixelChicken look={chickenLookFromState(puzzle.target.snapshot)} size={160} className="self-center rounded sm:size-48" />
         <div className="flex flex-col gap-4 text-sm">
           {puzzle.kind === "daily" && <h3 className="text-base text-grey-50">{puzzle.title}</h3>}
           <p className="text-grey-50">{puzzle.description}</p>
