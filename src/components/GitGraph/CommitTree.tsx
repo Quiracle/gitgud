@@ -448,7 +448,7 @@ export function CommitCard({
   const ordered = [...branches].sort((a, b) => Number(b === currentBranch) - Number(a === currentBranch));
 
   const card = (
-    <div className="relative" style={{ width: CARD_W }}>
+    <div className="relative text-left" style={{ width: CARD_W }}>
       <div
         className={`flex flex-col overflow-hidden rounded border transition ${onSelect ? "group-hover:brightness-125 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-lime-400" : ""}`}
         // The card is filled with its own colour so no dark seam can show beside the tag at any zoom.
