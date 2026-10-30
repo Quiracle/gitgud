@@ -34,7 +34,7 @@ const sourceFingerprint = await dailyCertificateSource();
 const manifest = JSON.parse(await readFile("src/puzzles/generation/proceduralManifest.json", "utf8"));
 if (manifest.sourceFingerprint !== sourceFingerprint) throw new Error("Evaluator manifest is stale; do not refill with mismatched certification code.");
 const compiled = await build({ stdin: {
-  contents: "export * from './src/puzzles/generation/synthesis'; export * from './src/puzzles/generation/procedural'; export * from './src/puzzles/generation/proceduralCertification'; export * from './src/puzzles/generation/proceduralQuality'; export * from './src/puzzles/generation/novelty'; export * from './src/puzzles/generation/decisionCore'; export * from './src/puzzles/generation/candidateArtifact'; export * from './src/puzzles/generation/publishedNovelty'; export {validatePuzzleCandidate} from './src/puzzles/validateCandidate'; export {CHICKEN_V2_SEMANTIC_POLICY} from './src/puzzles/chickenTheme';",
+  contents: "export * from './src/puzzles/generation/synthesis'; export * from './src/puzzles/generation/procedural'; export * from './src/puzzles/generation/proceduralCertification'; export * from './src/puzzles/generation/proceduralQuality'; export * from './src/puzzles/generation/novelty'; export * from './src/puzzles/generation/decisionCore'; export * from './src/puzzles/generation/candidateArtifact'; export * from './src/puzzles/generation/shortestRoute'; export * from './src/puzzles/generation/publishedNovelty'; export {validatePuzzleCandidate} from './src/puzzles/validateCandidate'; export {CHICKEN_V2_SEMANTIC_POLICY} from './src/puzzles/chickenTheme';",
   resolveDir: process.cwd(), loader: "ts",
 }, bundle: true, write: false, format: "esm", platform: "node" });
 const domain = await import(`data:text/javascript;base64,${Buffer.from(compiled.outputFiles[0].text).toString("base64")}`);
@@ -170,10 +170,15 @@ for (let index = start; index < start + maxSeeds && (available < target || !dive
     if (recertifyingId && verdict.status !== "certified") report.recertificationFailures.push({ candidateId: recertifyingId, reservedDate: previous.reservedDate, reason: verdict.status });
     if (verdict.status === "unknown") { report.unknown++; continue; }
     if (verdict.status !== "certified") { report.rejected++; continue; }
-    // Hints and the revealed solution follow the proof, so it must be proven shortest, not merely certified.
-    if (!recertifyingId && verdict.candidate.solutionCommands.length > search.excludedThroughDepth + 1) { report.rejected++; continue; }
+    // Hints and the revealed solution read this route, so the solver settles it here, once.
+    const settled = recertifyingId ? { candidate: verdict.candidate, excludedThroughDepth: search.excludedThroughDepth } : domain.settleShortestRoute(verdict.candidate, search.excludedThroughDepth, { maxStates: 150_000, maxTransitions: 2_000_000 });
+    if (!settled) { report.unknown++; continue; }
     if (!recertifyingId && difficulty !== "easy" && (strategyCounts[strategyKey(verdict.candidate)] ?? 0) >= Math.ceil(Math.max(target, available) / Math.min(4, target))) { report.rejected++; continue; }
-    const artifact = await domain.createCandidateArtifact(verdict, { sourceFingerprint, excludedThroughDepth: search.excludedThroughDepth });
+    // A quicker route can break the strategic-proof policy; such a puzzle is not worth keeping.
+    const artifact = await domain.createCandidateArtifact({ ...verdict, candidate: settled.candidate }, { sourceFingerprint, excludedThroughDepth: settled.excludedThroughDepth }).catch(error => {
+      if (recertifyingId) throw error;
+    });
+    if (!artifact) { report.rejected++; continue; }
     if (recertifyingId && artifact.id !== recertifyingId) throw new Error("Recertification changed the reserved candidate identity.");
     if (!recertifyingId && (knownMechanics.has(artifact.novelty.mechanicsHash) || knownCores.has(artifact.novelty.decisionCoreHash))) { report.rejected++; continue; }
     if (await dailyCertificateSource() !== sourceFingerprint) throw new Error("Evaluator source changed while searching. No further artifacts will be saved or uploaded.");
