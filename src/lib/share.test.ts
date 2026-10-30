@@ -18,7 +18,7 @@ describe("share text", () => {
 
   it("claims no time for an assisted run", () => {
     const text = shareText({ ...summary, assisted: true }, "x");
-    expect(text).toContain("solved with help");
+    expect(text).toContain("solution revealed");
     expect(text).not.toContain("2m 47s");
   });
 

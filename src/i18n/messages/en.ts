@@ -277,7 +277,7 @@ export const en = {
   "solve.solvedPlaceholder": "Solved! Exit to play more.",
 
   "result.title": "Congrats!",
-  "result.assistedTitle": "Solved with help",
+  "result.assistedTitle": "Solution revealed",
   "result.retries": "Retries:",
   "result.time": "Time taken:",
   "result.points": "Points:",
@@ -294,7 +294,7 @@ export const en = {
   "share.heading": "GitGud daily · {date}",
   "share.result": "{difficulty} puzzle, {result}.",
   "share.solvedIn": "solved in {time} with {retries}",
-  "share.solvedWithHelp": "solved with help",
+  "share.solvedWithHelp": "solution revealed",
   "share.cta": "Play today's puzzle: {url}",
   "share.x.post": "Post to X",
   "share.x.copied": "Image copied. Paste it into your post on X (Ctrl+V or ⌘V).",
@@ -378,8 +378,13 @@ export const en = {
   "giveUp.title": "Give up?",
   "giveUp.body": "Start over with the same timer, or reveal how to solve it. Revealing marks this puzzle as assisted and it earns 0 points.",
   "giveUp.reveal": "Reveal solution",
+  "giveUp.dailyBody": "This ends the run for good: you'll see the full solution, score 0 points and can't play this puzzle again.",
+  "giveUp.keepPlaying": "Keep playing",
+  "giveUp.unavailable": "The solution couldn't be loaded, so your run is still open. Check your connection and try again.",
 
   "solution.title": "How to solve it",
+  "solution.gaveUpNote": "This is the shortest route. This puzzle is finished: it earns 0 points and isn't ranked.",
+  "solution.seeResult": "See result",
   "solution.assistedNote": "Assisted run: you can still finish it, but it won't be ranked.",
 
   "hint.title": "Hint {number} of {total}",

@@ -1,6 +1,7 @@
 import { DEFAULT_PUZZLE_LIMITS } from "../policy";
 import { cloneRepository, diffSnapshots, executeCommand, getSnapshot, parseGitCommand } from "../../engine";
 import type { SemanticChange, SemanticState } from "../../engine";
+import { routeThroughFirstWin } from "../solutionRoute";
 import type { PuzzleCandidate, PuzzleLocalization, PuzzleLocalizations } from "../types";
 
 const LOCALES = ["en", "ca", "es"] as const;
@@ -235,7 +236,9 @@ function createHints(candidate: PuzzleCandidate, family: string): Record<Locale,
 
 function traceRoute(candidate: PuzzleCandidate): RouteCommand[] {
   let repository = cloneRepository(candidate.initialRepository);
-  return candidate.solutionCommands.map((command) => {
+  // Generation can run past the first win; the shortest route ends there.
+  const commands = routeThroughFirstWin(candidate, candidate.solutionCommands) ?? candidate.solutionCommands;
+  return commands.map((command) => {
     const branch = repository.currentBranch;
     const result = executeCommand(repository, command);
     const changes = result.ok

@@ -274,7 +274,7 @@ export const es: Messages = {
   "solve.solvedPlaceholder": "¡Resuelto! Sal para jugar a otro.",
 
   "result.title": "¡Enhorabuena!",
-  "result.assistedTitle": "Resuelto con ayuda",
+  "result.assistedTitle": "Solución revelada",
   "result.retries": "Reintentos:",
   "result.time": "Tiempo:",
   "result.points": "Puntos:",
@@ -291,7 +291,7 @@ export const es: Messages = {
   "share.heading": "GitGud diario · {date}",
   "share.result": "Dificultad {difficulty}, {result}.",
   "share.solvedIn": "resuelto en {time} con {retries}",
-  "share.solvedWithHelp": "resuelto con ayuda",
+  "share.solvedWithHelp": "solución revelada",
   "share.cta": "Juega al puzzle de hoy: {url}",
   "share.x.post": "Publicar en X",
   "share.x.copied": "Imagen copiada. Pégala en tu publicación de X (Ctrl+V o ⌘V).",
@@ -375,8 +375,13 @@ export const es: Messages = {
   "giveUp.title": "¿Te rindes?",
   "giveUp.body": "Vuelve a empezar con el mismo cronómetro o descubre cómo resolverlo. Si ves la solución, el puzzle queda como asistido y vale 0 puntos.",
   "giveUp.reveal": "Ver la solución",
+  "giveUp.dailyBody": "Esto termina la partida para siempre: verás la solución completa, tendrás 0 puntos y no podrás volver a jugar este puzzle.",
+  "giveUp.keepPlaying": "Seguir jugando",
+  "giveUp.unavailable": "No se ha podido cargar la solución, así que la partida sigue abierta. Comprueba la conexión y vuelve a intentarlo.",
 
   "solution.title": "Cómo resolverlo",
+  "solution.gaveUpNote": "Esta es la ruta más corta. El puzzle ha terminado: vale 0 puntos y no entra en la clasificación.",
+  "solution.seeResult": "Ver el resultado",
   "solution.assistedNote": "Partida asistida: puedes terminarla, pero no entrará en la clasificación.",
 
   "hint.title": "Pista {number} de {total}",

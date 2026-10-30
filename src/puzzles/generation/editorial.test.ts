@@ -66,8 +66,8 @@ describe("daily editorial copy", () => {
     for (const locale of ["en", "ca", "es"] as const) {
       expect(localized[locale].hints.join(" ")).not.toMatch(/only way|única|sola forma/i);
     }
-    const long = createTemplateLocalizations({ ...puzzle, solutionCommands: ["git revert b22", "git cherry-pick s14", "git revert b22"] }, "repair-family", "seed").en.hints;
-    expect(long[2]).toMatch(/^Next: git cherry-pick s14\./);
+    const long = createTemplateLocalizations({ ...puzzle, solutionCommands: ["git cherry-pick s14", "git switch main", "git revert b22", "git log"] }, "repair-family", "seed").en.hints;
+    expect(long.join(" ")).toContain("One route starts with git cherry-pick s14");
   });
 
   it("keeps the final command out of the published hints and says what is left instead", () => {
@@ -78,6 +78,13 @@ describe("daily editorial copy", () => {
     const withTrailingSwitch = createTemplateLocalizations({ ...puzzle, solutionCommands: ["git revert b22", "git cherry-pick s14", "git switch main"] }, "repair-family", "seed").en.hints;
     expect(withTrailingSwitch.join(" ")).not.toContain("git cherry-pick s14");
     expect(withTrailingSwitch.join(" ")).not.toContain("git switch main");
+  });
+
+  it("ends the route at the first win", () => {
+    const puzzle = candidate();
+    const hints = createTemplateLocalizations({ ...puzzle, solutionCommands: ["git revert b22", "git cherry-pick s14", "git revert s14", "git cherry-pick s14"] }, "repair-family", "seed").en.hints;
+    expect(hints.join(" ")).not.toContain("git revert s14");
+    expect(hints.join(" ")).not.toContain("git cherry-pick s14");
   });
 
   it("fits a ten-command proof inside the hint limits", () => {

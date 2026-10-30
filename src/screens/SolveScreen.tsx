@@ -83,6 +83,8 @@ export function SolveScreen({
   const [panel, setPanel] = useState<Panel>("none");
   const [confetti, setConfetti] = useState<{ x: number; y: number; key: number } | null>(null);
   const [loginOpen, setLoginOpen] = useState(false);
+  const [revealing, setRevealing] = useState(false);
+  const [revealFailed, setRevealFailed] = useState(false);
   const { status: authStatus } = useAuth();
 
   const canvas = useRef<HTMLDivElement>(null);
@@ -136,7 +138,7 @@ export function SolveScreen({
 
   // Celebrate, then show the result. Reopening a solved daily skips straight to the board.
   useEffect(() => {
-    if (!solved || session.solvedOnArrival) return;
+    if (!solved || session.solvedOnArrival || session.gaveUp) return;
     const g = goal.current?.getBoundingClientRect();
     setConfetti({ x: g ? g.left + g.width / 2 : window.innerWidth / 2, y: g ? g.top + g.height / 2 : 120, key: Date.now() });
     // Let the final command's result land on the graph before the popup covers it.
@@ -184,8 +186,18 @@ export function SolveScreen({
   }
 
   function openGiveUp() {
+    setRevealFailed(false);
     session.giveUp();
     setPanel("give-up");
+  }
+
+  async function surrenderDaily() {
+    setRevealing(true);
+    setRevealFailed(false);
+    const revealed = await session.surrenderDaily();
+    setRevealing(false);
+    if (revealed) setPanel("solution");
+    else setRevealFailed(true);
   }
 
   // Confirm only when the run has progress worth keeping.
@@ -406,21 +418,33 @@ export function SolveScreen({
       </Dialog>
 
       <Dialog open={panel === "give-up"} title={t("giveUp.title")} onClose={() => { session.resume(); closePanel(); }}>
-        <p className="text-sm text-grey-300">{t("giveUp.body")}</p>
-        <div className="flex flex-col gap-2">
-          <Button onClick={restart}>
-            <Icon name="forward_media" size={20} className="mr-2" />
-            {t("common.tryAgain")}
-          </Button>
-          <Button variant="outline" onClick={() => { session.revealSolution(); setPanel("solution"); }}>
-            {t("giveUp.reveal")}
-          </Button>
-        </div>
+        <p className="text-sm text-grey-300">{t(puzzle.kind === "daily" ? "giveUp.dailyBody" : "giveUp.body")}</p>
+        {revealFailed && <p role="alert" className="text-sm text-grey-300">{t("giveUp.unavailable")}</p>}
+        {puzzle.kind === "daily" ? (
+          <div className="flex flex-col gap-2">
+            <Button disabled={revealing} onClick={() => void surrenderDaily()}>
+              {t("giveUp.reveal")}
+            </Button>
+            <Button variant="outline" disabled={revealing} onClick={() => { session.resume(); closePanel(); }}>
+              {t("giveUp.keepPlaying")}
+            </Button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <Button onClick={restart}>
+              <Icon name="forward_media" size={20} className="mr-2" />
+              {t("common.tryAgain")}
+            </Button>
+            <Button variant="outline" onClick={() => { session.revealSolution(); setPanel("solution"); }}>
+              {t("giveUp.reveal")}
+            </Button>
+          </div>
+        )}
       </Dialog>
 
       <Dialog size="wide" open={panel === "solution"} title={t("solution.title")} onClose={() => { session.resume(); closePanel(); }}>
         <ol className="flex flex-col gap-2 text-sm text-grey-50">
-          {puzzle.hints.map((hint, index) => (
+          {(session.gaveUp ? session.solutionRoute : puzzle.hints).map((hint, index) => (
             <motion.li
               key={index}
               className="flex gap-2"
@@ -429,12 +453,16 @@ export function SolveScreen({
               transition={{ ...spring.soft, delay: 0.1 + index * 0.08 }}
             >
               <span className="text-lime-400">{index + 1}.</span>
-              <span>{hint}</span>
+              <span className={session.gaveUp ? "whitespace-pre-line font-secondary" : undefined}>{hint}</span>
             </motion.li>
           ))}
         </ol>
-        <p className="text-xs text-grey-400">{t("solution.assistedNote")}</p>
-        <Button onClick={restart}>{t("common.tryAgain")}</Button>
+        <p className="text-xs text-grey-400">{t(session.gaveUp ? "solution.gaveUpNote" : "solution.assistedNote")}</p>
+        {session.gaveUp ? (
+          <Button onClick={() => setPanel("result")}>{t("solution.seeResult")}</Button>
+        ) : (
+          <Button onClick={restart}>{t("common.tryAgain")}</Button>
+        )}
       </Dialog>
 
       <Dialog open={panel === "hint"} title={session.hintsTotal === 0 ? t("hint.none") : t("hint.title", { number: Math.max(1, session.hintsUsed), total: session.hintsTotal })} onClose={closePanel}>

@@ -217,3 +217,11 @@ describe("solves synced from other devices", () => {
     expect(unlocked["daily-regular"]).toBe(true);
   });
 });
+
+describe("dailySolveDates with a given-up daily", () => {
+  it("does not count the day, while an earlier assisted solve still does", () => {
+    const gaveUp = { kind: "daily" as const, puzzleId: "daily-2026-10-09", completedAt: "2026-10-09T12:00:00.000Z", assisted: true, gaveUp: true };
+    const assisted = { kind: "daily" as const, puzzleId: "daily-2026-10-08", completedAt: "2026-10-08T12:00:00.000Z", assisted: true };
+    expect([...dailySolveDates([gaveUp, assisted])]).toEqual(["2026-10-08"]);
+  });
+});

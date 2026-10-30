@@ -117,3 +117,17 @@ describe("solved puzzle replay data", () => {
     expect(store.latestCompletion("daily-2026-10-10", 2)).toBeUndefined();
   });
 });
+
+describe("giving up on a daily", () => {
+  it("saves the route as the run, keeps the player's history, and never counts as a solve", () => {
+    const store = new LocalProgressStore(new MemoryStorage(), () => Date.parse("2026-10-10T10:00:00Z"), () => "attempt-1");
+    const puzzle = createDailyFixture("2026-10-10");
+    const attempt = store.recordCommand(store.start(puzzle), { command: "git log", elapsedMs: 900, ok: true, output: "" }, false);
+    const done = store.surrender(attempt, ["git revert c3", "git cherry-pick c4"], 5_000);
+    expect(done).toMatchObject({ assisted: true, gaveUp: true, ranked: false, elapsedMs: 5_000, runCommands: ["git revert c3", "git cherry-pick c4"], runTranscriptStart: 1 });
+    expect(done.commands.map((entry) => entry.command)).toEqual(["git log", "git revert c3", "git cherry-pick c4"]);
+    expect(store.latestCompletion(puzzle.id, puzzle.version)?.gaveUp).toBe(true);
+    expect(store.stats()).toMatchObject({ completedRuns: 0, completedDailies: 0 });
+    expect(store.stats().bestElapsedMs).toBeUndefined();
+  });
+});

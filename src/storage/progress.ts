@@ -23,6 +23,8 @@ export interface StoredAttempt {
   serverUserId?: string;
   /** The solution was revealed: the run can finish but is never ranked. Survives refresh and restart. */
   assisted?: boolean;
+  /** The player gave up on a daily: the run ends on the revealed route, unsolved and unranked. */
+  gaveUp?: boolean;
   /**
    * Time spent with the puzzle open and visible, banked every few seconds. Restarts never
    * reset it; closing the app or hiding the tab pauses it. Only ever grows.
@@ -42,6 +44,8 @@ export interface CompletionRecord {
   commandCount: number;
   commands: AttemptCommand[];
   ranked: boolean;
+  /** Ended by giving up, so it never counts as a solve. */
+  gaveUp?: boolean;
   /** Account the solve was submitted for. Guest solves have none until claimed after login. */
   rankedUserId?: string;
   assisted?: boolean;
@@ -142,6 +146,20 @@ export class LocalProgressStore {
     return next;
   }
 
+  /** Ends a daily on the revealed route. The saved run replays as the finished tree on any later visit. */
+  surrender(attempt: StoredAttempt, route: string[], elapsedMs: number): CompletionRecord {
+    const steps = route.map((command) => ({ command, elapsedMs, ok: true, output: "" }));
+    return this.complete({
+      ...attempt,
+      assisted: true,
+      gaveUp: true,
+      commands: [...attempt.commands, ...steps],
+      commandCount: attempt.commands.length + steps.length,
+      runCommands: route,
+      runTranscriptStart: attempt.commands.length,
+    }, false, elapsedMs);
+  }
+
   markAssisted(attempt: StoredAttempt): StoredAttempt {
     const next: StoredAttempt = { ...attempt, assisted: true };
     this.saveAttempt(next);
@@ -174,6 +192,7 @@ export class LocalProgressStore {
       commands: attempt.commands,
       ranked,
       ...(attempt.assisted ? { assisted: true } : {}),
+      ...(attempt.gaveUp ? { gaveUp: true } : {}),
       runCommands: attempt.runCommands,
       runTranscriptStart: attempt.runTranscriptStart,
     };
@@ -267,7 +286,8 @@ export function browserProgressStore(): LocalProgressStore {
   return new LocalProgressStore(window.localStorage);
 }
 
-export function calculateStats(completions: readonly CompletionRecord[]): PlayerStats {
+export function calculateStats(records: readonly CompletionRecord[]): PlayerStats {
+  const completions = records.filter((item) => !item.gaveUp);
   const puzzleKeys = new Set(completions.map((item) => attemptKey(item.puzzleId, item.puzzleVersion)));
   const elapsed = completions.map((item) => item.elapsedMs);
   return {

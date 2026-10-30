@@ -36,6 +36,24 @@ export async function startDailyAttempt(
   return data;
 }
 
+/** Hands over the private route once a player gives up, and closes a signed-in player's attempt. */
+export async function revealDailySolution(
+  puzzle: Pick<PublicPuzzleDefinition, "id" | "version">,
+  run: { elapsedMs: number; restartCount: number },
+): Promise<string[]> {
+  const { data, error } = await requireSupabaseClient().rpc("reveal_daily_solution", {
+    target_puzzle_id: puzzle.id,
+    target_puzzle_version: puzzle.version,
+    submitted_elapsed_ms: run.elapsedMs,
+    submitted_restart_count: run.restartCount,
+  });
+  if (error) throw new Error(`The solution is unavailable: ${error.message}`);
+  if (!Array.isArray(data) || !data.length || !data.every((command) => typeof command === "string")) {
+    throw new Error("The solution service returned an invalid route.");
+  }
+  return data;
+}
+
 export async function submitDailyResult(
   serverAttemptId: string,
   completion: CompletionRecord,

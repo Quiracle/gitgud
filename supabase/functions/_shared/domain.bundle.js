@@ -2045,6 +2045,20 @@ function toGuidedPuzzle(candidate, lessonId) {
   };
 }
 
+// src/puzzles/solutionRoute.ts
+function routeThroughFirstWin(puzzle, commands2) {
+  let repository = cloneRepository(puzzle.initialRepository);
+  const actions = [];
+  for (const [index, command] of commands2.entries()) {
+    const result = executeCommand(repository, command);
+    if (!result.ok) return void 0;
+    repository = result.repository;
+    actions.push(result.action);
+    if (validatePuzzleCompletion(puzzle, repository, actions).solved) return commands2.slice(0, index + 1);
+  }
+  return void 0;
+}
+
 // src/puzzles/generation/editorial.ts
 var LOCALES2 = ["en", "ca", "es"];
 var THEMES = {
@@ -2236,7 +2250,8 @@ function createHints(candidate, family) {
 }
 function traceRoute(candidate) {
   let repository = cloneRepository(candidate.initialRepository);
-  return candidate.solutionCommands.map((command) => {
+  const commands2 = routeThroughFirstWin(candidate, candidate.solutionCommands) ?? candidate.solutionCommands;
+  return commands2.map((command) => {
     const branch = repository.currentBranch;
     const result = executeCommand(repository, command);
     const changes = result.ok ? diffSnapshots(getSnapshot(repository, repository.branches[branch]), getSnapshot(result.repository, result.repository.branches[branch])) : [];

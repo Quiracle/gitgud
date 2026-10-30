@@ -76,15 +76,15 @@ Home (guest play is immediately available)
   -> Contextual daily action
        -> Not played: Start daily game
        -> Active: Continue daily game
-       -> Surrendered: Try again
+       -> Gave up: See the solution and result
        -> Completed: See result and leaderboard
   -> Daily challenge
        -> View command history
        -> View goals and hints
        -> Exit to Home without losing the active attempt
        -> Give up
-            -> Try again
-            -> Reveal solution/result (assisted, zero points)
+            -> Keep playing
+            -> Reveal solution (the daily ends: completed tree, full route, zero points, no replay)
        -> Solve
             -> Result popup
                  -> Time, retries, points, and assisted status
@@ -277,7 +277,7 @@ Exactly one immutable official puzzle is published for each canonical date. Ever
 - `pnpm daily:refill` proposes repository structures and targets, discovers private proofs, and exhaustively excludes shorter solutions using the actual simulator. Individual artifacts bind the mechanics, proof, novelty metadata, and evaluator source fingerprint. Default execution is offline; uploading requires explicit `--upload` and private service configuration.
 - `pnpm daily:check` checks the evaluator source manifest and the legacy template regression registry. `pnpm daily:certify` updates that legacy registry only. Neither command certifies newly proposed procedural candidates. Incomplete searches remain unknown; never fabricate or hand-edit search evidence.
 - The proposed minimum certified solution lengths are 2 commands for easy, 4 for medium, and 6 for hard. These are quality thresholds, not game command limits, scoring inputs, or completion requirements.
-- Hard private proofs may have six to ten commands; certification still excludes all solutions through five commands. Report the proven lower bound and known proof length separately instead of claiming a longer proof is shortest.
+- Hints and the revealed solution follow the private proof, so the refill worker only accepts a proof whose length is one more than its exhaustively excluded depth: that makes it a proven shortest route. The browser and Edge Function cannot run this search; it takes tens of seconds per hard puzzle. Candidates certified earlier may hold longer hard proofs that were never proven shortest.
 - At publication, the Edge Function verifies the reserved artifact's source and mechanics binding, then replays its private proof through the ordinary engine and completion validator. Expensive exhaustive search happens in the offline worker.
 - `parCommands` is derived from the private proof through its first win and remains advisory only.
 - Medium/hard proposals need an integration or rebase proof, no predecessor-copy chain in that proof, and no equally short copy-only solution. The eight templates in `src/puzzles/generation/templates.ts` are regression fixtures, not the daily content supply. Keep all player solutions valid under the daily state-only rules; never enforce the generator's proof strategy on players.
@@ -377,7 +377,7 @@ Restart behavior:
 
 For scoring, a retry is an explicit restart. Invalid commands, failed conflict-producing commands, and opening a hint do not increment retries; hints are tracked separately. Restarting resets only the simulated repository and puzzle UI state. It must never reset or reduce elapsed time: after any number of retries, `elapsedMs` is still measured from the first start of that attempt, subject only to the documented hidden-page pause policy.
 
-Giving up marks the run as surrendered and pauses it. Show a result popup that lets the player restart or reveal the solution. Revealing the solution marks that puzzle/date as assisted. The player may still restart and complete it, but the completion earns zero points and is excluded from ranked leaderboard submission. Do not clear the assisted flag by refreshing or restarting.
+Giving up pauses the run and asks for confirmation. On a daily or archive puzzle, revealing the solution ends that puzzle for the player for good: the private route comes from `reveal_daily_solution`, the tree is rebuilt on it, and the run is saved as a given-up completion that earns zero points, is never ranked, never counts as a solve for streaks or statistics, and cannot be replayed. If the route cannot be loaded, nothing changes and the run stays playable. Lessons and guided practice stay replayable: revealing marks the run assisted, and the player may restart and finish it unranked. Do not clear the assisted flag by refreshing or restarting.
 
 Record every submitted command in the run transcript, including failed and unsupported commands, its relative timestamp, and its user-facing result. This is the source for the command-history view and optional debugging; it is not a prescribed solution sequence.
 
@@ -443,7 +443,7 @@ Version the localStorage schema and provide migrations or a safe fallback when i
 
 ## Leaderboard
 
-The primary leaderboard is per daily challenge, not one all-time table. Only completed, unassisted attempts may be submitted: by signed-in players, or by guests under a chosen guest name through `submit_guest_daily_result`. The browser keeps a random guest token and the server stores only its hash. Guest entries are labelled as guests, and they move to the account (and the guest name is removed) once that device signs in and its solves are claimed. Historical challenges retain their own leaderboards. A player who revealed the solution receives zero points and may finish for learning/progress, but that result is not ranked.
+The primary leaderboard is per daily challenge, not one all-time table. Only completed, unassisted attempts may be submitted: by signed-in players, or by guests under a chosen guest name through `submit_guest_daily_result`. The browser keeps a random guest token and the server stores only its hash. Guest entries are labelled as guests, and they move to the account (and the guest name is removed) once that device signs in and its solves are claimed. Historical challenges retain their own leaderboards. A player who gave up receives zero points and that run is not ranked.
 
 Solve time and restart count are the canonical scoring inputs shown in the final flow. Keep the exact points formula in one versioned scoring-policy module so it can be tuned without rewriting stored attempts. Persist the raw inputs even when displaying derived points. Until a points formula is approved, use the deterministic ordering below and do not invent constants in UI components.
 

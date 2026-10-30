@@ -170,6 +170,8 @@ for (let index = start; index < start + maxSeeds && (available < target || !dive
     if (recertifyingId && verdict.status !== "certified") report.recertificationFailures.push({ candidateId: recertifyingId, reservedDate: previous.reservedDate, reason: verdict.status });
     if (verdict.status === "unknown") { report.unknown++; continue; }
     if (verdict.status !== "certified") { report.rejected++; continue; }
+    // Hints and the revealed solution follow the proof, so it must be proven shortest, not merely certified.
+    if (!recertifyingId && verdict.candidate.solutionCommands.length > search.excludedThroughDepth + 1) { report.rejected++; continue; }
     if (!recertifyingId && difficulty !== "easy" && (strategyCounts[strategyKey(verdict.candidate)] ?? 0) >= Math.ceil(Math.max(target, available) / Math.min(4, target))) { report.rejected++; continue; }
     const artifact = await domain.createCandidateArtifact(verdict, { sourceFingerprint, excludedThroughDepth: search.excludedThroughDepth });
     if (recertifyingId && artifact.id !== recertifyingId) throw new Error("Recertification changed the reserved candidate identity.");

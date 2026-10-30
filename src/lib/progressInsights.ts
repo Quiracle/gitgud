@@ -3,13 +3,13 @@ import { dailyDate } from "./dailyDate";
 
 /** The parts of a solve that streaks and the solve-time graph need; synced solves carry only these. */
 export type DailySolve = Pick<CompletionRecord, "kind" | "puzzleId" | "completedAt"> &
-  Partial<Pick<CompletionRecord, "elapsedMs" | "assisted">>;
+  Partial<Pick<CompletionRecord, "elapsedMs" | "assisted" | "gaveUp">>;
 
 /** Date (YYYY-MM-DD) of each official daily solved on its own day. */
 export function dailySolveDates(completions: readonly DailySolve[]): Set<string> {
   const dates = new Set<string>();
   for (const completion of completions) {
-    if (completion.kind !== "daily") continue;
+    if (completion.kind !== "daily" || completion.gaveUp) continue;
     // Corrected republications get a version suffix: daily-2026-10-10-v2.
     const puzzleDate = /^daily-(\d{4}-\d{2}-\d{2})(?:-v\d+)?$/.exec(completion.puzzleId)?.[1];
     // Archive replays don't count: the solve must happen on the puzzle's own day.

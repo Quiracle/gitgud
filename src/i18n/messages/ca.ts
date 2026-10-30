@@ -274,7 +274,7 @@ export const ca: Messages = {
   "solve.solvedPlaceholder": "Resolt! Surt per jugar-ne un altre.",
 
   "result.title": "Felicitats!",
-  "result.assistedTitle": "Resolt amb ajuda",
+  "result.assistedTitle": "Solució revelada",
   "result.retries": "Reintents:",
   "result.time": "Temps:",
   "result.points": "Punts:",
@@ -291,7 +291,7 @@ export const ca: Messages = {
   "share.heading": "GitGud diari · {date}",
   "share.result": "Dificultat {difficulty}, {result}.",
   "share.solvedIn": "resolt en {time} amb {retries}",
-  "share.solvedWithHelp": "resolt amb ajuda",
+  "share.solvedWithHelp": "solució revelada",
   "share.cta": "Juga al trencaclosques d'avui: {url}",
   "share.x.post": "Publica a X",
   "share.x.copied": "Imatge copiada. Enganxa-la a la teva publicació d'X (Ctrl+V o ⌘V).",
@@ -375,8 +375,13 @@ export const ca: Messages = {
   "giveUp.title": "Et rendeixes?",
   "giveUp.body": "Torna a començar amb el mateix cronòmetre o descobreix com resoldre'l. Si veus la solució, el trencaclosques queda com a assistit i val 0 punts.",
   "giveUp.reveal": "Mostra la solució",
+  "giveUp.dailyBody": "Això acaba la partida definitivament: veuràs la solució completa, tindràs 0 punts i no podràs tornar a jugar aquest trencaclosques.",
+  "giveUp.keepPlaying": "Continua jugant",
+  "giveUp.unavailable": "No s'ha pogut carregar la solució, així que la partida segueix oberta. Comprova la connexió i torna-ho a provar.",
 
   "solution.title": "Com resoldre'l",
+  "solution.gaveUpNote": "Aquesta és la ruta més curta. El trencaclosques s'ha acabat: val 0 punts i no entra a la classificació.",
+  "solution.seeResult": "Mira el resultat",
   "solution.assistedNote": "Partida assistida: la pots acabar, però no entrarà a la classificació.",
 
   "hint.title": "Pista {number} de {total}",

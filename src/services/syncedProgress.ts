@@ -2,10 +2,6 @@ import type { DailySolve } from "../lib/progressInsights";
 import type { AttemptCommand, CompletionRecord } from "../storage/progress";
 import { requireSupabaseClient } from "./supabase";
 
-interface ProgressRow {
-  completed: unknown;
-}
-
 interface AttemptRow {
   id: unknown;
   puzzle_id: unknown;
@@ -27,15 +23,6 @@ export async function getSyncedDailyCompletion(
   puzzleVersion: number,
 ): Promise<CompletionRecord | undefined> {
   const client = requireSupabaseClient();
-  const progress = await client
-    .from("progress")
-    .select("completed")
-    .eq("puzzle_id", puzzleId)
-    .eq("puzzle_version", puzzleVersion)
-    .maybeSingle<ProgressRow>();
-  if (progress.error) throw new Error(`Synced progress is unavailable: ${progress.error.message}`);
-  if (!progress.data?.completed) return undefined;
-
   const attempt = await client
     .from("attempts")
     .select("id,puzzle_id,puzzle_version,started_at,completed_at,elapsed_ms,restart_count,command_count,assisted,transcript,run_commands,run_transcript_start")
@@ -87,7 +74,8 @@ export function parseSyncedDailySolves(rows: unknown): DailySolve[] {
         puzzleId,
         completedAt: new Date(time).toISOString(),
         ...(typeof elapsedMs === "number" && elapsedMs >= 0 ? { elapsedMs } : {}),
-        ...(assisted === true ? { assisted: true } : {}),
+        // The server only completes an assisted attempt when the player gives up.
+        ...(assisted === true ? { assisted: true, gaveUp: true } : {}),
       },
     ];
   });
@@ -125,8 +113,8 @@ export function parseSyncedDailyCompletion(row: AttemptRow): CompletionRecord | 
     restartCount: row.restart_count,
     commandCount: row.command_count,
     commands,
-    ranked: true,
-    ...(row.assisted === true ? { assisted: true } : {}),
+    ranked: row.assisted !== true,
+    ...(row.assisted === true ? { assisted: true, gaveUp: true } : {}),
     runCommands: runCommands.length ? runCommands : commands.filter((entry) => entry.ok).map((entry) => entry.command),
     runTranscriptStart,
   };

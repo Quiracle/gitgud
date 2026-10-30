@@ -24,7 +24,9 @@ import {
   joinDailyAsGuest,
   startDailyAttempt,
   submitDailyResult,
+  revealDailySolution,
 } from "../services/leaderboard";
+import { routeThroughFirstWin } from "../puzzles/solutionRoute";
 import { isSupabaseConfigured } from "../services/supabase";
 import { openProgressStore } from "../storage/browserProgress";
 import { readGuestPlayer } from "../storage/guestPlayer";
@@ -344,6 +346,38 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
   const giveUp = useCallback(() => setStatus((current) => (current === "completed" ? current : "surrendered")), []);
   const resume = useCallback(() => setStatus((current) => (current === "surrendered" ? "active" : current)), []);
 
+  /**
+   * Ends a daily for good: the tree is rebuilt on the shortest route and the run saved as given up.
+   * Nothing changes unless the route arrives and wins, so a failure leaves the run playable.
+   */
+  const surrenderDaily = useCallback(async (): Promise<boolean> => {
+    if (puzzle.kind !== "daily" || completion) return false;
+    const finalMs = activeMs();
+    try {
+      const route = routeThroughFirstWin(
+        puzzle,
+        await revealDailySolution(puzzle, { elapsedMs: finalMs, restartCount: attempt.restartCount }),
+      );
+      if (!route) return false;
+      openSince.current = null;
+      const done = store.surrender(attempt, route, finalMs);
+      const finished = attemptFromCompletion(done);
+      const restored = restoreRun(puzzle, finished);
+      setAttempt(finished);
+      setRepository(restored.repository);
+      setActions(restored.actions);
+      setEntries(restored.entries);
+      setPendingRebase(null);
+      setAssisted(true);
+      setCompletion(done);
+      setSubmission({ state: "assisted" });
+      setStatus("completed");
+      return true;
+    } catch {
+      return false;
+    }
+  }, [activeMs, attempt, completion, puzzle, store]);
+
   /** Marks the run assisted: it can still be finished, but earns no points and isn't ranked. */
   const revealSolution = useCallback(() => {
     setAssisted(true);
@@ -379,6 +413,9 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
     /** Opened an already-solved daily (no celebration, just the result). */
     solvedOnArrival: Boolean(boot.solved),
     assisted,
+    gaveUp: Boolean(completion?.gaveUp),
+    /** The revealed route, once the player has given up. */
+    solutionRoute: completion?.gaveUp ? completion.runCommands ?? [] : [],
     restartCount: attempt.restartCount,
     commandCount: attempt.commands.length - attempt.runTranscriptStart,
     hintsUsed,
@@ -394,6 +431,7 @@ export function usePuzzleSession(puzzle: PublicPuzzleDefinition, syncedCompletio
     takeHint,
     giveUp,
     resume,
+    surrenderDaily,
     revealSolution,
     cancelRebase,
     confirmRebase,
