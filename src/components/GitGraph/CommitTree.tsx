@@ -87,6 +87,8 @@ export function CommitTree({
   // Two-column trees use the airy Figma spacing; wider trees tighten up.
   const colStep = layout.columns <= 2 ? 130 : CARD_W + 16;
   const rowStep = (layout.rows <= 2 ? 150 : CARD_H + 32) + tagRows * TAG_H;
+  // Middle of the empty gap above a row, where no card can sit in a merged-in line's way.
+  const laneAbove = (row: number) => row * rowStep - (rowStep - CARD_H - tagRows * TAG_H) / 2;
   const minCol = Math.min(...layout.nodes.map((node) => node.col));
   // Both sides keep room for the HEAD pointer so the tree stays centred wherever HEAD is.
   const margin = showRefs ? HEAD_EXTENT : 0;
@@ -131,6 +133,9 @@ export function CommitTree({
           // A merged-in line belongs to the branch it brings in; any other line to the commit it leads to.
           const colour = colourOfCommit(edge.secondary ? edge.from : edge.to);
           const delay = delayFor(from.row, from.x) + 0.12;
+          const line = edge.secondary
+            ? mergeConnector(from, to, laneAbove(to.row), edge.blocked ? { y: laneAbove(from.row + 1), gutter: (colStep - CARD_W) / 2 } : undefined)
+            : connector(from, to);
           return (
             <g key={`${edge.from}-${edge.to}`} style={{ color: colour, transition: "color 300ms" }}>
               <motion.path
@@ -138,8 +143,8 @@ export function CommitTree({
                 stroke="currentColor"
                 strokeWidth={1}
                 strokeDasharray={edge.secondary ? "4 3" : undefined}
-                initial={animateIn ? { pathLength: 0, opacity: 0, d: connector(from, to) } : false}
-                animate={{ pathLength: 1, opacity: 1, d: connector(from, to) }}
+                initial={animateIn ? { pathLength: 0, opacity: 0, d: line } : false}
+                animate={{ pathLength: 1, opacity: 1, d: line }}
                 transition={{ duration: 0.45, ease: "easeInOut", delay }}
               />
               <motion.path
@@ -445,8 +450,9 @@ export function CommitCard({
   const card = (
     <div className="relative" style={{ width: CARD_W }}>
       <div
-        className={`flex flex-col overflow-hidden rounded border bg-green-900 transition ${onSelect ? "group-hover:brightness-125 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-lime-400" : ""}`}
-        style={{ borderColor: colour, transition: "border-color 300ms" }}
+        className={`flex flex-col overflow-hidden rounded border transition ${onSelect ? "group-hover:brightness-125 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-lime-400" : ""}`}
+        // The card is filled with its own colour so no dark seam can show beside the tag at any zoom.
+        style={{ borderColor: colour, backgroundColor: colour, transition: "border-color 300ms, background-color 300ms" }}
       >
         <AnimatePresence initial={false}>
           {ordered.length > 0 && (
@@ -472,7 +478,7 @@ export function CommitCard({
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="flex flex-col gap-1 p-2">
+        <div className="flex flex-col gap-1 bg-green-900 p-2">
           <PixelChicken look={look} size={48} className="rounded" />
           <span className="truncate text-xs leading-[15px] text-grey-50">{id}</span>
         </div>
@@ -549,4 +555,25 @@ function connector(from: { x: number; y: number; h: number }, to: { x: number; y
   if (Math.abs(fromCenter - toCenter) < 1) return `M${fromCenter} ${from.y + from.h}V${to.y}`;
   const side = toCenter < fromCenter ? from.x : from.x + CARD_W;
   return `M${side} ${from.y + from.h / 2}H${toCenter}V${to.y}`;
+}
+
+/**
+ * Merged-in lines leave the bottom of the card and cross in the gap above the merge, so they
+ * never pass through a card beside the merged commit. `detour` takes the drop down the
+ * gutter when a later commit sits below that card.
+ */
+function mergeConnector(
+  from: { x: number; y: number; h: number },
+  to: { x: number; y: number },
+  lane: number,
+  detour?: { y: number; gutter: number },
+): string {
+  const fromCenter = from.x + CARD_W / 2;
+  const toCenter = to.x + CARD_W / 2;
+  const start = `M${fromCenter} ${from.y + from.h}`;
+  if (Math.abs(fromCenter - toCenter) < 1) return `${start}V${to.y}`;
+  const end = `V${lane}H${toCenter}V${to.y}`;
+  if (!detour) return start + end;
+  const gutter = toCenter < fromCenter ? from.x - detour.gutter : from.x + CARD_W + detour.gutter;
+  return `${start}V${detour.y}H${gutter}${end}`;
 }

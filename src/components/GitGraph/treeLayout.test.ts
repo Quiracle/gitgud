@@ -56,7 +56,31 @@ describe("layoutCommitTree", () => {
   it("places a merge below both parents and marks the second-parent edge", () => {
     const layout = layoutCommitTree(repo({ a: [], b: ["a"], c: ["a"], m: ["b", "c"] }));
     expect(layout.nodes.find((node) => node.id === "m")).toEqual({ id: "m", col: 0, row: 2 });
-    expect(layout.edges).toContainEqual({ from: "c", to: "m", secondary: true });
+    expect(layout.edges).toContainEqual({ from: "c", to: "m", secondary: true, blocked: false });
+  });
+
+  it("flags a merged-in line with a later commit below it in the same column", () => {
+    const layout = layoutCommitTree(
+      repo(
+        { a: [], b: ["a"], c: ["b"], d: ["c"], f1: ["a"], f2: ["f1"], m: ["d", "f1"] },
+        { main: "m", feature: "f2" },
+      ),
+    );
+    expect(layout.edges).toContainEqual({ from: "f1", to: "m", secondary: true, blocked: true });
+    expect(layout.edges).toContainEqual({ from: "d", to: "m", secondary: false, blocked: false });
+  });
+
+  it("leaves a merged-in line clear when only a neighbour shares its row", () => {
+    const layout = layoutCommitTree(
+      repo(
+        { a: [], b: ["a"], p: ["a"], f: ["a"], m: ["b", "f"] },
+        { main: "m", polish: "p", feature: "f" },
+      ),
+    );
+    const col = (id: string) => layout.nodes.find((node) => node.id === id)!.col;
+    expect(col("p")).toBeGreaterThan(col("m"));
+    expect(col("p")).toBeLessThan(col("f"));
+    expect(layout.edges).toContainEqual({ from: "f", to: "m", secondary: true, blocked: false });
   });
 
   it("gives main the trunk colour and colours each commit by its owning branch", () => {

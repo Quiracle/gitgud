@@ -13,6 +13,8 @@ export interface TreeEdge {
   to: string;
   /** True for a merge commit's second (or later) parent. */
   secondary: boolean;
+  /** True when a merged-in line can't drop straight down: a card sits below `from` before the merge. */
+  blocked: boolean;
 }
 
 export interface TreeLayout {
@@ -69,10 +71,17 @@ export function layoutCommitTree(repository: Repository): TreeLayout {
   roots.forEach(place);
 
   const nodes = ids.map((id) => ({ id, col: colOf.get(id) ?? 0, row: row(id) }));
+  const cardBetween = (from: string, to: string) =>
+    nodes.some((node) => node.col === colOf.get(from) && node.row > row(from) && node.row < row(to));
   const edges = ids.flatMap((id) =>
     commits[id].parents
       .filter((parent) => parent in commits)
-      .map((parent, index) => ({ from: parent, to: id, secondary: index > 0 })),
+      .map((parent, index) => ({
+        from: parent,
+        to: id,
+        secondary: index > 0,
+        blocked: index > 0 && cardBetween(parent, id),
+      })),
   );
 
   return {
