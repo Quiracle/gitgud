@@ -1,6 +1,8 @@
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useI18n } from "../../i18n/I18nProvider";
+import { modalLayers } from "../../lib/modalLayers";
 import { spring } from "../../lib/motion";
 import { Icon } from "../Icon/Icon";
 
@@ -18,25 +20,45 @@ export function Dialog({ open, title, onClose, size = "default", children }: Dia
   const titleId = useId();
   const { t } = useI18n();
   const panel = useRef<HTMLDivElement>(null);
+  // Screens pass inline handlers; a ref keeps a re-render from re-running the open effect
+  // (which would bounce focus back to the trigger).
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+
+  // Each dialog renders into its own container on <body>, outside the app root, so the root
+  // (and any lower dialog) can be made inert while this one is on top.
+  const [container] = useState(() => (typeof document === "undefined" ? null : document.createElement("div")));
+  useEffect(() => {
+    if (!container) return;
+    document.body.appendChild(container);
+    return () => container.remove();
+  }, [container]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || !container) return;
     const previous = document.activeElement as HTMLElement | null;
+    const layers = modalLayers();
+    layers.open(container);
     // Move focus into the dialog itself (not a button) so no focus ring flashes on open.
     const timer = window.setTimeout(() => panel.current?.focus({ preventScroll: true }), 50);
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose?.();
+      // Escape closes only the top dialog when one opened another.
+      if (event.key === "Escape" && layers.isTop(container)) closeRef.current?.();
     };
     window.addEventListener("keydown", onKey);
     return () => {
       window.clearTimeout(timer);
       window.removeEventListener("keydown", onKey);
+      // Release the page first: an inert trigger can't take focus back.
+      layers.close(container);
       // Hand focus back without scrolling the page to the trigger.
       previous?.focus?.({ preventScroll: true });
     };
-  }, [open, onClose]);
+  }, [open, container]);
 
-  return (
+  if (!container) return null;
+
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -75,7 +97,8 @@ export function Dialog({ open, title, onClose, size = "default", children }: Dia
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    container,
   );
 }
 
