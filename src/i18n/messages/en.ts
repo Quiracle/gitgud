@@ -268,7 +268,7 @@ export const en = {
   "puzzle.goal": "Goal",
   "puzzle.par_one": "par: {count} command",
   "puzzle.par_other": "par: {count} commands",
-  "daily.stateOnlyHelp": "Match the target appearance on main with any supported Git command. The intended route is only a hint, not a requirement.",
+  "daily.stateOnlyHelp": "Match the target.",
 
   "graph.centre": "Centre on HEAD",
   "graph.zoomOut": "Zoom out",
@@ -430,6 +430,11 @@ export const en = {
   "goals.checklist": "Goal checklist",
   "goals.done": "(done)",
   "goals.notDone": "(not done yet)",
+  "goals.feature": "{feature} = {value}",
+  "goals.feature.body": "body",
+  "goals.feature.none": "none",
+  "goals.feature.cream": "cream",
+  "goals.feature.on": "yes",
 
   "terminal.solved": "Puzzle solved!",
   "terminal.inputLabel": "Git command",

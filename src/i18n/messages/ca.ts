@@ -265,7 +265,7 @@ export const ca: Messages = {
   "puzzle.goal": "Objectiu",
   "puzzle.par_one": "par: {count} ordre",
   "puzzle.par_other": "par: {count} ordres",
-  "daily.stateOnlyHelp": "Fes coincidir l'aparença objectiu a main amb qualsevol ordre Git compatible. El camí previst només és una pista, no un requisit.",
+  "daily.stateOnlyHelp": "Fes coincidir l'objectiu.",
 
   "graph.centre": "Centra a HEAD",
   "graph.zoomOut": "Allunya",
@@ -427,6 +427,11 @@ export const ca: Messages = {
   "goals.checklist": "Llista d'objectius",
   "goals.done": "(assolit)",
   "goals.notDone": "(pendent)",
+  "goals.feature": "{feature} = {value}",
+  "goals.feature.body": "cos",
+  "goals.feature.none": "no",
+  "goals.feature.cream": "crema",
+  "goals.feature.on": "sí",
 
   "terminal.solved": "Trencaclosques resolt!",
   "terminal.inputLabel": "Ordre de Git",

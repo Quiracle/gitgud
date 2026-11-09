@@ -265,7 +265,7 @@ export const es: Messages = {
   "puzzle.goal": "Objetivo",
   "puzzle.par_one": "par: {count} comando",
   "puzzle.par_other": "par: {count} comandos",
-  "daily.stateOnlyHelp": "Haz coincidir la apariencia objetivo en main con cualquier comando Git compatible. La ruta prevista solo es una pista, no un requisito.",
+  "daily.stateOnlyHelp": "Haz coincidir el objetivo.",
 
   "graph.centre": "Centrar en HEAD",
   "graph.zoomOut": "Alejar",
@@ -427,6 +427,11 @@ export const es: Messages = {
   "goals.checklist": "Lista de objetivos",
   "goals.done": "(cumplido)",
   "goals.notDone": "(pendiente)",
+  "goals.feature": "{feature} = {value}",
+  "goals.feature.body": "cuerpo",
+  "goals.feature.none": "no",
+  "goals.feature.cream": "crema",
+  "goals.feature.on": "sí",
 
   "terminal.solved": "¡Puzzle resuelto!",
   "terminal.inputLabel": "Comando de Git",
