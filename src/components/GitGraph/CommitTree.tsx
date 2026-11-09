@@ -420,7 +420,9 @@ function PanCanvas({ containerRef, view, content, focus, introScale, className, 
       >
         {children}
       </motion.div>
-      <div className="absolute bottom-3 right-3 flex gap-1">
+      {/* Phones: a column in the bottom-left corner, + on top and centre at the bottom (reversed
+          visually so keyboard order stays the same as desktop). Desktop: a row bottom-right. */}
+      <div className="absolute bottom-3 left-3 flex flex-col-reverse gap-1 lg:left-auto lg:right-3 lg:flex-row">
         <CanvasButton icon="my_location" label={t("graph.centre")} onClick={() => glide(centerOn(focus, view, 1))} />
         <CanvasButton icon="remove" label={t("graph.zoomOut")} onClick={() => zoomBy(1 / 1.3)} />
         <CanvasButton icon="add_2" label={t("graph.zoomIn")} onClick={() => zoomBy(1.3)} />
