@@ -36,9 +36,9 @@ interface Tone {
 export const CHICKEN_TINTS: Record<ChickenColor, Tone> = {
   red: { base: "#ff4733", shade: "#a51e0f", light: "#ff7364" },
   black: { base: "#272727", shade: "#0b0b0b", light: "#535353" },
-  blue: { base: "#2f6bff", shade: "#1a3fb8", light: "#9cbcff" },
+  blue: { base: "#2f6bff", shade: "#1a3fb8", light: "#94b8ff" },
   turquoise: { base: "#12d68e", shade: "#0a7a52", light: "#86f0c6" },
-  purple: { base: "#b347f5", shade: "#6c1aa8", light: "#dc9cff" },
+  purple: { base: "#b347f5", shade: "#6c1aa8", light: "#d894ff" },
   gold: { base: "#fbdd31", shade: "#c88b06", light: "#fdf08b" },
 };
 const TINTS = CHICKEN_TINTS;

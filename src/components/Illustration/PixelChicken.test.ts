@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CHICKEN_PIXELS } from "./chickenPixels";
-import { CHICKEN_BODY_CREAM, CHICKEN_BODY_TINTS, CHICKEN_TINTS, chickenLookFromState } from "./PixelChicken";
+import { CHICKEN_ACCESSORY_SLOTS, CHICKEN_COLORS } from "../../puzzles/chickenTheme";
+import { CHICKEN_BODY_CREAM, CHICKEN_BODY_TINTS, chickenLookFromState, chickenPaintLayers } from "./PixelChicken";
 
 describe("chickenLookFromState", () => {
   it("keeps Figma colours for an undecorated chicken", () => {
@@ -70,28 +71,51 @@ const MIN_BODY_HUE_GAP = 40;
 /** Sunglasses are a handful of pixels, so accessories need a wider gap than bodies. */
 const MIN_ACCESSORY_HUE_GAP = 45;
 
+const isNeutral = (hex: string) => hueSat(hex).chroma < 0.15;
+
+/**
+ * Two colours of the same feature must never read alike: a neutral (black) only needs
+ * the other colour to be clearly coloured; two coloured ones need a wide hue gap.
+ */
 function expectDistinct(colours: Record<string, string>, minGap: number) {
-  const chromatic = Object.entries(colours).filter(([name]) => name !== "black");
-  for (const [i, [nameA, a]] of chromatic.entries()) {
-    for (const [nameB, b] of chromatic.slice(i + 1)) {
-      const gap = hueGap(hueSat(a).hue, hueSat(b).hue);
-      expect(gap, `${nameA} ${a} vs ${nameB} ${b}`).toBeGreaterThanOrEqual(minGap);
+  const entries = Object.entries(colours);
+  for (const [i, [nameA, a]] of entries.entries()) {
+    for (const [nameB, b] of entries.slice(i + 1)) {
+      const label = `${nameA} ${a} vs ${nameB} ${b}`;
+      if (isNeutral(a) || isNeutral(b)) {
+        expect(isNeutral(a) && isNeutral(b), label).toBe(false);
+        expect(Math.max(hueSat(a).chroma, hueSat(b).chroma), label).toBeGreaterThanOrEqual(0.4);
+        continue;
+      }
+      expect(hueGap(hueSat(a).hue, hueSat(b).hue), label).toBeGreaterThanOrEqual(minGap);
     }
   }
 }
 
+/** The colours a feature is actually painted with in each chicken colour. */
+function paintedColours(part: (typeof CHICKEN_ACCESSORY_SLOTS)[number] | "body", key: "p" | "l" | "b") {
+  return Object.fromEntries(
+    CHICKEN_COLORS.map((colour) => {
+      const look =
+        part === "body"
+          ? { chicken: true, body: colour, parts: {} }
+          : { chicken: true, body: "default" as const, parts: { [part]: colour } };
+      const layer = chickenPaintLayers(look).find((l) => l.layer === CHICKEN_PIXELS[part === "body" ? "chicken" : part]);
+      return [colour, layer!.colors[key]];
+    }),
+  );
+}
+
 describe("chicken palette", () => {
-  it("keeps accessory colours on clearly different hues", () => {
-    for (const key of ["base", "light"] as const) {
-      expectDistinct(
-        Object.fromEntries(Object.entries(CHICKEN_TINTS).map(([name, tone]) => [name, tone[key]])),
-        MIN_ACCESSORY_HUE_GAP,
-      );
-    }
+  // Matching colours across features (a blue body with blue sunglasses) is fine; the
+  // same feature in two different colours on two commits must never look the same.
+  it.each(CHICKEN_ACCESSORY_SLOTS)("paints %s in clearly different colours", (part) => {
+    expectDistinct(paintedColours(part, "p"), MIN_ACCESSORY_HUE_GAP);
+    expectDistinct(paintedColours(part, "l"), MIN_ACCESSORY_HUE_GAP);
   });
 
-  it("keeps body colours on clearly different hues", () => {
-    expectDistinct(CHICKEN_BODY_TINTS, MIN_BODY_HUE_GAP);
+  it("paints bodies in clearly different colours", () => {
+    expectDistinct(paintedColours("body", "b"), MIN_BODY_HUE_GAP);
   });
 
   it("keeps coloured bodies saturated enough to never read as the cream chicken", () => {
