@@ -158,7 +158,7 @@ function AchievementCards({ items, showDates }: { items: AchievementCard[]; show
 
 /** A card's row: a full-size button when it opens a detail, otherwise plain content. */
 function CardBody({ onOpen, children }: { onOpen?: () => void; children: ReactNode }) {
-  const layout = "flex w-full items-center gap-3 p-2 text-left";
+  const layout = "flex h-full w-full items-start gap-3 p-2 text-left";
   if (!onOpen) return <div className={layout}>{children}</div>;
   return (
     <button
