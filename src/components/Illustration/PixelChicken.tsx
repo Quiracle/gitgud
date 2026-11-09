@@ -27,15 +27,28 @@ interface Tone {
   light: string;
 }
 
-/* Palette colours come from the Figma variables. Blue is the hat blue from the Figma
-   frame; turquoise and purple are not in the Figma palette yet and are provisional. */
-const TINTS: Record<ChickenColor, Tone> = {
+/* Red, black and gold come from the Figma variables. Blue, turquoise and purple are
+   tuned so every colour sits on a clearly different hue: players compare chickens by
+   colour, so two tints must never read as the same one. PixelChicken.test.ts enforces
+   the separation for accessory tones and body tones. */
+export const CHICKEN_TINTS: Record<ChickenColor, Tone> = {
   red: { base: "#ff4733", shade: "#a51e0f", light: "#ff7364" },
   black: { base: "#272727", shade: "#0b0b0b", light: "#535353" },
-  blue: { base: "#8ca6e6", shade: "#4a64a8", light: "#c3d1f3" },
-  turquoise: { base: "#2dd4bf", shade: "#0f766e", light: "#99f6e4" },
-  purple: { base: "#a78bfa", shade: "#6d28d9", light: "#ddd6fe" },
+  blue: { base: "#2f7bff", shade: "#1747b8", light: "#8fbcff" },
+  turquoise: { base: "#14d1b0", shade: "#0b7a67", light: "#7ff0dc" },
+  purple: { base: "#b347f5", shade: "#6c1aa8", light: "#dc9cff" },
   gold: { base: "#fbdd31", shade: "#c88b06", light: "#fdf08b" },
+};
+const TINTS = CHICKEN_TINTS;
+
+/** Body fill per colour: saturated enough that coloured bodies never look alike or cream. */
+export const CHICKEN_BODY_TINTS: Record<ChickenColor, string> = {
+  red: "#ff8a7d",
+  black: "#5c5c5c",
+  blue: "#78adff",
+  turquoise: "#5ee8cf",
+  purple: "#d38bff",
+  gold: "#ffd84a",
 };
 
 /** Colours each part has in the Figma artwork. */
@@ -49,11 +62,11 @@ const DESIGN_TONES: Record<ChickenPart, Tone> = {
 
 const OUTLINE = "#0b0b0b";
 const BACKGROUND = "#fafafa";
-const BODY_CREAM = "#fefce8";
+export const CHICKEN_BODY_CREAM = "#fefce8";
+const BODY_CREAM = CHICKEN_BODY_CREAM;
 const bodyColors = (tint: ChickenTint) => ({
   o: OUTLINE,
-  // Bodies use the light tone so a coloured chicken stays readable against its outline.
-  b: tint === "default" ? BODY_CREAM : TINTS[tint].light,
+  b: tint === "default" ? BODY_CREAM : CHICKEN_BODY_TINTS[tint],
   k: "#ff4733",
   f: "#fdb874",
   g: BACKGROUND,
