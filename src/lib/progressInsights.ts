@@ -181,7 +181,10 @@ function unlockIndex(sorted: readonly Solve[], rule: Rule): number {
 }
 
 /** Most recently unlocked first, topped up with locked ones in catalog order. */
-export function featuredAchievements(list: readonly Achievement[], count: number): Achievement[] {
+export function featuredAchievements<T extends { unlocked: boolean; unlockedAt?: string }>(
+  list: readonly T[],
+  count: number,
+): T[] {
   const unlocked = list
     .filter((item) => item.unlocked)
     .sort((a, b) => (b.unlockedAt ?? "").localeCompare(a.unlockedAt ?? ""));

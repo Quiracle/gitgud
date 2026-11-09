@@ -59,7 +59,9 @@ export function pageMeta(path: string, locale: Locale): PageMeta {
         ? t("account.stats")
         : path === "/account/achievements"
           ? t("account.achievements")
-          : path.startsWith("/account")
+          : path === "/account/commands"
+            ? t("account.commandsLearned")
+            : path.startsWith("/account")
             ? t("meta.account.heading")
             : path.startsWith("/course/practice/")
               ? t("meta.practice.heading")

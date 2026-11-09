@@ -1,6 +1,6 @@
 import { motion } from "motion/react";
 import { useEffect, useState, type FormEvent } from "react";
-import { AchievementList } from "../components/Account/AchievementList";
+import { AchievementList, CommandAchievementList } from "../components/Account/AchievementList";
 import { CookieSetting } from "../components/Account/CookieSetting";
 import { LinkedInSetting } from "../components/Account/LinkedInSetting";
 import { LoginDialog } from "../components/Auth/LoginDialog";
@@ -12,6 +12,7 @@ import { SiteFooter } from "../components/Layout/SiteFooter";
 import { SolveTimeChart } from "../components/Stats/SolveTimeChart";
 import { StreakTrail } from "../components/Streak/StreakTrail";
 import { useAuth } from "../context/AuthContext";
+import { useCommandAchievements } from "../hooks/useLearnedCommands";
 import { useProgressInsights } from "../hooks/useProgressInsights";
 import { useI18n } from "../i18n/I18nProvider";
 import { spring } from "../lib/motion";
@@ -24,8 +25,8 @@ interface AccountScreenProps {
 
 const look = (parts: ChickenLook["parts"]): ChickenLook => ({ chicken: true, body: "default", parts: { crest: "default", ...parts } });
 
-/** Account shows the latest unlocks; the rest live on the achievements screen. */
-const FEATURED_ACHIEVEMENTS = 6;
+/** Account shows the latest unlocks of each kind; the rest live on their own screens. */
+const FEATURED_ACHIEVEMENTS = 3;
 
 const PROVIDER_NAMES: Record<string, string> = { google: "Google", github: "GitHub" };
 
@@ -37,6 +38,8 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
   const insights = useProgressInsights();
   const [loginOpen, setLoginOpen] = useState(false);
   const unlocked = insights.achievements.filter((item) => item.unlocked).length;
+  const commands = useCommandAchievements();
+  const learned = commands.filter((item) => item.unlocked).length;
 
   return (
     <div className="min-h-dvh bg-green-50">
@@ -102,19 +105,20 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
           </div>
 
           <div className="flex flex-col gap-4">
-            <h2>
-              <button
-                type="button"
-                onClick={() => onNavigate("/account/achievements")}
-                className="-my-2 flex min-h-11 w-full items-center gap-3 text-xl leading-[25px] text-green-950 transition-colors hover:text-green-700"
-              >
-                <span className="flex-1 text-left">{t("account.achievements")}</span>
-                <span className="text-xs text-grey-700">
-                  {unlocked} / {insights.achievements.length}
-                </span>
-                <Icon name="arrow_forward_ios" size={20} />
-              </button>
-            </h2>
+            <SeeAllTitle
+              label={t("account.commandsLearned")}
+              count={`${learned} / ${commands.length}`}
+              onClick={() => onNavigate("/account/commands")}
+            />
+            <CommandAchievementList items={featuredAchievements(commands, FEATURED_ACHIEVEMENTS)} />
+          </div>
+
+          <div className="flex flex-col gap-4">
+            <SeeAllTitle
+              label={t("account.achievements")}
+              count={`${unlocked} / ${insights.achievements.length}`}
+              onClick={() => onNavigate("/account/achievements")}
+            />
             <AchievementList items={featuredAchievements(insights.achievements, FEATURED_ACHIEVEMENTS)} />
           </div>
 
@@ -151,6 +155,23 @@ export function AccountScreen({ onNavigate }: AccountScreenProps) {
       <SiteFooter onNavigate={onNavigate} />
       <LoginDialog open={loginOpen} onClose={() => setLoginOpen(false)} returnPath="/account" />
     </div>
+  );
+}
+
+/** A section title whose whole row opens the full list; -my-2 keeps the 44px target from adding height. */
+function SeeAllTitle({ label, count, onClick }: { label: string; count: string; onClick: () => void }) {
+  return (
+    <h2>
+      <button
+        type="button"
+        onClick={onClick}
+        className="-my-2 flex min-h-11 w-full items-center gap-3 text-xl leading-[25px] text-green-950 transition-colors hover:text-green-700"
+      >
+        <span className="flex-1 text-left">{label}</span>
+        <span className="text-xs text-grey-700">{count}</span>
+        <Icon name="arrow_forward_ios" size={20} />
+      </button>
+    </h2>
   );
 }
 

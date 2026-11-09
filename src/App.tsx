@@ -23,6 +23,7 @@ import { StatsScreen } from "./screens/StatsScreen";
 import { AchievementsScreen } from "./screens/AchievementsScreen";
 import { LegalScreen } from "./screens/LegalScreen";
 import { NotFoundScreen } from "./screens/NotFoundScreen";
+import { CommandLearnedToast } from "./components/Account/CommandLearnedToast";
 
 function normalizePath(path: string): string {
   if (path === "/") return path;
@@ -87,6 +88,7 @@ export default function App() {
           {renderScreen(path, navigate, replace)}
         </motion.div>
       </AnimatePresence>
+      <CommandLearnedToast />
       {showsBottomNav(path) && <BottomNav path={path} onNavigate={navigate} />}
       <CookieBanner visible={showsBottomNav(path) || path === "/legal"} aboveNav={showsBottomNav(path)} onNavigate={navigate} />
     </MotionConfig>
@@ -129,6 +131,8 @@ function renderScreen(
   if (path === "/account/stats") return <StatsScreen onNavigate={navigate} />;
 
   if (path === "/account/achievements") return <AchievementsScreen onNavigate={navigate} />;
+
+  if (path === "/account/commands") return <AchievementsScreen key="commands" kind="commands" onNavigate={navigate} />;
 
   if (path === "/leaderboard") return <LeaderboardScreen onNavigate={navigate} />;
 

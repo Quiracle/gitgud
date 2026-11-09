@@ -130,4 +130,52 @@ describe("giving up on a daily", () => {
     expect(store.stats()).toMatchObject({ completedRuns: 0, completedDailies: 0 });
     expect(store.stats().bestElapsedMs).toBeUndefined();
   });
+
+  it("learns each command the first time it is typed, even when it fails", () => {
+    let now = Date.parse("2026-10-10T10:00:00Z");
+    const store = new LocalProgressStore(new MemoryStorage(), () => now, () => "attempt-1");
+    let attempt = store.start(createDailyFixture("2026-10-10"));
+    attempt = store.recordCommand(attempt, { command: "git revert nope", elapsedMs: 1_000, ok: false, output: "error" }, false);
+    now += 60_000;
+    attempt = store.recordCommand(attempt, { command: "git revert b22", elapsedMs: 61_000, ok: true, output: "" });
+    attempt = store.recordCommand(attempt, { command: "git commit", elapsedMs: 62_000, ok: false, output: "error" }, false);
+
+    expect(store.learnedCommands()).toEqual({ revert: "2026-10-10T10:00:00.000Z" });
+  });
+
+  it("counts commands from transcripts saved before learning was tracked, skipping a revealed route", () => {
+    const storage = new MemoryStorage();
+    storage.setItem(
+      "gitgud:progress:v1",
+      JSON.stringify({
+        schemaVersion: 1,
+        activeAttempts: {
+          "lesson-a@1": {
+            id: "a", puzzleId: "lesson-a", puzzleVersion: 1, kind: "lesson", status: "active",
+            startedAt: "2026-10-05T10:00:00.000Z", restartCount: 0, commandCount: 1,
+            commands: [{ command: "git log", elapsedMs: 5_000, ok: true, output: "" }],
+            runCommands: ["git log"], runTranscriptStart: 0,
+          },
+        },
+        completions: [
+          {
+            id: "b", puzzleId: "daily-2026-10-01", puzzleVersion: 1, kind: "daily",
+            startedAt: "2026-10-01T10:00:00.000Z", completedAt: "2026-10-01T10:05:00.000Z",
+            elapsedMs: 300_000, restartCount: 0, commandCount: 2, ranked: false, gaveUp: true, assisted: true,
+            runTranscriptStart: 1,
+            commands: [
+              { command: "git checkout main", elapsedMs: 10_000, ok: true, output: "" },
+              { command: "git cherry-pick s14", elapsedMs: 300_000, ok: true, output: "" },
+            ],
+          },
+        ],
+      }),
+    );
+    const store = new LocalProgressStore(storage);
+
+    expect(store.learnedCommands()).toEqual({
+      switch: "2026-10-01T10:00:10.000Z",
+      log: "2026-10-05T10:00:05.000Z",
+    });
+  });
 });
