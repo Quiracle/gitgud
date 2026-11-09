@@ -1,5 +1,5 @@
 import { animate, AnimatePresence, motion, useMotionValue, type MotionValue } from "motion/react";
-import { useEffect, useMemo, useRef, type PointerEvent, type ReactNode, type RefObject } from "react";
+import { useEffect, useId, useMemo, useRef, type PointerEvent, type ReactNode, type RefObject } from "react";
 import {
   getSnapshot,
   pickBranchReference,
@@ -52,6 +52,8 @@ interface CommitTreeProps {
   /** Makes only cards that can satisfy the current command argument selectable. */
   referenceKind?: CommandReferenceKind | null;
   onSelectReference?: (commitId: string, branches: string[]) => void;
+  /** Thumbnails inside a link or button: hidden from screen readers, which use the control's name. */
+  decorative?: boolean;
   className?: string;
 }
 
@@ -66,11 +68,31 @@ export function CommitTree({
   onScale,
   referenceKind,
   onSelectReference,
+  decorative = false,
   className = "",
 }: CommitTreeProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const [ref, box] = useElementSize<HTMLDivElement>();
   const layout = useMemo(() => layoutCommitTree(repository), [repository]);
+  // Oldest first, left to right: the order a reader should meet the commits.
+  const readingOrder = useMemo(() => [...layout.nodes].sort((a, b) => a.row - b.row || a.col - b.col), [layout]);
+  const list = (items: string[]) => new Intl.ListFormat(locale, { type: "conjunction" }).format(items);
+  /** What the drawing shows about one commit, in words: its parents, branch tips and HEAD. */
+  const describeCommit = (id: string, branches: string[], head: boolean) => {
+    const parents = (repository.commits[id]?.parents ?? []).filter((parent) => parent in repository.commits);
+    return [
+      t("graph.commit", { commit: id }),
+      parents.length === 0
+        ? t("graph.root")
+        : parents.length === 1
+          ? t("graph.parent", { parent: parents[0] })
+          : t("graph.mergeParents", { parents: list(parents) }),
+      branches.length > 0 ? t("graph.branches", { count: branches.length, branches: list(branches) }) : "",
+      head ? t("graph.head") : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+  };
   const looks = useMemo(
     () => Object.fromEntries(Object.keys(repository.commits).map((id) => [id, chickenLookFromState(getSnapshot(repository, id))])),
     [repository],
@@ -157,8 +179,11 @@ export function CommitTree({
           );
         })}
       </svg>
+      {/* Static wrapper: the cards stay positioned against the drawing. Screen readers get
+          the commits as a list, oldest first, each naming its parents (the lines are aria-hidden). */}
+      <div role="list" aria-label={t("graph.list", { count: layout.nodes.length })}>
       <AnimatePresence initial={animateIn}>
-        {layout.nodes.map((node) => {
+        {readingOrder.map((node) => {
           const at = position.get(node.id)!;
           const branches = tagsOf(node.id);
           const branch = pickBranchReference(branches, repository.currentBranch);
@@ -171,6 +196,7 @@ export function CommitTree({
           return (
             <motion.div
               key={node.id}
+              role="listitem"
               className="absolute"
               initial={{ opacity: 0, scale: 0.5, y: -12, left: at.x, top: at.y }}
               animate={{ opacity: 1, scale: 1, y: 0, left: at.x, top: at.y }}
@@ -188,14 +214,18 @@ export function CommitTree({
                   ? () => onSelectReference(node.id, branches)
                   : undefined}
                 selectionLabel={selectable ? selectionLabel : undefined}
+                description={describeCommit(node.id, branches, showRefs && node.id === repository.head)}
               />
             </motion.div>
           );
         })}
       </AnimatePresence>
+      </div>
       {headAt && (
         // One pointer for the whole tree, so it glides from card to card as HEAD moves.
+        // Screen readers hear "HEAD is here" in that card's description instead.
         <motion.div
+          aria-hidden
           className="absolute"
           initial={{ opacity: 0, ...headPlacement(headAt.x, headSide), top: headAt.y }}
           animate={{ opacity: 1, ...headPlacement(headAt.x, headSide), top: headAt.y }}
@@ -225,7 +255,7 @@ export function CommitTree({
   }
 
   return (
-    <div ref={ref} className={`relative overflow-hidden ${className}`}>
+    <div ref={ref} className={`relative overflow-hidden ${className}`} aria-hidden={decorative || undefined}>
       {fitScale > 0 && (
         <motion.div
           className="absolute left-1/2 top-1/2"
@@ -427,6 +457,9 @@ export interface CommitCardProps {
   /** Present only while this card is a valid argument for the current command. */
   onSelect?: () => void;
   selectionLabel?: string;
+  /** Screen-reader text for what the graph shows about this commit (parents, branches, HEAD). It
+   *  replaces the visible ID and branch tags for assistive technology. */
+  description?: string;
 }
 
 /** Trunk lime, anything else the second branch colour: for cards drawn outside a graph. */
@@ -444,11 +477,18 @@ export function CommitCard({
   colourOf = defaultColourOf,
   onSelect,
   selectionLabel,
+  description,
 }: CommitCardProps) {
+  const descriptionId = useId();
   const ordered = [...branches].sort((a, b) => Number(b === currentBranch) - Number(a === currentBranch));
 
   const card = (
     <div className="relative text-left" style={{ width: CARD_W }}>
+      {description && (
+        <span id={descriptionId} className="sr-only">
+          {description}
+        </span>
+      )}
       <div
         className={`flex flex-col overflow-hidden rounded border transition ${onSelect ? "group-hover:brightness-125 group-focus-visible:outline group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-lime-400" : ""}`}
         // The card is filled with its own colour so no dark seam can show beside the tag at any zoom.
@@ -463,6 +503,7 @@ export function CommitCard({
               exit={{ height: 0, opacity: 0 }}
               transition={spring.snappy}
               className="flex shrink-0 flex-col overflow-hidden"
+              aria-hidden={description ? true : undefined}
               title={ordered.join(", ")}
             >
               {/* One full-width row per branch, the checked-out one on top beside HEAD. */}
@@ -480,7 +521,9 @@ export function CommitCard({
         </AnimatePresence>
         <div className="flex flex-col gap-1 bg-green-900 p-2">
           <PixelChicken look={look} size={48} className="rounded" />
-          <span className="truncate text-xs leading-[15px] text-grey-50">{id}</span>
+          <span className="truncate text-xs leading-[15px] text-grey-50" aria-hidden={description ? true : undefined}>
+            {id}
+          </span>
         </div>
       </div>
       <AnimatePresence initial={false}>
@@ -507,6 +550,7 @@ export function CommitCard({
       type="button"
       onClick={onSelect}
       aria-label={selectionLabel}
+      aria-describedby={description ? descriptionId : undefined}
       title={selectionLabel}
       className="group block cursor-pointer rounded text-left"
     >
@@ -525,7 +569,6 @@ export function HeadPointer({ side }: { side: "left" | "right" }) {
   const tip = `${HEAD_TIP}px`;
   return (
     <div
-      aria-label="HEAD"
       className="flex items-center whitespace-nowrap bg-lime-400 text-2xs text-green-950"
       style={{
         height: TAG_H,

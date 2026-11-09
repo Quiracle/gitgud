@@ -186,7 +186,7 @@ function LessonCard({ lesson, thumbnail, onNavigate }: LessonCardProps) {
   if (thumbnail === "graph" && available) {
     picture = (
       <div className="pointer-events-none size-16 shrink-0 overflow-hidden rounded bg-green-900">
-        <CommitTree repository={lesson.puzzle.initialRepository} padding={9} showRefs={false} className="size-full" />
+        <CommitTree repository={lesson.puzzle.initialRepository} padding={9} showRefs={false} decorative className="size-full" />
       </div>
     );
   } else {

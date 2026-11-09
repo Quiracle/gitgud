@@ -57,7 +57,7 @@ export function PuzzlePreview({ canvasRef, puzzle, onScale, onOpen, openLabel, s
       {fallback ?? (!puzzle ? <PreviewSkeleton /> : (
         <>
           <button type="button" onClick={onOpen} aria-label={openLabel} className="absolute inset-0 cursor-pointer">
-            <CommitTree repository={puzzle.initialRepository} padding={24} onScale={onScale} className="size-full" />
+            <CommitTree repository={puzzle.initialRepository} padding={24} onScale={onScale} decorative className="size-full" />
           </button>
           {showDifficulty && (
             <motion.div
