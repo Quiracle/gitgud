@@ -25,7 +25,8 @@ import {
   getCommandReferenceKind,
   SUPPORTED_ACTION_TYPES,
 } from "../engine";
-import { goalLabel } from "../i18n/goals";
+import { chickenFeatureGoals } from "../components/Puzzle/goalFeatures";
+import { featureGoalLabel, goalLabel } from "../i18n/goals";
 import { useI18n } from "../i18n/I18nProvider";
 import { Rich } from "../i18n/Rich";
 import type { TranslationKey } from "../i18n/translate";
@@ -100,7 +101,14 @@ export function SolveScreen({
     isSupabaseConfigured() &&
     (submissionState === "guest" || submissionState === "submitting");
   const referenceKind = solved ? null : getCommandReferenceKind(commandDraft);
-  const checks = session.validation.checks;
+  // Dailies spell the target snapshot out as one line per chicken feature.
+  const checks = session.validation.checks.flatMap((check) =>
+    puzzle.kind === "daily" && check.goal.type === "snapshot"
+      ? chickenFeatureGoals(puzzle.initialRepository, puzzle.target.snapshot, session.repository, check.goal.branch).map(
+          (feature) => ({ id: `${check.id}:${feature.feature}`, met: feature.met, label: featureGoalLabel(feature, i18n) }),
+        )
+      : [{ id: check.id, met: check.met, label: goalLabel(check, i18n) }],
+  );
   const goalsMet = solved ? checks.length : checks.filter((check) => check.met).length;
   const sharing = useResultShare(
     puzzle,
@@ -523,7 +531,7 @@ export function SolveScreen({
                 <li key={check.id} className={`flex gap-2 ${met ? "text-lime-400" : "text-grey-300"}`}>
                   <span aria-hidden className="w-4 shrink-0 text-center">{met ? "✓" : "○"}</span>
                   <span>
-                    {goalLabel(check, i18n)}
+                    {check.label}
                     <span className="sr-only"> {met ? t("goals.done") : t("goals.notDone")}</span>
                   </span>
                 </li>

@@ -10,6 +10,7 @@ import linkedin from "../../assets/brand/linkedin.svg";
 import x from "../../assets/brand/x.svg";
 import check from "../../assets/icons/check.svg";
 import close from "../../assets/icons/close.svg";
+import codeXml from "../../assets/icons/code_xml.svg";
 import contentCopy from "../../assets/icons/content_copy.svg";
 import crown from "../../assets/icons/crown.svg";
 import download from "../../assets/icons/download.svg";
@@ -37,6 +38,7 @@ const ICONS = {
   arrow_forward_ios: arrowForwardIos,
   check,
   close,
+  code_xml: codeXml,
   content_copy: contentCopy,
   crown,
   download,

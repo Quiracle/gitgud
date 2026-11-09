@@ -1,7 +1,8 @@
 import { motion } from "motion/react";
-import { AchievementList } from "../components/Account/AchievementList";
+import { AchievementList, CommandAchievementList } from "../components/Account/AchievementList";
 import { Icon } from "../components/Icon/Icon";
 import { SiteFooter } from "../components/Layout/SiteFooter";
+import { useCommandAchievements } from "../hooks/useLearnedCommands";
 import { useProgressInsights } from "../hooks/useProgressInsights";
 import { useI18n } from "../i18n/I18nProvider";
 import { featuredAchievements } from "../lib/progressInsights";
@@ -9,13 +10,17 @@ import { spring } from "../lib/motion";
 
 interface AchievementsScreenProps {
   onNavigate: (path: string) => void;
+  /** Puzzle achievements, or the commands the player has learned. */
+  kind?: "achievements" | "commands";
 }
 
-/** Every achievement: latest unlocks first, then the locked ones still to earn. */
-export function AchievementsScreen({ onNavigate }: AchievementsScreenProps) {
+/** Every achievement of one kind: latest unlocks first, then the locked ones still to earn. */
+export function AchievementsScreen({ onNavigate, kind = "achievements" }: AchievementsScreenProps) {
   const { t } = useI18n();
   const { achievements } = useProgressInsights();
-  const unlocked = achievements.filter((item) => item.unlocked).length;
+  const commands = useCommandAchievements();
+  const items = kind === "commands" ? commands : achievements;
+  const unlocked = items.filter((item) => item.unlocked).length;
 
   function back() {
     if (window.history.length > 1) window.history.back();
@@ -40,9 +45,11 @@ export function AchievementsScreen({ onNavigate }: AchievementsScreenProps) {
             animate={{ opacity: 1, y: 0 }}
             transition={spring.soft}
           >
-            <h1 className="min-w-0 text-3xl text-grey-50">{t("account.achievements")}</h1>
+            <h1 className="min-w-0 text-3xl text-grey-50">
+              {kind === "commands" ? t("account.commandsLearned") : t("account.achievements")}
+            </h1>
             <span className="shrink-0 text-xs text-grey-300">
-              {unlocked} / {achievements.length}
+              {unlocked} / {items.length}
             </span>
           </motion.div>
         </div>
@@ -50,7 +57,11 @@ export function AchievementsScreen({ onNavigate }: AchievementsScreenProps) {
 
       <section className="px-6 py-6">
         <div className="mx-auto max-w-md">
-          <AchievementList items={featuredAchievements(achievements, achievements.length)} showDates />
+          {kind === "commands" ? (
+            <CommandAchievementList items={featuredAchievements(commands, commands.length)} showDates />
+          ) : (
+            <AchievementList items={featuredAchievements(achievements, achievements.length)} showDates />
+          )}
         </div>
       </section>
 

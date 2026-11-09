@@ -1,3 +1,4 @@
+import { learnedCommandOf, mergeLearned, type LearnedCommands } from "../lib/learnedCommands";
 import type { PublicPuzzleDefinition } from "../puzzles";
 
 export interface AttemptCommand {
@@ -68,6 +69,8 @@ interface ProgressDocument {
   schemaVersion: 1;
   activeAttempts: Record<string, StoredAttempt>;
   completions: CompletionRecord[];
+  /** First time each command was typed. Added later, so older documents lack it. */
+  learnedCommands?: LearnedCommands;
 }
 
 interface StorageLike {
@@ -121,8 +124,27 @@ export class LocalProgressStore {
       commands: [...attempt.commands, sanitizeCommand(entry)].slice(-MAX_COMMANDS),
       runCommands: replayable ? [...attempt.runCommands, entry.command] : attempt.runCommands,
     };
+    this.learn(entry.command);
     this.saveAttempt(next);
     return next;
+  }
+
+  /**
+   * Every command the player has typed, with when they first typed it. Transcripts saved
+   * before commands were tracked count too, so earlier players keep what they learned.
+   */
+  learnedCommands(): LearnedCommands {
+    const document = this.read();
+    return mergeLearned(document.learnedCommands ?? {}, learnedFromTranscripts(document));
+  }
+
+  private learn(command: string) {
+    const id = learnedCommandOf(command);
+    if (!id) return;
+    const document = this.read();
+    if (document.learnedCommands?.[id]) return;
+    document.learnedCommands = { ...document.learnedCommands, [id]: new Date(this.now()).toISOString() };
+    this.write(document);
   }
 
   restart(attempt: StoredAttempt): StoredAttempt {
@@ -272,6 +294,28 @@ export class LocalProgressStore {
       // A storage quota or privacy-mode failure must never block the puzzle.
     }
   }
+}
+
+/** Commands found in saved transcripts, dated by when they were typed during the attempt. */
+function learnedFromTranscripts(document: ProgressDocument): LearnedCommands {
+  let learned: LearnedCommands = {};
+  const add = (commands: readonly AttemptCommand[], startedAt: string, latest?: string) => {
+    const start = Date.parse(startedAt);
+    for (const entry of commands) {
+      const id = learnedCommandOf(entry.command);
+      if (!id || Number.isNaN(start)) continue;
+      let at = new Date(start + Math.max(0, entry.elapsedMs || 0)).toISOString();
+      if (latest && at > latest) at = latest;
+      learned = mergeLearned(learned, { [id]: at });
+    }
+  };
+  for (const record of document.completions) {
+    // A given-up daily ends with the revealed route, which the player never typed.
+    const typed = record.gaveUp ? record.commands.slice(0, record.runTranscriptStart ?? 0) : record.commands;
+    add(typed, record.startedAt, record.completedAt);
+  }
+  for (const attempt of Object.values(document.activeAttempts)) add(attempt.commands, attempt.startedAt);
+  return learned;
 }
 
 /**

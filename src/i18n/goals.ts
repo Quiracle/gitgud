@@ -1,4 +1,5 @@
 import type { GoalCheck } from "../engine";
+import type { FeatureGoal } from "../components/Puzzle/goalFeatures";
 import type { I18nValue } from "./I18nProvider";
 
 /** A goal checklist line in the player's language, built from the check's structured spec. */
@@ -31,4 +32,18 @@ export function goalLabel(check: GoalCheck, { t, formatList }: Pick<I18nValue, "
       }
     }
   }
+}
+
+/** A chicken-feature checklist line, e.g. "hat = blue" or "sunglasses = none". */
+export function featureGoalLabel(goal: FeatureGoal, { t }: Pick<I18nValue, "t">): string {
+  const feature = goal.feature === "body" ? t("goals.feature.body") : t(`chicken.part.${goal.feature}`);
+  const value =
+    goal.target === "none"
+      ? t("goals.feature.none")
+      : goal.target === "default"
+        ? goal.feature === "body"
+          ? t("goals.feature.cream")
+          : t("goals.feature.on")
+        : t(`chicken.color.${goal.target}`);
+  return t("goals.feature", { feature, value });
 }
