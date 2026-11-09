@@ -63,28 +63,6 @@ describe("executeCommand", () => {
     expect(allLog.repository).toBe(repository);
   });
 
-  it("lists a merge commit's parents in git log, like real Git", () => {
-    const commit = (id: string, parents: string[]) => ({
-      id,
-      parents,
-      message: id,
-      changes: [],
-      provenance: { type: parents.length > 1 ? ("merge" as const) : ("original" as const) },
-    });
-    const repository: Repository = {
-      initialState: {},
-      commits: { a10: commit("a10", []), b1: commit("b1", ["a10"]), c1: commit("c1", ["a10"]), m1: commit("m1", ["b1", "c1"]) },
-      branches: { main: "m1" },
-      currentBranch: "main",
-      head: "m1",
-      nextGeneratedId: 1,
-    };
-
-    const lines = executeCommand(repository, "git log").output;
-    expect(lines.slice(0, 3)).toEqual(["commit m1 (main)", "Merge: b1 c1", "    m1"]);
-    expect(lines.filter((line) => line.startsWith("Merge:"))).toHaveLength(1);
-  });
-
   it("accepts both valid command orders for a final-state puzzle", () => {
     let first = puzzleRepository();
     first = run(first, "git revert b22");

@@ -12,9 +12,7 @@ export function showLog(repository: Repository, all: boolean): MutationResult {
   const output = getReachableCommitsFrom(repository, startIds).flatMap((commit) => {
     const branches = branchesAtCommit(repository, commit.id);
     const refs = branches.length > 0 ? ` (${branches.join(", ")})` : "";
-    // Like real Git, merge commits list their parents, so the history's shape reads as text.
-    const merge = commit.parents.length > 1 ? [`Merge: ${commit.parents.join(" ")}`] : [];
-    return [`commit ${commit.id}${refs}`, ...merge, `    ${commit.message}`];
+    return [`commit ${commit.id}${refs}`, `    ${commit.message}`];
   });
 
   if (all) {
