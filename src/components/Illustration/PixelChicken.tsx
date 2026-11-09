@@ -29,13 +29,15 @@ interface Tone {
 
 /* Red, black and gold come from the Figma variables. Blue, turquoise and purple are
    tuned so every colour sits on a clearly different hue: players compare chickens by
-   colour, so two tints must never read as the same one. PixelChicken.test.ts enforces
-   the separation for accessory tones and body tones. */
+   colour, so the same part in two different colours must never read as the same one
+   (a part may freely match the body or another part). Small parts such as sunglasses
+   show only a few pixels, so accessory tones are kept further apart than bodies.
+   PixelChicken.test.ts enforces both separations. */
 export const CHICKEN_TINTS: Record<ChickenColor, Tone> = {
   red: { base: "#ff4733", shade: "#a51e0f", light: "#ff7364" },
   black: { base: "#272727", shade: "#0b0b0b", light: "#535353" },
-  blue: { base: "#2f7bff", shade: "#1747b8", light: "#8fbcff" },
-  turquoise: { base: "#14d1b0", shade: "#0b7a67", light: "#7ff0dc" },
+  blue: { base: "#2f6bff", shade: "#1a3fb8", light: "#9cbcff" },
+  turquoise: { base: "#12d68e", shade: "#0a7a52", light: "#86f0c6" },
   purple: { base: "#b347f5", shade: "#6c1aa8", light: "#dc9cff" },
   gold: { base: "#fbdd31", shade: "#c88b06", light: "#fdf08b" },
 };

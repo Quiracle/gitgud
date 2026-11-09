@@ -66,25 +66,32 @@ function hueSat(hex: string): { hue: number; sat: number; light: number; chroma:
 }
 
 const hueGap = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
-const MIN_HUE_GAP = 40;
+const MIN_BODY_HUE_GAP = 40;
+/** Sunglasses are a handful of pixels, so accessories need a wider gap than bodies. */
+const MIN_ACCESSORY_HUE_GAP = 45;
 
-function expectDistinct(colours: Record<string, string>) {
+function expectDistinct(colours: Record<string, string>, minGap: number) {
   const chromatic = Object.entries(colours).filter(([name]) => name !== "black");
   for (const [i, [nameA, a]] of chromatic.entries()) {
     for (const [nameB, b] of chromatic.slice(i + 1)) {
       const gap = hueGap(hueSat(a).hue, hueSat(b).hue);
-      expect(gap, `${nameA} ${a} vs ${nameB} ${b}`).toBeGreaterThanOrEqual(MIN_HUE_GAP);
+      expect(gap, `${nameA} ${a} vs ${nameB} ${b}`).toBeGreaterThanOrEqual(minGap);
     }
   }
 }
 
 describe("chicken palette", () => {
   it("keeps accessory colours on clearly different hues", () => {
-    expectDistinct(Object.fromEntries(Object.entries(CHICKEN_TINTS).map(([name, tone]) => [name, tone.base])));
+    for (const key of ["base", "light"] as const) {
+      expectDistinct(
+        Object.fromEntries(Object.entries(CHICKEN_TINTS).map(([name, tone]) => [name, tone[key]])),
+        MIN_ACCESSORY_HUE_GAP,
+      );
+    }
   });
 
   it("keeps body colours on clearly different hues", () => {
-    expectDistinct(CHICKEN_BODY_TINTS);
+    expectDistinct(CHICKEN_BODY_TINTS, MIN_BODY_HUE_GAP);
   });
 
   it("keeps coloured bodies saturated enough to never read as the cream chicken", () => {
