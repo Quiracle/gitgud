@@ -227,6 +227,7 @@ function RecommendedCard({ href, icon, title, description, puzzle, onNavigate }:
           padding={6}
           showRefs={false}
           animateIn={false}
+          decorative
           className="size-16 shrink-0 rounded bg-green-900"
         />
         <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 py-px">
