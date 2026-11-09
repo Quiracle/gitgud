@@ -16,6 +16,10 @@ export const ca: Messages = {
   "meta.leaderboard.description": "Mira qui ha resolt més ràpid el trencaclosques de Git d'avui i amb menys reintents, a tot el món i entre amics.",
   "meta.legal.heading": "Política de privacitat, galetes i condicions d'ús",
   "meta.legal.description": "Com tracta GitGud les teves dades, les galetes i l'emmagatzematge local, i les condicions per jugar.",
+  "meta.account.heading": "El teu compte",
+  "meta.practice.heading": "Lliçó de pràctica",
+  "meta.signIn.heading": "Iniciant la sessió",
+  "meta.linkedIn.heading": "Connectant LinkedIn",
 
   "common.gotIt": "Entesos",
   "common.tryAgain": "Torna-ho a provar",
@@ -81,6 +85,9 @@ export const ca: Messages = {
   "streak.days_one": "Ratxa d'{count} dia!",
   "streak.days_other": "Ratxa de {count} dies!",
   "streak.start": "Comença la teva ratxa!",
+  "streak.trail": "Darrers {total} dies, del més antic al més recent: {days}",
+  "streak.daySolved": "resolt",
+  "streak.dayMissed": "no resolt",
 
   "howToPlay.link": "Com es juga",
   "howToPlay.title": "Com es juga",

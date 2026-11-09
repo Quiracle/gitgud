@@ -16,6 +16,10 @@ export const es: Messages = {
   "meta.leaderboard.description": "Mira quién ha resuelto más rápido el puzzle de Git de hoy y con menos reintentos, en todo el mundo y entre amigos.",
   "meta.legal.heading": "Política de privacidad, cookies y condiciones de uso",
   "meta.legal.description": "Cómo trata GitGud tus datos, las cookies y el almacenamiento local, y las condiciones para jugar.",
+  "meta.account.heading": "Tu cuenta",
+  "meta.practice.heading": "Lección de práctica",
+  "meta.signIn.heading": "Iniciando sesión",
+  "meta.linkedIn.heading": "Conectando LinkedIn",
 
   "common.gotIt": "Entendido",
   "common.tryAgain": "Reintentar",
@@ -81,6 +85,9 @@ export const es: Messages = {
   "streak.days_one": "¡Racha de {count} día!",
   "streak.days_other": "¡Racha de {count} días!",
   "streak.start": "¡Empieza tu racha!",
+  "streak.trail": "Últimos {total} días, del más antiguo al más reciente: {days}",
+  "streak.daySolved": "resuelto",
+  "streak.dayMissed": "no resuelto",
 
   "howToPlay.link": "Cómo jugar",
   "howToPlay.title": "Cómo jugar",

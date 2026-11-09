@@ -19,6 +19,10 @@ export const en = {
   "meta.leaderboard.description": "See who solved today's Git puzzle fastest and with the fewest retries, worldwide and among friends.",
   "meta.legal.heading": "Privacy policy, cookies and terms of use",
   "meta.legal.description": "How GitGud handles your data, cookies and local storage, and the terms for playing.",
+  "meta.account.heading": "Your account",
+  "meta.practice.heading": "Practice lesson",
+  "meta.signIn.heading": "Signing in",
+  "meta.linkedIn.heading": "Connecting LinkedIn",
 
   "common.gotIt": "Got it",
   "common.tryAgain": "Try again",
@@ -84,6 +88,9 @@ export const en = {
   "streak.days_one": "{count}-day streak!",
   "streak.days_other": "{count}-day streak!",
   "streak.start": "Start your streak!",
+  "streak.trail": "Last {total} days, oldest first: {days}",
+  "streak.daySolved": "solved",
+  "streak.dayMissed": "not solved",
 
   "howToPlay.link": "How to play",
   "howToPlay.title": "How to play",

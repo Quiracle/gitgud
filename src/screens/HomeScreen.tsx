@@ -185,14 +185,14 @@ export function HomeScreen({ onNavigate }: HomeScreenProps) {
   );
 }
 
-/** A soft highlight that sweeps across the primary call to action. */
+/** A soft highlight that sweeps across the primary call to action twice, then stops (WCAG 2.2.2). */
 function Shimmer() {
   return (
     <motion.span
       aria-hidden
       className="pointer-events-none absolute inset-y-0 -left-1/3 w-1/3 bg-gradient-to-r from-transparent via-white/45 to-transparent"
       animate={{ x: ["0%", "450%"] }}
-      transition={{ duration: 1.1, ease: "easeInOut", repeat: Infinity, repeatDelay: 3.2, delay: 1.4 }}
+      transition={{ duration: 1.1, ease: "easeInOut", repeat: 1, repeatDelay: 1.5, delay: 1.4 }}
     />
   );
 }

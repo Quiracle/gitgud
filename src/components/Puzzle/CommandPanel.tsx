@@ -147,7 +147,7 @@ export function CommandPanel({
               className="pointer-events-none absolute inset-0 flex min-w-0 items-center overflow-hidden whitespace-pre p-3 font-secondary text-code"
             >
               <span className="invisible">{command}</span>
-              <span className="text-grey-400/50">{suggestionSuffix}</span>
+              <span className="text-grey-400">{suggestionSuffix}</span>
             </div>
           )}
           <input

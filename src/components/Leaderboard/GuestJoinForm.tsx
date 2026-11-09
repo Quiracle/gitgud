@@ -55,7 +55,7 @@ export function GuestJoinForm({ initialName, submitting, error, onJoin, onLogIn 
           enterKeyHint="send"
           aria-invalid={message ? true : undefined}
           aria-describedby={message ? messageId : undefined}
-          className="min-h-11 min-w-0 flex-1 rounded border border-grey-700 bg-green-900 px-3 text-paragraph text-grey-50 outline-none transition-colors placeholder:text-grey-500 focus:border-lime-400 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-400"
+          className="min-h-11 min-w-0 flex-1 rounded border border-grey-500 bg-green-900 px-3 text-paragraph text-grey-50 outline-none transition-colors placeholder:text-grey-400 focus:border-lime-400 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-400"
         />
         <Button type="submit" fullWidth={false} className="shrink-0" disabled={submitting}>
           {submitting ? t("guestName.joining") : t("guestName.join")}

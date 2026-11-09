@@ -214,8 +214,15 @@ button {
    so a ring there never reflects keyboard navigation. Text fields always match
    :focus-visible, so they thicken their own border instead (see each input). */
 :focus-visible:not([tabindex="-1"], input, textarea) {
-  outline: 2px solid rgb(var(--colors-lime-400));
+  /* Light page and cards: a dark ring (lime would be ~1.4:1 there). */
+  outline: 2px solid rgb(var(--colors-green-950));
   outline-offset: 2px;
+}
+
+/* Inside dark panels (headers, dialogs, puzzle, nav, cookie banner) the ring is lime. */
+:is([class~="bg-green-950"], [class~="bg-green-950/90"], [class~="bg-green-900"])
+  :focus-visible:not([tabindex="-1"], input, textarea) {
+  outline-color: rgb(var(--colors-lime-400));
 }
 
 .no-scrollbar {

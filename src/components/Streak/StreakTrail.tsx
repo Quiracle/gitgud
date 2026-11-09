@@ -1,4 +1,5 @@
 import { motion } from "motion/react";
+import { useI18n } from "../../i18n/I18nProvider";
 import { spring } from "../../lib/motion";
 
 interface StreakTrailProps {
@@ -13,9 +14,15 @@ const SQUARE = 12;
 
 /** Figma streak row (node 24:33053): a commit-like trail of the last days. */
 export function StreakTrail({ days, label }: StreakTrailProps) {
+  const { t } = useI18n();
+  // The squares show which recent days were solved; screen readers get the same as text.
+  const trail = t("streak.trail", {
+    total: days.length,
+    days: days.map((done) => t(done ? "streak.daySolved" : "streak.dayMissed")).join(", "),
+  });
   return (
     <div className="flex items-center justify-between gap-3">
-      <div className="flex h-3 shrink-0 items-center" aria-label={label}>
+      <div className="flex h-3 shrink-0 items-center" role="img" aria-label={trail}>
         <motion.span
           className="block h-px border-t border-dashed border-lime-400"
           style={{ width: SEGMENT }}

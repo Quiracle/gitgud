@@ -53,7 +53,20 @@ export function pageMeta(path: string, locale: Locale): PageMeta {
   if (path === "/legal") return page(t("meta.legal.heading"), t("meta.legal.description"));
 
   if (PRIVATE_PREFIXES.some((prefix) => path === prefix || path.startsWith(prefix))) {
-    return { heading: t("meta.title"), title: t("meta.title"), description: t("meta.description"), indexable: false };
+    // Private pages stay out of search results but still name themselves in the tab.
+    const heading =
+      path === "/account/stats"
+        ? t("account.stats")
+        : path === "/account/achievements"
+          ? t("account.achievements")
+          : path.startsWith("/account")
+            ? t("meta.account.heading")
+            : path.startsWith("/course/practice/")
+              ? t("meta.practice.heading")
+              : path.startsWith("/linkedin/")
+                ? t("meta.linkedIn.heading")
+                : t("meta.signIn.heading");
+    return { heading, title: t("meta.page.title", { title: heading }), description: t("meta.description"), indexable: false };
   }
 
   if (path.startsWith("/course/")) {

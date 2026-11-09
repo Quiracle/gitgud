@@ -25,7 +25,7 @@ export function LanguagePicker({ tone = "light", className = "" }: LanguagePicke
 
   return (
     <div
-      className={`relative flex min-h-11 items-center gap-1.5 rounded transition-colors ${ring ? "outline outline-2 outline-offset-2 outline-lime-400" : ""} ${colors} ${className}`}
+      className={`relative flex min-h-11 items-center gap-1.5 rounded transition-colors ${ring ? `outline outline-2 outline-offset-2 ${tone === "dark" ? "outline-lime-400" : "outline-green-950"}` : ""} ${colors} ${className}`}
     >
       <label htmlFor={id} className="sr-only">
         {t("common.language")}

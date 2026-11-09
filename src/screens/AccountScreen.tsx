@@ -214,7 +214,7 @@ function DisplayNameForm({ userId, fallback }: { userId: string; fallback: strin
           }}
           autoComplete="nickname"
           aria-describedby="display-name-help"
-          className="min-h-11 min-w-0 flex-1 rounded border border-grey-300 bg-grey-50 px-3 text-paragraph text-grey-950 outline-none transition-colors focus:border-lime-500 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-lime-500"
+          className="min-h-11 min-w-0 flex-1 rounded border border-grey-500 bg-grey-50 px-3 text-paragraph text-grey-950 outline-none transition-colors focus:border-green-950 focus:outline focus:outline-1 focus:-outline-offset-2 focus:outline-green-950"
         />
         <Button type="submit" fullWidth={false} className="shrink-0" disabled={unchanged || state === "saving"}>
           {state === "saving" ? t("profile.saving") : t("profile.save")}
@@ -242,6 +242,18 @@ function InfoTip({ id, label, children }: { id: string; label: string; children:
   const [pinned, setPinned] = useState(false);
   const open = hovered || pinned;
 
+  // Escape closes the tip however it opened, including by hover with focus elsewhere.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setPinned(false);
+      setHovered(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <span className="relative flex" onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
       <button
@@ -265,7 +277,9 @@ function InfoTip({ id, label, children }: { id: string; label: string; children:
       <motion.span
         id={id}
         role="tooltip"
-        className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[220px] rounded bg-green-950 px-3 py-2 text-xs text-grey-50"
+        // While open the pointer can rest on the tip without closing it; closed, it ignores the pointer.
+        // The ::before bridge spans the gap to the icon so the pointer can cross it.
+        className={`${open ? "" : "pointer-events-none"} absolute bottom-full left-1/2 z-10 mb-2 w-max max-w-[220px] rounded bg-green-950 px-3 py-2 text-xs text-grey-50 before:absolute before:inset-x-0 before:top-full before:h-2 before:content-['']`}
         style={{ x: "-50%" }}
         initial={false}
         animate={open ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
