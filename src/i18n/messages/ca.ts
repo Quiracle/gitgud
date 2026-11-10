@@ -192,6 +192,7 @@ export const ca: Messages = {
   "commandLearned.toast": "Ordre apresa",
   "commandLearned.lockedTitle": "???",
   "commandLearned.lockedDescription": "Escriu una ordre de Git nova per aprendre-la.",
+  "commandLearned.timesTyped": "Vegades escrita",
   "commandLearned.log.description": "Llegeix l'historial.",
   "commandLearned.switch.description": "Canvia de branca.",
   "commandLearned.merge.description": "Uneix una altra branca.",

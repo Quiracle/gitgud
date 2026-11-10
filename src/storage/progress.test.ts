@@ -141,6 +141,29 @@ describe("giving up on a daily", () => {
     attempt = store.recordCommand(attempt, { command: "git commit", elapsedMs: 62_000, ok: false, output: "error" }, false);
 
     expect(store.learnedCommands()).toEqual({ revert: "2026-10-10T10:00:00.000Z" });
+    expect(store.commandCounts()).toEqual({ revert: 2 });
+  });
+
+  it("counts every line per command, seeding from older transcripts without double counting", () => {
+    const storage = new MemoryStorage();
+    const store = new LocalProgressStore(storage, () => Date.parse("2026-10-10T10:00:00Z"), () => "attempt-1");
+    let attempt = store.start(createDailyFixture("2026-10-10"));
+    // A transcript saved before counting existed.
+    const raw = JSON.parse(storage.getItem("gitgud:progress:v1")!);
+    const key = Object.keys(raw.activeAttempts)[0];
+    raw.activeAttempts[key].commands = [
+      { command: "git log", elapsedMs: 1_000, ok: true, output: "" },
+      { command: "git log --all", elapsedMs: 2_000, ok: true, output: "" },
+    ];
+    delete raw.commandCounts;
+    storage.setItem("gitgud:progress:v1", JSON.stringify(raw));
+    attempt = { ...attempt, commands: raw.activeAttempts[key].commands };
+
+    expect(store.commandCounts()).toEqual({ log: 2 });
+    attempt = store.recordCommand(attempt, { command: "git log", elapsedMs: 3_000, ok: true, output: "" });
+    attempt = store.recordCommand(attempt, { command: "git checkout main", elapsedMs: 4_000, ok: true, output: "" });
+
+    expect(store.commandCounts()).toEqual({ log: 3, switch: 1 });
   });
 
   it("counts commands from transcripts saved before learning was tracked, skipping a revealed route", () => {

@@ -32,7 +32,9 @@ describe("learned command sets", () => {
   });
 
   it("lists every command, locked ones included, and reports new ones", () => {
-    const list = commandAchievements({ revert: "2026-10-03T00:00:00.000Z" });
+    const list = commandAchievements({ revert: "2026-10-03T00:00:00.000Z" }, { revert: 4 });
+    expect(list.find((item) => item.id === "revert")?.timesTyped).toBe(4);
+    expect(commandAchievements({ log: "x" })[0].timesTyped).toBe(1);
     expect(list).toHaveLength(7);
     expect(list.filter((item) => item.unlocked).map((item) => item.id)).toEqual(["revert"]);
     expect(newlyLearned({ log: "x" }, { log: "x", merge: "y" })).toEqual(["merge"]);

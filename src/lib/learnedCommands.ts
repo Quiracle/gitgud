@@ -18,10 +18,15 @@ export type LearnableCommand = (typeof LEARNABLE_COMMANDS)[number];
 /** When each command was first typed (ISO timestamp). */
 export type LearnedCommands = Partial<Record<LearnableCommand, string>>;
 
+/** How many lines have used each command. */
+export type CommandCounts = Partial<Record<LearnableCommand, number>>;
+
 export interface CommandAchievement {
   id: LearnableCommand;
   unlocked: boolean;
   unlockedAt?: string;
+  /** Lines typed with this command, failed ones included. */
+  timesTyped: number;
 }
 
 /** The literal command each badge names; never translated. */
@@ -67,10 +72,12 @@ export function mergeLearned(a: LearnedCommands, b: LearnedCommands): LearnedCom
   return merged;
 }
 
-export function commandAchievements(learned: LearnedCommands): CommandAchievement[] {
-  return LEARNABLE_COMMANDS.map((id) =>
-    learned[id] ? { id, unlocked: true, unlockedAt: learned[id] } : { id, unlocked: false },
-  );
+export function commandAchievements(learned: LearnedCommands, counts: CommandCounts = {}): CommandAchievement[] {
+  return LEARNABLE_COMMANDS.map((id) => {
+    // A learned command was typed at least once, even if its transcript has since rolled off.
+    const timesTyped = Math.max(counts[id] ?? 0, learned[id] ? 1 : 0);
+    return learned[id] ? { id, unlocked: true, unlockedAt: learned[id], timesTyped } : { id, unlocked: false, timesTyped };
+  });
 }
 
 /** Commands present in `next` but not in `previous`, in catalog order. */

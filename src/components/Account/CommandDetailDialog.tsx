@@ -20,15 +20,16 @@ interface CommandDetailDialogProps {
   /** The learned command to explain; undefined keeps the popup closed. */
   command?: LearnableCommand;
   unlockedAt?: string;
+  timesTyped?: number;
   onClose: () => void;
 }
 
-/** A learned command: what it does, how to type it, and when the player first used it. */
-export function CommandDetailDialog({ command, unlockedAt, onClose }: CommandDetailDialogProps) {
-  const { t, formatDate } = useI18n();
+/** A learned command: what it does, how to type it, when the player first used it, and how often. */
+export function CommandDetailDialog({ command, unlockedAt, timesTyped, onClose }: CommandDetailDialogProps) {
+  const { t, formatDate, formatNumber } = useI18n();
   // Keep the last command on screen while the popup animates out.
-  const last = useRef({ command, unlockedAt });
-  if (command) last.current = { command, unlockedAt };
+  const last = useRef({ command, unlockedAt, timesTyped });
+  if (command) last.current = { command, unlockedAt, timesTyped };
   const shown = last.current;
 
   return (
@@ -42,9 +43,14 @@ export function CommandDetailDialog({ command, unlockedAt, onClose }: CommandDet
             </code>
           </div>
           <p className="text-sm text-grey-50">{t(`commandLearned.${shown.command}.explanation`)}</p>
-          {shown.unlockedAt && (
-            <StatRow label={t("account.unlocked")} value={formatDate(shown.unlockedAt, { dateStyle: "medium" })} />
-          )}
+          <div className="flex flex-col gap-2">
+            {shown.unlockedAt && (
+              <StatRow label={t("account.unlocked")} value={formatDate(shown.unlockedAt, { dateStyle: "medium" })} />
+            )}
+            {shown.timesTyped !== undefined && (
+              <StatRow label={t("commandLearned.timesTyped")} value={formatNumber(shown.timesTyped)} />
+            )}
+          </div>
           <Button onClick={onClose}>{t("common.gotIt")}</Button>
         </>
       )}

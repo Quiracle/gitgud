@@ -19,7 +19,20 @@ export function useLearnedCommands(): LearnedCommands {
   return learned;
 }
 
-/** Every command badge, locked ones included, in catalog order. */
+/** Every command badge, locked ones included, in catalog order, with how often each was typed. */
 export function useCommandAchievements() {
-  return commandAchievements(useLearnedCommands());
+  const learned = useLearnedCommands();
+  const [counts, setCounts] = useState(() => openProgressStore().commandCounts());
+
+  useEffect(() => {
+    const refresh = () => setCounts(openProgressStore().commandCounts());
+    window.addEventListener(PROGRESS_CHANGED, refresh);
+    window.addEventListener("storage", refresh);
+    return () => {
+      window.removeEventListener(PROGRESS_CHANGED, refresh);
+      window.removeEventListener("storage", refresh);
+    };
+  }, []);
+
+  return commandAchievements(learned, counts);
 }

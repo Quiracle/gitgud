@@ -86,7 +86,12 @@ export function CommandAchievementList({ items, showDates = false }: CommandAchi
           onOpen: item.unlocked ? () => setOpen(item) : undefined,
         }))}
       />
-      <CommandDetailDialog command={open?.id} unlockedAt={open?.unlockedAt} onClose={() => setOpen(undefined)} />
+      <CommandDetailDialog
+        command={open?.id}
+        unlockedAt={open?.unlockedAt}
+        timesTyped={open?.timesTyped}
+        onClose={() => setOpen(undefined)}
+      />
     </>
   );
 }

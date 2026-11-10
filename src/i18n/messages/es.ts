@@ -192,6 +192,7 @@ export const es: Messages = {
   "commandLearned.toast": "Comando aprendido",
   "commandLearned.lockedTitle": "???",
   "commandLearned.lockedDescription": "Escribe un comando de Git nuevo para aprenderlo.",
+  "commandLearned.timesTyped": "Veces escrito",
   "commandLearned.log.description": "Lee el historial.",
   "commandLearned.switch.description": "Cambia de rama.",
   "commandLearned.merge.description": "Une otra rama.",

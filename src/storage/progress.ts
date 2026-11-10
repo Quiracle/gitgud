@@ -1,4 +1,4 @@
-import { learnedCommandOf, mergeLearned, type LearnedCommands } from "../lib/learnedCommands";
+import { learnedCommandOf, mergeLearned, type CommandCounts, type LearnedCommands } from "../lib/learnedCommands";
 import type { PublicPuzzleDefinition } from "../puzzles";
 
 export interface AttemptCommand {
@@ -71,6 +71,8 @@ interface ProgressDocument {
   completions: CompletionRecord[];
   /** First time each command was typed. Added later, so older documents lack it. */
   learnedCommands?: LearnedCommands;
+  /** How many lines used each command. Seeded once from saved transcripts when first written. */
+  commandCounts?: CommandCounts;
 }
 
 interface StorageLike {
@@ -138,12 +140,22 @@ export class LocalProgressStore {
     return mergeLearned(document.learnedCommands ?? {}, learnedFromTranscripts(document));
   }
 
+  /** How many times the player has typed each command, failed lines included. */
+  commandCounts(): CommandCounts {
+    const document = this.read();
+    return document.commandCounts ?? countedFromTranscripts(document);
+  }
+
   private learn(command: string) {
     const id = learnedCommandOf(command);
     if (!id) return;
     const document = this.read();
-    if (document.learnedCommands?.[id]) return;
-    document.learnedCommands = { ...document.learnedCommands, [id]: new Date(this.now()).toISOString() };
+    // The first counted line starts from what older transcripts already hold, so nothing is lost.
+    const counts = document.commandCounts ?? countedFromTranscripts(document);
+    document.commandCounts = { ...counts, [id]: (counts[id] ?? 0) + 1 };
+    if (!document.learnedCommands?.[id]) {
+      document.learnedCommands = { ...document.learnedCommands, [id]: new Date(this.now()).toISOString() };
+    }
     this.write(document);
   }
 
@@ -296,26 +308,47 @@ export class LocalProgressStore {
   }
 }
 
+/** Every saved transcript line the player typed, with its attempt's start and end. */
+function typedTranscripts(document: ProgressDocument) {
+  const runs: { commands: readonly AttemptCommand[]; startedAt: string; latest?: string }[] = [];
+  for (const record of document.completions) {
+    // A given-up daily ends with the revealed route, which the player never typed.
+    const typed = record.gaveUp ? record.commands.slice(0, record.runTranscriptStart ?? 0) : record.commands;
+    runs.push({ commands: typed, startedAt: record.startedAt, latest: record.completedAt });
+  }
+  for (const attempt of Object.values(document.activeAttempts)) {
+    runs.push({ commands: attempt.commands, startedAt: attempt.startedAt });
+  }
+  return runs;
+}
+
 /** Commands found in saved transcripts, dated by when they were typed during the attempt. */
 function learnedFromTranscripts(document: ProgressDocument): LearnedCommands {
   let learned: LearnedCommands = {};
-  const add = (commands: readonly AttemptCommand[], startedAt: string, latest?: string) => {
+  for (const { commands, startedAt, latest } of typedTranscripts(document)) {
     const start = Date.parse(startedAt);
+    if (Number.isNaN(start)) continue;
     for (const entry of commands) {
       const id = learnedCommandOf(entry.command);
-      if (!id || Number.isNaN(start)) continue;
+      if (!id) continue;
       let at = new Date(start + Math.max(0, entry.elapsedMs || 0)).toISOString();
       if (latest && at > latest) at = latest;
       learned = mergeLearned(learned, { [id]: at });
     }
-  };
-  for (const record of document.completions) {
-    // A given-up daily ends with the revealed route, which the player never typed.
-    const typed = record.gaveUp ? record.commands.slice(0, record.runTranscriptStart ?? 0) : record.commands;
-    add(typed, record.startedAt, record.completedAt);
   }
-  for (const attempt of Object.values(document.activeAttempts)) add(attempt.commands, attempt.startedAt);
   return learned;
+}
+
+/** How often each command appears in saved transcripts. */
+function countedFromTranscripts(document: ProgressDocument): CommandCounts {
+  const counts: CommandCounts = {};
+  for (const { commands } of typedTranscripts(document)) {
+    for (const entry of commands) {
+      const id = learnedCommandOf(entry.command);
+      if (id) counts[id] = (counts[id] ?? 0) + 1;
+    }
+  }
+  return counts;
 }
 
 /**

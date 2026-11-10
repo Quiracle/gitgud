@@ -195,6 +195,7 @@ export const en = {
   "commandLearned.toast": "Command learned",
   "commandLearned.lockedTitle": "???",
   "commandLearned.lockedDescription": "Type a new Git command to learn it.",
+  "commandLearned.timesTyped": "Times typed",
   "commandLearned.log.description": "Read the history.",
   "commandLearned.switch.description": "Change branches.",
   "commandLearned.merge.description": "Join another branch.",
